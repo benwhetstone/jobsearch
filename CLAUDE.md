@@ -43,6 +43,29 @@ ran out of room mid-run. Let the launcher pull in each skill when its phase star
   the browser uploads it to the ATS from there, and a copy is saved to Drive for the record.
   The file passes *through* the container transiently; its permanent home is Drive.
 
+## Environment requirements
+
+These skills run from the **Cowork desktop client on Ben's own computer**, which provides three
+things a bare web/cloud session does not:
+
+- **Mounted `/Job Search/` Google Drive folder** — the data store. Expected layout:
+  - `/Job Search/Tracking/job-search.json` — the application tracker (source of truth)
+  - `/Job Search/Tracking/job-search-dashboard.html` — the dashboard
+  - `/Job Search/Resumes/` and `/Job Search/Cover Letters/` — generated materials
+    (`Archive - Submitted/` subfolders hold submitted copies)
+  - `/Job Search/Misc/Resume Standards - Whetstone.md` and
+    `/Job Search/Misc/Resume and Cover Letter Best Practices 2026.md` — the fixed standards
+- **Chrome control (Claude-in-Chrome)** — used only for the final apply-in-browser step and to
+  check confirmation emails in the personal `brwhetstone@gmail.com` tab. This is a desktop-client
+  capability; a web-only session cannot fill or submit applications.
+- **`ROADMAP_TOKEN`** — bearer token for the dashboard API
+  (`https://roadmap.benwhetstone.info/api/job-search`). Set it once in the Cowork **environment
+  settings** (env vars) so every session has it.
+
+If a session lacks the `/Job Search/` mount or Chrome control, everything up to submission still
+works (search, scoring, materials — the Google Drive connector can stand in for reads/writes),
+but the browser submit must happen on the desktop client.
+
 ## Standing rules
 
 1. **One skill per job.** Each of the skills above owns a distinct phase. Do not create a

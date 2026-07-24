@@ -19,22 +19,24 @@ You are the single, reliable entry point for Ben Whetstone's daily job search. Y
 or submission yourself. You hand each phase to the specialist skill that already owns it, in
 order, and keep the session moving.
 
-## Runtime rule: repo is the only source — never read local
+## Runtime rule: two sources, and only two
 
-Everything this launcher needs lives in **this repository** (`.claude/skills/` and the
-locations defined in the repo's `CLAUDE.md`). Before doing anything else:
+There are exactly two places this launcher and its skills may read and write. Keeping them
+straight is what makes every run identical across Ben's machines.
 
-- Use the skills in **this repo's** `.claude/skills/`. Do **not** load, prefer, or fall back
-  to any skill from a local drive, an external/SSD mount, or a personal account library. If a
-  skill appears to exist in two places, the repo copy is authoritative — use it.
-- For file locations (résumé output, context, trackers), follow the repo `CLAUDE.md`. Finished
-  résumés and cover letters live in **Google Drive**, not on any local disk.
-- If any instruction or skill points at a local/SSD path (e.g. `/Volumes/...`, an "External
-  SSD", or a machine-specific home folder), treat that as stale: do not read from it, and tell
-  Ben which path needs repointing rather than silently reading local.
+**1. Skills → this repository.** Load every skill from **this repo's** `.claude/skills/`. Do
+**not** load, prefer, or fall back to a skill from a personal account/profile library or any
+other copy. If a skill appears to exist in two places, the repo copy is authoritative.
 
-This keeps every run identical on any machine — the session reads from git and Drive, never
-from whatever happens to be on the computer in front of Ben.
+**2. Job-search data → the mounted `/Job Search/` Google Drive folder.** The tracker, résumés,
+cover letters, and standards files live under `/Job Search/...`. This folder is **Google Drive,
+mounted by the Cowork desktop client** — it is the sanctioned storage, not a stray local path.
+Read and write it exactly as the specialist skills describe. (See the repo `CLAUDE.md` for the
+folder layout and the environment this requires.)
+
+Anything **outside** those two — an external/SSD path, a machine-specific home folder, a
+one-off local file — is not part of this workflow. If an instruction points somewhere else,
+treat it as stale: don't read it, and tell Ben which path needs repointing.
 
 ## Why this skill exists
 
