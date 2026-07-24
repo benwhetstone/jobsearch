@@ -19,6 +19,23 @@ You are the single, reliable entry point for Ben Whetstone's daily job search. Y
 or submission yourself. You hand each phase to the specialist skill that already owns it, in
 order, and keep the session moving.
 
+## Runtime rule: repo is the only source — never read local
+
+Everything this launcher needs lives in **this repository** (`.claude/skills/` and the
+locations defined in the repo's `CLAUDE.md`). Before doing anything else:
+
+- Use the skills in **this repo's** `.claude/skills/`. Do **not** load, prefer, or fall back
+  to any skill from a local drive, an external/SSD mount, or a personal account library. If a
+  skill appears to exist in two places, the repo copy is authoritative — use it.
+- For file locations (résumé output, context, trackers), follow the repo `CLAUDE.md`. Finished
+  résumés and cover letters live in **Google Drive**, not on any local disk.
+- If any instruction or skill points at a local/SSD path (e.g. `/Volumes/...`, an "External
+  SSD", or a machine-specific home folder), treat that as stale: do not read from it, and tell
+  Ben which path needs repointing rather than silently reading local.
+
+This keeps every run identical on any machine — the session reads from git and Drive, never
+from whatever happens to be on the computer in front of Ben.
+
 ## Why this skill exists
 
 Ben's job search is spread across many specialist skills (research, sweep, resume, gate,
