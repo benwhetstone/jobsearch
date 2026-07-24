@@ -39,6 +39,12 @@ REQUIRED = [
  (r"data\.benwhetstone\.info", "portfolio link missing (rule 1)"),
  (r"Google Sheets",            "Google Sheets missing (rule 6, added 2026-07-18)"),
  (r"Army Veteran|U\.S\. Army",     "veteran status missing - Ben is a protected veteran and several employers weight it"),
+ # ---- Every experience role must ship WITH its description/bullets --------
+ # (a role that appears with a title but no bullets is the "skipped descriptions" defect)
+ (r"Closing Day",              "Closing Day experience entry missing entirely"),
+ (r"South Shore Team",         "The South Shore Team experience entry missing entirely"),
+ (r"data model|scoring",       "Closing Day role has NO description/bullets - skipped role descriptions, DO NOT deliver"),
+ (r"reconcil|CRM, MLS|four systems", "South Shore Team role has NO description/bullets - skipped role descriptions, DO NOT deliver"),
 ]
 
 def text_of(p):

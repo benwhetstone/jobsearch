@@ -206,6 +206,22 @@ These are hard-won; ignoring them produces forms that look filled but aren't.
 - **Batch actions with `browser_batch`.** Screenshotting between every step is the main reason this
   workflow feels slow to Ben.
 
+### Step 6c — Fill EVERY field, then sweep for blanks before submit (never skip)
+
+Skipped fields are the single biggest defect in this workflow. A half-filled application reads as
+careless and can auto-reject before a human ever sees it. Two non-negotiable rules:
+
+- **Fill everything that accepts content.** Work-history **description / responsibilities** boxes,
+  profile summary fields, "additional information," and every required dropdown get populated from
+  Ben's canonical data. Work-history descriptions come from `resume-builder`'s `voice.md` bullets
+  (reworded only to fit a plain-text box — never left blank). An empty description box is a defect,
+  not a shortcut. Optional fields that take relevant content get filled, not skipped.
+- **Sweep before you submit.** Before asking Ben for the go-ahead, **re-read every page top to
+  bottom** (do not trust memory — Workday/UltiPro re-renders and parsers hide field state) and
+  confirm no input, textarea, or required select that should have content was left empty. List any
+  blanks you find, fill them, then proceed. If a field genuinely has no honest answer, say so out
+  loud rather than leaving it silently empty. Do not advance to the Submit screen with known blanks.
+
 ---
 
 ## Step 7 — Update the tracker immediately after submitting

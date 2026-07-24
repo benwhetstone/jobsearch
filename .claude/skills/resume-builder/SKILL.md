@@ -113,6 +113,11 @@ No .docx files delivered to Ben. Ever.
 
 ## Hard rules (each one is a real incident)
 
+- **Never emit a role with a title and no description.** Every experience entry ships with ALL of
+  its voice.md bullets (reorder allowed, omit never). A job heading followed by no bullets is a
+  build failure — this is the "skipped role descriptions" defect and it must never reach Ben. The
+  verifier (`scripts/verify_resume.py`) now fails the build if any current role's bullets are
+  missing; fix it before delivering.
 - Skills come from Resume Standards rule 6 only. A posting asking for Python does not authorize
   listing Python.
 - Closing Day is a "sales pipeline analytics platform for real estate teams." Ben designs and

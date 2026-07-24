@@ -33,7 +33,7 @@ const doc=(children)=>new Document({sections:[{
 module.exports={P,H,B,JOB,header,earlier,edu,doc,Packer};
 
 const EXP_CD = (P,H,B,JOB)=>[
- JOB("Founder, Closing Day (closingday.info)","01/2026 \u2013 Present"),
+ JOB("Operations & Data Analyst, Closing Day (closingday.info)","01/2026 \u2013 Present"),
  P("Apollo Beach (Tampa), FL  \u00b7  Small, growing SaaS business serving real estate teams",{sz:17,after:30}),
  B("Founded and run the business. Designed the relational data model and schema, and built the scoring logic that ranks client records on past performance. That scoring is what customers buy the product for."),
  B("Collect requirements from customers, write the specifications, oversee development, run acceptance testing, and manage the release."),
@@ -42,8 +42,8 @@ const EXP_CD = (P,H,B,JOB)=>[
  B("Built the product by directing an AI development pipeline instead of hiring engineers. Method documented at aiopsforrealestate.com."),
 ];
 const EXP_SST = (P,H,B,JOB)=>[
- JOB("Founder & Team Leader, The South Shore Team","01/2016 \u2013 Present"),
- P("Apollo Beach (Tampa), FL  \u00b7  Residential real estate sales team, \$30M+ annual transaction volume",{sz:17,after:30}),
+ JOB("Operations & Data Analyst, The South Shore Team","01/2016 \u2013 Present"),
+ P("Apollo Beach (Tampa), FL  \u00b7  Residential real estate sales team, \$36M+ annual transaction volume",{sz:17,after:30}),
  B("Founded and lead the team: strategy, recruiting, training, compliance, and full P&L ownership."),
  B("Decide which metrics actually predict production, and build the reporting against those rather than against whatever data is easiest to pull. Used that analysis to cut time spent on low-probability deals and concentrate agent effort where it paid."),
  B("Reconcile CRM, MLS, transaction management, and bookkeeping systems into one set of numbers the business runs on. Four systems that rarely agree."),

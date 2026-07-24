@@ -56,7 +56,7 @@ Updated 2026-07-22 to follow Resume Worded verb+tool+result formula and name rea
 explicitly. Every bullet starts with an action verb, weaves tools into the accomplishment,
 and quantifies where truthfully possible.
 
-**Founder & Product/Data Lead, Closing Day (closingday.info)** . 01/2026-present
+**Operations & Data Analyst, Closing Day (closingday.info)** . 01/2026-present
 Apollo Beach (Tampa), FL . Sales pipeline analytics platform for real estate teams
 
 - Designed and launched a sales pipeline dashboard that transforms raw real estate
@@ -79,7 +79,7 @@ Apollo Beach (Tampa), FL . Sales pipeline analytics platform for real estate tea
   rules for the dashboard's core reports: conversion funnel analysis, lead source
   ROI, income forecasting, and agent performance rankings.
 
-**Founder & Operations/Data Lead, The South Shore Team** . 01/2016-present
+**Operations & Data Analyst, The South Shore Team** . 01/2016-present
 Apollo Beach (Tampa), FL . Residential real estate, $36M annual volume
 
 - Founded and run a residential real estate sales team serving Tampa Bay, managing
