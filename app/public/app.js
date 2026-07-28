@@ -699,16 +699,38 @@
     else arr.sort((a, b) => b.totalScore - a.totalScore);
     return arr;
   }
+  // Jobs For You shows ONLY jobs autopilot can file end-to-end (globalwork's
+  // hasModernAutoApply). The toggle widens it to everything we scored.
+  let FORYOU_AUTO_ONLY = true;
+
   function renderMatches(list) {
     LAST_MATCHES = list;
-    list = sortMatches(list);
+    const filtered = (JOBS_TAB === "auto" && FORYOU_AUTO_ONLY)
+      ? list.filter((m) => m.job.autoApply === true) : list;
+    const hiddenCount = list.length - filtered.length;
+    list = sortMatches(filtered);
     const box = $("#matchList"); box.innerHTML = "";
+    if (JOBS_TAB === "auto") {
+      const bar = el("div", "muted");
+      bar.style.cssText = "display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px";
+      const cb = el("input"); cb.type = "checkbox"; cb.checked = FORYOU_AUTO_ONLY; cb.id = "autoOnly";
+      cb.addEventListener("change", () => { FORYOU_AUTO_ONLY = cb.checked; renderMatches(LAST_MATCHES); });
+      const lb = el("label", null, "One-click apply only — jobs we submit for you after your approval");
+      lb.htmlFor = "autoOnly"; lb.style.cursor = "pointer";
+      bar.appendChild(cb); bar.appendChild(lb);
+      if (FORYOU_AUTO_ONLY && hiddenCount > 0)
+        bar.appendChild(el("span", null, `(${hiddenCount} manual-apply match${hiddenCount === 1 ? "" : "es"} hidden)`));
+      box.appendChild(bar);
+    }
     if (!list.length) {
       const p = el("div", "card placeholder");
-      p.innerHTML =
-        '<div class="ph-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>' +
-        '<h3>No jobs yet</h3><p>Set what you\'re looking for above and hit <strong>Find jobs</strong>. ' +
-        'We search several boards at once — local, hybrid and remote together.</p>';
+      p.innerHTML = (JOBS_TAB === "auto" && FORYOU_AUTO_ONLY)
+        ? '<div class="ph-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>' +
+          '<h3>No one-click jobs right now</h3><p>Every sweep discovers more employers whose systems we can file directly. ' +
+          'Hit <strong>Refresh</strong> to sweep again, or untick the box above to see matches that need a manual submit.</p>'
+        : '<div class="ph-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>' +
+          '<h3>No jobs yet</h3><p>Set what you\'re looking for above and hit <strong>Find jobs</strong>. ' +
+          'We search several boards at once — local, hybrid and remote together.</p>';
       box.appendChild(p);
       return;
     }

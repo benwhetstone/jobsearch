@@ -192,7 +192,7 @@ async function jsearch(env: Env, q: SearchQuery): Promise<RawJob[]> {
 async function atsDirect(env: Env, q: SearchQuery): Promise<RawJob[]> {
   const { boardJobs } = await import("./_ats");
   const rows = await env.DB.prepare(
-    "SELECT ats, token FROM ats_boards WHERE ats IN ('greenhouse','lever') AND token IS NOT NULL ORDER BY checked_at DESC LIMIT 15"
+    "SELECT ats, token FROM ats_boards WHERE ats IN ('greenhouse','lever') AND token IS NOT NULL ORDER BY checked_at DESC LIMIT 25"
   ).all<{ ats: string; token: string }>();
   const lists = await Promise.all((rows.results ?? []).map((r) =>
     boardJobs({ ats: r.ats as any, token: r.token }, q.keywords).catch(() => [] as RawJob[])));
