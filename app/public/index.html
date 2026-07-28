@@ -28,10 +28,16 @@
   <!-- App -->
   <div id="app" hidden>
     <header class="topbar">
-      <div class="brand">Job Search Engine <span class="tag">Profile</span></div>
+      <div class="brand"><span class="dot">J</span> Job Search</div>
+      <nav class="mainnav" id="mainnav">
+        <button data-view="profile" class="active">Profile</button>
+        <button data-view="matches">Matches</button>
+        <button data-view="applications">Applications</button>
+        <button data-view="inbox">Inbox</button>
+      </nav>
       <div class="top-right">
-        <div class="overall">
-          <span class="overall-label">Profile strength</span>
+        <div class="overall" id="overall">
+          <span class="overall-label">Profile</span>
           <div class="bar"><div id="overallFill" class="fill"></div></div>
           <span id="overallPct" class="pct">0%</span>
         </div>
@@ -42,12 +48,49 @@
       </div>
     </header>
 
-    <div id="actionBanner" class="action-banner" hidden></div>
+    <main class="views">
+      <section id="view-profile" class="view">
+        <div id="actionBanner" class="action-banner" hidden></div>
+        <div class="layout">
+          <nav id="blockNav" class="blocknav"></nav>
+          <div id="blocks" class="content"></div>
+        </div>
+      </section>
 
-    <div class="layout">
-      <nav id="blockNav" class="blocknav"></nav>
-      <main id="blocks" class="content"></main>
-    </div>
+      <section id="view-matches" class="view" hidden>
+        <div class="placeholder">
+          <div class="ph-icon">◎</div>
+          <h2>Matches</h2>
+          <p>Ranked roles with an explained match score will appear here. Finish your profile and this fills up on your first sweep.</p>
+          <span class="ph-tag">Coming in Phase 2</span>
+        </div>
+      </section>
+
+      <section id="view-applications" class="view" hidden>
+        <div class="placeholder">
+          <div class="ph-icon">▤</div>
+          <h2>Applications</h2>
+          <p>Every role you apply to, from prepared to submitted to interview, tracked in one pipeline. You approve each one; nothing is submitted for you.</p>
+          <span class="ph-tag">Coming in Phase 2</span>
+        </div>
+      </section>
+
+      <section id="view-inbox" class="view" hidden>
+        <div class="placeholder">
+          <div class="ph-icon">✉</div>
+          <h2>Inbox</h2>
+          <p>Recruiter replies, rejections, and interview invites, sorted automatically. This is where the email notifications you get will link back to.</p>
+          <span class="ph-tag">Coming in Phase 2</span>
+        </div>
+      </section>
+    </main>
+
+    <nav class="tabbar" id="tabbar">
+      <button data-view="profile" class="active"><span>◉</span>Profile</button>
+      <button data-view="matches"><span>◎</span>Matches</button>
+      <button data-view="applications"><span>▤</span>Apps</button>
+      <button data-view="inbox"><span>✉</span>Inbox</button>
+    </nav>
 
     <div id="toast" class="toast" hidden></div>
   </div>

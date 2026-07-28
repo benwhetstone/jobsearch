@@ -238,41 +238,109 @@
     return box;
   }
 
+  // How each object_array field is edited by a human. name-lists are add/remove
+  // tags; "records" are card forms with labeled inputs. No JSON.
+  const SKILL_LEVELS = ["BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"];
+  const LANG_LEVELS = ["BASIC", "INTERMEDIATE", "PROFESSIONAL", "FLUENT", "NATIVE"];
+  const OBJECT_ARRAY_SPEC = {
+    st_jobTitles: { kind: "namelist", singular: "job title", placeholder: "e.g. Data Analyst" },
+    st_softSkills: { kind: "namelist", singular: "soft skill", placeholder: "e.g. Stakeholder Communication" },
+    st_industryDomainKnowledge: { kind: "namelist", singular: "industry", placeholder: "e.g. Real Estate" },
+    st_professionalCredential: { kind: "namelist", singular: "credential", placeholder: "e.g. DP-900" },
+    st_hardSkills: { kind: "namelist", singular: "skill", placeholder: "e.g. SQL", withLevel: true, levels: SKILL_LEVELS },
+    workLanguage: { kind: "namelist", singular: "language", placeholder: "e.g. English", withLevel: true, levels: LANG_LEVELS },
+    otherSocialHandles: { kind: "namelist", singular: "link", placeholder: "e.g. github.com/you", nameKey: "url" },
+    st_workExperiences: { kind: "records", singular: "role", fields: [
+      { key: "title", label: "Job title" }, { key: "employer", label: "Employer" },
+      { key: "city", label: "Location" }, { key: "startDate", label: "Start (YYYY-MM)" },
+      { key: "endDate", label: "End (YYYY-MM, blank if current)" },
+      { key: "description", label: "What you did", type: "textarea" },
+    ] },
+    st_education: { kind: "records", singular: "degree", fields: [
+      { key: "degree", label: "Degree or certificate" }, { key: "school", label: "School" },
+      { key: "fieldOfStudy", label: "Field of study" }, { key: "city", label: "Location" },
+      { key: "startDate", label: "Start (year)" }, { key: "endDate", label: "Finished (year)" },
+    ] },
+  };
+
   function objectArray(f, wrap) {
-    const container = el("div", "objlist");
-    const list = el("div", "objlist");
-    function summary() {
+    const spec = OBJECT_ARRAY_SPEC[f.fieldKey];
+    if (spec && spec.kind === "namelist") return nameListEditor(f, wrap, spec);
+    if (spec && spec.kind === "records") return recordListEditor(f, wrap, spec);
+    return nameListEditor(f, wrap, { singular: "item", placeholder: "Add an item" }); // sane default, still no JSON
+  }
+
+  function nameListEditor(f, wrap, spec) {
+    const nameKey = spec.nameKey || "name";
+    const box = el("div", "namelist");
+    const chips = el("div", "chips");
+    const arr = Array.isArray(f.value) ? f.value.map((x) => ({ ...x })) : [];
+    const commit = () => { f.value = arr.map((x) => ({ ...x })); queueSave(f.fieldKey, f.value, wrap); };
+    function renderChips() {
+      chips.innerHTML = "";
+      arr.forEach((item, idx) => {
+        const chip = el("span", "tagitem");
+        chip.appendChild(document.createTextNode(item[nameKey] || ""));
+        if (spec.withLevel) {
+          const sel = el("select", "levelsel");
+          (spec.levels || SKILL_LEVELS).forEach((lv) => {
+            const o = new Option(pretty(lv), lv); if ((item.level || "") === lv) o.selected = true; sel.appendChild(o);
+          });
+          sel.addEventListener("change", () => { item.level = sel.value; commit(); });
+          chip.appendChild(sel);
+        }
+        const x = el("b", null, "×");
+        x.addEventListener("click", () => { arr.splice(idx, 1); renderChips(); commit(); });
+        chip.appendChild(x);
+        chips.appendChild(chip);
+      });
+    }
+    const row = el("div", "addrow");
+    const input = el("input"); input.type = "text"; input.placeholder = spec.placeholder || ("Add a " + spec.singular);
+    const add = () => {
+      const v = input.value.trim(); if (!v) return;
+      const item = { [nameKey]: v }; if (spec.withLevel) item.level = (spec.levels || SKILL_LEVELS)[0];
+      arr.push(item); input.value = ""; renderChips(); commit(); input.focus();
+    };
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); add(); } });
+    const btn = el("button", "addbtn", "Add"); btn.type = "button"; btn.addEventListener("click", add);
+    row.appendChild(input); row.appendChild(btn);
+    box.appendChild(chips); box.appendChild(row);
+    renderChips();
+    return box;
+  }
+
+  function recordListEditor(f, wrap, spec) {
+    const box = el("div", "records");
+    const list = el("div");
+    const arr = Array.isArray(f.value) ? f.value.map((x) => ({ ...x })) : [];
+    const commit = () => { f.value = arr.map((x) => ({ ...x })); queueSave(f.fieldKey, f.value, wrap); };
+    function render() {
       list.innerHTML = "";
-      const arr = Array.isArray(f.value) ? f.value : [];
-      if (!arr.length) { list.appendChild(el("div", "help", "None yet.")); return; }
-      arr.forEach((o) => {
-        const card = el("div", "objcard");
-        const title = o.title || o.name || o.employer || Object.values(o)[0] || "item";
-        card.appendChild(el("div", "t", String(title)));
-        const rest = Object.entries(o).filter(([k]) => !["title", "name"].includes(k))
-          .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`).join("  ·  ");
-        if (rest) card.appendChild(el("div", "muted", rest));
+      arr.forEach((rec, idx) => {
+        const card = el("div", "reccard");
+        const head = el("div", "rechead");
+        head.appendChild(el("span", "recnum", (spec.singular ? pretty(spec.singular) : "Entry") + " " + (idx + 1)));
+        const del = el("button", "linkbtn", "Remove"); del.type = "button";
+        del.addEventListener("click", () => { arr.splice(idx, 1); render(); commit(); });
+        head.appendChild(del); card.appendChild(head);
+        spec.fields.forEach((fld) => {
+          const w = el("div", "recfield");
+          w.appendChild(el("label", null, fld.label));
+          const inp = fld.type === "textarea" ? el("textarea") : el("input");
+          if (fld.type !== "textarea") inp.type = "text";
+          inp.value = rec[fld.key] != null ? rec[fld.key] : "";
+          inp.addEventListener("input", () => { rec[fld.key] = inp.value || undefined; commit(); });
+          w.appendChild(inp); card.appendChild(w);
+        });
         list.appendChild(card);
       });
     }
-    const editBtn = el("button", "linkbtn", "Edit as JSON");
-    const ta = el("textarea", "objedit"); ta.hidden = true;
-    ta.value = JSON.stringify(Array.isArray(f.value) ? f.value : [], null, 2);
-    editBtn.addEventListener("click", () => {
-      if (ta.hidden) { ta.hidden = false; editBtn.textContent = "Save JSON"; }
-      else {
-        try {
-          const parsed = JSON.parse(ta.value);
-          if (!Array.isArray(parsed)) throw new Error("must be a JSON array");
-          f.value = parsed; queueSave(f.fieldKey, parsed, wrap);
-          ta.hidden = true; editBtn.textContent = "Edit as JSON"; summary();
-          $(".fieldmsg", wrap).textContent = "";
-        } catch (e) { $(".fieldmsg", wrap).textContent = e.message; }
-      }
-    });
-    summary();
-    container.appendChild(list); container.appendChild(editBtn); container.appendChild(ta);
-    return container;
+    const add = el("button", "addbtn", "Add a " + (spec.singular || "entry")); add.type = "button";
+    add.addEventListener("click", () => { arr.push({}); render(); commit(); });
+    box.appendChild(list); box.appendChild(add);
+    render();
+    return box;
   }
 
   // Acronyms that must stay uppercase in labels (country codes, regions, terms).
@@ -320,7 +388,9 @@
       b.categories.forEach((cat) => {
         const c = el("div", "category");
         c.appendChild(el("h3", null, cat.label));
-        cat.fields.forEach((f) => c.appendChild(renderField(f)));
+        const grid = el("div", "fieldgrid");
+        cat.fields.forEach((f) => grid.appendChild(renderField(f)));
+        c.appendChild(grid);
         panel.appendChild(c);
       });
       main.appendChild(panel);
