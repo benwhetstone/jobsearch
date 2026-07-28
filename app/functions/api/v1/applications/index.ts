@@ -89,7 +89,8 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
 };
 
 // ---- the autopilot run ------------------------------------------------------
-async function prepare(env: Env, user: CtxUser, appUuid: string, job: JobRow): Promise<void> {
+export async function prepare(env: Env, user: CtxUser, appUuid: string, job: JobRow,
+                               opts: { skipOnReject?: boolean } = {}): Promise<void> {
   const now = () => new Date().toISOString();
 
   // 1. find the employer's real application. Aggregator links are interstitials
@@ -113,11 +114,17 @@ async function prepare(env: Env, user: CtxUser, appUuid: string, job: JobRow): P
   const values: Record<string, string | null> = {};
   for (const v of vals.results ?? []) values[v.field_key] = v.value_json;
 
-  // 3. tailor documents + run the gate
+  // 3. tailor documents + run the gate. In bulk mode the order is sequential
+  //    and a gate REJECT stops the spend right there: no cover letter, no form
+  //    fill, no LLM answers for a job not worth submitting to.
   const jd = { title: job.title, company: job.company_name, description: job.description };
-  const [cv, cover] = await Promise.all([tailorCv(env, user.id, values, jd), tailorCoverLetter(env, user.id, values, jd)]);
-  const gate = cv.report.passed ? await hiringManagerGate(env, cv.content, jd)
+  const cv = await tailorCv(env, user.id, values, jd);
+  const gate = cv.report.passed ? await hiringManagerGate(env, cv.content, jd, user.id)
                                 : { verdict: "REVISE" as const, notes: cv.report.failures };
+  const stopEarly = opts.skipOnReject && gate.verdict === "REJECT";
+  const cover = stopEarly
+    ? { content: { greeting: "", paragraphs: [], closing: "" }, report: { passed: false, failures: ["Skipped: the hiring-manager gate rejected this fit before the cover letter was written."], warnings: [] } }
+    : await tailorCoverLetter(env, user.id, values, jd);
 
   const base = await env.DB.prepare(
     "SELECT uuid FROM documents WHERE user_id = ? AND kind = 'cv' AND is_default = 1"
@@ -141,7 +148,7 @@ async function prepare(env: Env, user: CtxUser, appUuid: string, job: JobRow): P
 
   // 4. mirror the employer's form and prefill it
   let fieldCount = 0, needsHuman = 0;
-  if (ref) {
+  if (ref && !stopEarly) {
     const form = await fetchForm(ref).catch(() => []);
     if (form.length) {
       const cvText = cvToText(cv.content);
@@ -155,7 +162,7 @@ async function prepare(env: Env, user: CtxUser, appUuid: string, job: JobRow): P
                     "Return the answer text only.",
             content: `QUESTION\n${f.label}\n\nROLE\n${job.title} at ${job.company_name || ""}\n\n` +
                      `POSTING\n${(job.description || "").slice(0, 2500)}\n\nRESUME\n${cvText.slice(0, 3000)}`,
-            maxTokens: 320,
+            maxTokens: 320, userId: user.id, purpose: "form_answer",
           });
           return reply.trim() || null;
         },
@@ -182,12 +189,15 @@ async function prepare(env: Env, user: CtxUser, appUuid: string, job: JobRow): P
                : gate.verdict === "REVISE" ? "actionRequired"
                : "readyToApply";
 
+  // Vanity relay address for this application: everything the employer sends to
+  // it lands in the inbox, classified, and linked back to this application.
+  const relaySlug = appUuid.replace(/-/g, "").slice(0, 10);
   await env.DB.prepare(
     `UPDATE applications_v2 SET ats = ?, ats_token = ?, ats_job_id = ?, supported_ats = ?, need_manual_apply = ?,
-            status = ?, cv_uuid = ?, cover_letter_uuid = ?, gate_verdict = ?, gate_report = ?, updated_at = ?
+            status = ?, cv_uuid = ?, cover_letter_uuid = ?, gate_verdict = ?, gate_report = ?, relay_slug = ?, updated_at = ?
       WHERE uuid = ?`
   ).bind(ref?.ats ?? null, ref?.token ?? null, ref?.jobId ?? null, ref ? 1 : 0, manual ? 1 : 0,
-         status, cvUuid, clUuid, gate.verdict, JSON.stringify(gate.notes), now(), appUuid).run();
+         status, cvUuid, clUuid, gate.verdict, JSON.stringify(gate.notes), relaySlug, now(), appUuid).run();
 
   // Anything that stops and waits for the user goes on the action-required
   // queue, which is what the actions banner shows and the notification email

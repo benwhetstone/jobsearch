@@ -20,7 +20,7 @@ export interface SweepResult {
   fetched?: number; deduped?: number; matched?: number; refreshedAt?: string;
 }
 
-export async function runSweep(env: Env, userId: string): Promise<SweepResult> {
+export async function runSweep(env: Env, userId: string, origin: "auto" | "search" = "auto"): Promise<SweepResult> {
   const user = { id: userId };
 
   // ---- build the query from saved prefs, falling back to profile titles ----
@@ -123,16 +123,17 @@ export async function runSweep(env: Env, userId: string): Promise<SweepResult> {
     const m = s.match;
     stmts.push(env.DB.prepare(
       `INSERT INTO matches (user_id, job_uuid, total_score, skills, experience, compensation, terms, company,
-         comp_flag, missing_json, status, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?, 'matched', ?)
+         comp_flag, missing_json, status, origin, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?, 'matched', ?, ?)
        ON CONFLICT(user_id, job_uuid) DO UPDATE SET
+         origin=excluded.origin,
          total_score=excluded.total_score, skills=excluded.skills, experience=excluded.experience,
          compensation=excluded.compensation, terms=excluded.terms, company=excluded.company,
          comp_flag=excluded.comp_flag, missing_json=excluded.missing_json,
          status=CASE WHEN matches.status IN ('applied','hidden','skipped') THEN matches.status ELSE 'matched' END`
     ).bind(
       user.id, s.uuid, m.total, m.skills, m.experience, m.compensation, m.terms, m.company,
-      m.compFlag, JSON.stringify(m.missing), now
+      m.compFlag, JSON.stringify(m.missing), origin, now
     ));
   }
   // D1 batch has a statement cap; chunk to be safe.
@@ -162,7 +163,7 @@ export async function ensureDailySweep(env: Env, userId: string): Promise<boolea
   // claim the day first so concurrent logins don't double-run
   await env.DB.prepare("INSERT OR IGNORE INTO daily_sweeps (user_id, sweep_day, found, ran_at) VALUES (?, ?, 0, ?)")
     .bind(userId, day, new Date().toISOString()).run();
-  const res = await runSweep(env, userId).catch(() => ({ ok: false } as SweepResult));
+  const res = await runSweep(env, userId, "auto").catch(() => ({ ok: false } as SweepResult));
   if (res.ok) {
     await env.DB.prepare("UPDATE daily_sweeps SET found = ?, ran_at = ? WHERE user_id = ? AND sweep_day = ?")
       .bind(res.matched ?? 0, new Date().toISOString(), userId, day).run();

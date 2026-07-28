@@ -5,7 +5,7 @@ import { runSweep } from "../../_refresh";
 
 export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = async ({ env, data }) => {
   const user = currentUser(data);
-  const res = await runSweep(env, user.id);
+  const res = await runSweep(env, user.id, "search");
   if (!res.ok) return err(400, res.error || "Sweep failed.");
   const { ok, error, ...payload } = res;
   return json(payload);

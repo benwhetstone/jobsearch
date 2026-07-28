@@ -80,6 +80,8 @@
     });
     if (view === "matches" && !MATCHES_LOADED) loadMatches();
     if (view === "applications") loadApplications();
+    if (view === "inbox") loadInbox("all");
+    if (view === "templates") renderTemplates();
     if (view === "profile" && !MODEL) loadProfile();
     window.scrollTo(0, 0);
   }
@@ -548,6 +550,15 @@
     const card = el("article", "card job");
 
     const top = el("div", "job-top");
+    const check = el("input", "jobcheck");
+    check.type = "checkbox";
+    check.checked = SELECTED.has(m.jobUuid);
+    check.title = "Select for bulk apply";
+    check.addEventListener("change", () => {
+      if (check.checked) SELECTED.add(m.jobUuid); else SELECTED.delete(m.jobUuid);
+      updateBulkBar();
+    });
+    top.appendChild(check);
     const [bg, fg] = avaFor(j.company);
     const ava = el("span", "job-ava", (j.company || "?").trim()[0].toUpperCase());
     ava.style.background = bg; ava.style.color = fg;
@@ -689,11 +700,50 @@
   }
 
   let SWEEP_RUNNING = false;
+  let JOBS_TAB = "auto";            // auto = Jobs For You, search = Search jobs
+  const SELECTED = new Set();       // jobUuids checked for bulk apply
+
+  function setJobsTab(tab) {
+    JOBS_TAB = tab;
+    $("#tabForYou").classList.toggle("active", tab === "auto");
+    $("#tabSearch").classList.toggle("active", tab === "search");
+    $("#jobsHeadAuto").hidden = tab !== "auto";
+    $("#jobsHeadSearch").hidden = tab !== "search";
+    $("#searchbarCard").hidden = tab !== "search";
+    $("#matchMsg").innerHTML = "";
+    loadMatches();
+  }
+  $("#tabForYou").addEventListener("click", () => setJobsTab("auto"));
+  $("#tabSearch").addEventListener("click", () => setJobsTab("search"));
+
+  function updateBulkBar() {
+    const bar = $("#bulkbar");
+    bar.hidden = SELECTED.size === 0;
+    $("#bulkCount").textContent = `${SELECTED.size} selected`;
+    $("#bulkStart").textContent = `Start ${SELECTED.size} application${SELECTED.size === 1 ? "" : "s"}`;
+  }
+  $("#bulkClear").addEventListener("click", () => {
+    SELECTED.clear();
+    document.querySelectorAll(".jobcheck").forEach((c) => (c.checked = false));
+    updateBulkBar();
+  });
+  $("#bulkStart").addEventListener("click", async () => {
+    const btn = $("#bulkStart");
+    btn.disabled = true; btn.textContent = "Queuing…";
+    try {
+      const r = await api("/applications/bulk", { method: "POST", body: JSON.stringify({ jobUuids: [...SELECTED] }) });
+      SELECTED.clear(); updateBulkBar();
+      toast(`${r.data.queued} queued. Preparing one at a time in the background.`, 3200);
+      switchView("applications");
+    } catch (e) { toast(e.message, 3600); }
+    finally { btn.disabled = false; updateBulkBar(); }
+  });
+
   async function loadMatches() {
     MATCHES_LOADED = true;
     await loadSearchPrefs();
     try {
-      const r = await api("/matches");
+      const r = await api("/matches?origin=" + (JOBS_TAB === "auto" ? "auto" : "search"));
       const list = r.data.matches || [];
       if (!list.length && SWEEP_RUNNING) {
         // The daily sweep kicked off at login; matches are on their way.
@@ -728,6 +778,7 @@
     btn.disabled = true; btn.textContent = "Searching…";
     msg.innerHTML = "";
     try {
+      JOBS_TAB = "search";
       await api("/search", { method: "PATCH", body: JSON.stringify(currentPrefs()) });
       const r = await api("/jobs/refresh", { method: "POST" });
       const d = r.data;
@@ -736,7 +787,7 @@
       const b = el("div", "banner info");
       b.textContent = `Found ${d.fetched} postings, ${d.deduped} unique, ${d.matched} scored${live ? " — " + live : ""}.`;
       msg.appendChild(b);
-      const m = await api("/matches");
+      const m = await api("/matches?origin=search");
       renderMatches(m.data.matches || []);
     } catch (e) {
       const b = el("div", "banner bad");
@@ -749,13 +800,16 @@
 
   // ======================= APPLICATIONS ====================================
   const STATUS_LABEL = {
-    preparing: "Preparing", actionRequired: "Action required", readyToApply: "Ready to apply",
-    approved: "Approved", applied: "Applied", failed: "Failed",
+    queued: "Queued", preparing: "Preparing", actionRequired: "Action required",
+    readyToApply: "Ready to apply", approved: "Approved", applied: "Applied",
+    interview: "Interview", offer: "Offer", rejected: "Rejected", failed: "Failed",
   };
   const STATUS_CLASS = {
-    preparing: "plain", actionRequired: "amber", readyToApply: "green", approved: "green",
-    applied: "green", failed: "amber",
+    queued: "plain", preparing: "plain", actionRequired: "amber", readyToApply: "green",
+    approved: "green", applied: "green", interview: "green", offer: "green",
+    rejected: "plain", failed: "amber",
   };
+  let QUEUE_TIMER = null;
 
   async function loadApplications(force) {
     const box = $("#appList");
@@ -774,14 +828,36 @@
     const box = $("#appList"); box.innerHTML = "";
     const stats = $("#appStats");
     if (stats) {
+      // The real funnel, in order. Interviews and offers are advanced by the
+      // inbox classifier, not by hand.
       stats.innerHTML = ""; stats.hidden = false;
-      [["actionRequired", "Action required", "amber"], ["readyToApply", "Ready to apply", ""],
-       ["approved", "Approved", ""], ["applied", "Applied", "solid"]].forEach(([k, lbl, cls]) => {
+      const applied = (counts.applied || 0) + (counts.interview || 0) + (counts.offer || 0) + (counts.rejected || 0);
+      [["queued", (counts.queued || 0) + (counts.preparing || 0), "Queued", "plain"],
+       ["actionRequired", counts.actionRequired || 0, "Action required", "amber"],
+       ["readyToApply", (counts.readyToApply || 0) + (counts.approved || 0), "Ready to apply", ""],
+       ["applied", applied, "Applied", ""],
+       ["interview", counts.interview || 0, "Interviews", ""],
+       ["offer", counts.offer || 0, "Offers", "solid"]].forEach(([k, n, lbl, cls]) => {
         const s = el("div", "stat" + (cls ? " " + cls : ""));
+        if (k === "actionRequired" && n > 0) s.classList.add("alert");
         s.appendChild(el("div", "label", lbl));
-        s.appendChild(el("div", "num", String(counts[k] || 0)));
+        s.appendChild(el("div", "num", String(n)));
         stats.appendChild(s);
       });
+    }
+    // red dot on the sidebar when anything needs the user
+    const cnt = $("#cntApps");
+    if (cnt) cnt.classList.toggle("reddot", (counts.actionRequired || 0) > 0);
+    // keep the queue draining while any items wait; poll as chain backstop
+    clearTimeout(QUEUE_TIMER);
+    if ((counts.queued || 0) + (counts.preparing || 0) > 0) {
+      QUEUE_TIMER = setTimeout(async () => {
+        try {
+          const r = await api("/applications/process-next", { method: "POST" });
+          if (r.data.paused) { $("#appList").prepend(el("div", "banner warn", r.data.paused)); return; }
+        } catch { /* ignore */ }
+        if (CURRENT_VIEW === "applications") loadApplications(true);
+      }, 5000);
     }
     if (!apps.length) {
       const p = el("div", "card placeholder");
@@ -941,14 +1017,47 @@
     // form panel: the employer's real questions, prefilled
     const pf = el("div", "card block-body"); pf.hidden = true;
     if (!d.fields.length) {
-      pf.appendChild(el("p", "muted", d.ats
-        ? "The form could not be mirrored for this posting."
-        : "This employer's system isn't one we can mirror yet, so this one is a manual submit. Your tailored documents above are ready to use."));
-      if (d.job.applyUrl) {
-        const a = el("a", "btn", "Open the employer's application");
-        a.href = d.job.applyUrl; a.target = "_blank"; a.rel = "noopener noreferrer";
-        pf.appendChild(a);
+      // Manual apply: be explicit about where the documents are and what to do.
+      pf.appendChild(el("h3", null, "This one is a manual submit"));
+      const expl = el("p", "muted");
+      expl.textContent = d.ats
+        ? "We found this employer's system but couldn't mirror this particular form. Your tailored documents are still ready below."
+        : "This employer's application system isn't one we can fill for you yet. Your tailored r\u00e9sum\u00e9 and cover letter are still written, gated and ready: download both, then attach them on the employer's page.";
+      pf.appendChild(expl);
+      const steps = el("ol");
+      steps.style.cssText = "font-size:13px;margin:8px 0 14px;padding-left:20px;line-height:1.9";
+      [["Download your tailored r\u00e9sum\u00e9 and cover letter below."],
+       ["Open the employer's application page."],
+       ["Attach the PDFs and submit: the rest of the form is usually just your contact details, which are on your Profile page."]]
+        .forEach(([t]) => steps.appendChild(el("li", null, t)));
+      pf.appendChild(steps);
+      const row = el("div", "job-actions"); row.style.justifyContent = "flex-start";
+      if (d.cv?.uuid) {
+        const a1 = el("a", "btn primary", "Download r\u00e9sum\u00e9 (PDF)");
+        a1.href = `/api/v1/documents/${d.cv.uuid}/pdf`; a1.target = "_blank"; a1.rel = "noopener";
+        row.appendChild(a1);
       }
+      if (d.coverLetter?.uuid) {
+        const a2 = el("a", "btn primary", "Download cover letter (PDF)");
+        a2.href = `/api/v1/documents/${d.coverLetter.uuid}/pdf`; a2.target = "_blank"; a2.rel = "noopener";
+        row.appendChild(a2);
+      }
+      if (d.job.applyUrl) {
+        const a3 = el("a", "btn", "Open the employer's application \u2197");
+        a3.href = d.job.applyUrl; a3.target = "_blank"; a3.rel = "noopener noreferrer";
+        row.appendChild(a3);
+      }
+      pf.appendChild(row);
+      const done = el("button", "btn ghost", "I submitted it \u2014 mark as applied");
+      done.style.marginTop = "10px";
+      done.addEventListener("click", async () => {
+        try {
+          await api(`/applications/${uuid}`, { method: "PATCH", body: JSON.stringify({ action: "markApplied" }) });
+          toast("Marked as applied. Replies will be tracked in your inbox.");
+          loadApplications(true);
+        } catch (e) { toast(e.message, 3000); }
+      });
+      pf.appendChild(done);
     } else {
       const pending = new Map();
       d.fields.forEach((f) => {
@@ -1013,6 +1122,113 @@
       pf.appendChild(el("p", "help", "Approve locks your answers. The browser step then replays them into the employer's page and stops before final submit for your confirmation. Nothing is ever sent without you."));
     }
     panels.form = pf; box.appendChild(pf);
+  }
+
+  // ======================= TEMPLATES =======================================
+  const TPL_META = [
+    ["classic",   "Classic",   "Traditional serif, centered header. The safe pick for any industry."],
+    ["modern",    "Modern",    "Clean sans-serif with blue accents. Tech, startups, product."],
+    ["compact",   "Compact",   "Dense single page. Long work histories that must fit."],
+    ["executive", "Executive", "Wide margins, double rules. Senior and leadership roles."],
+  ];
+  let TPL_CURRENT = "classic";
+  async function renderTemplates() {
+    const grid = $("#tplGrid"); grid.innerHTML = "";
+    try {
+      const r = await api("/profile");
+      const blocks = r.data.blocks || [];
+      for (const b of blocks) for (const c of b.categories || []) for (const f of c.fields || []) {
+        if (f.fieldKey === "resumeTemplate" && f.value) TPL_CURRENT = String(f.value).toLowerCase();
+      }
+    } catch { /* default */ }
+    TPL_META.forEach(([key, name, desc]) => {
+      const card = el("button", "tplcard" + (TPL_CURRENT === key ? " on" : ""));
+      const mini = el("div", "mini");
+      // a schematic of each layout, not a screenshot
+      if (key === "classic" || key === "executive") {
+        mini.innerHTML = '<div class="hd" style="width:56%;margin:0 auto 4px"></div><div class="ln" style="width:70%;margin:0 auto 8px"></div>' +
+          '<div class="ln" style="width:34%"></div><div class="ln"></div><div class="ln" style="width:88%"></div><div class="ln" style="width:92%"></div>' +
+          '<div class="ln" style="width:30%;margin-top:9px"></div><div class="ln"></div><div class="ln" style="width:84%"></div>';
+        if (key === "executive") mini.style.borderTop = "3px double #444";
+      } else {
+        const accent = key === "modern" ? "#2563eb" : "#444";
+        mini.innerHTML = `<div class="hd" style="width:48%;background:${accent}"></div><div class="ln" style="width:66%;margin-bottom:8px"></div>` +
+          `<div class="ln" style="width:26%;background:${key === "modern" ? "#b9cdf5" : "#d8dbe2"}"></div><div class="ln"></div><div class="ln" style="width:90%"></div>` +
+          '<div class="ln" style="width:28%;margin-top:9px"></div><div class="ln" style="width:86%"></div><div class="ln"></div>';
+        if (key === "compact") mini.style.fontSize = "70%";
+      }
+      card.appendChild(mini);
+      card.appendChild(el("h4", null, name + (TPL_CURRENT === key ? "  ✓" : "")));
+      card.appendChild(el("p", null, desc));
+      const row = el("div", "chips");
+      const preview = el("a", "chip", "Preview with my résumé");
+      preview.href = "#"; preview.addEventListener("click", async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        try {
+          const r = await api("/applications");
+          // any existing cv doc works for preview; fall back to base
+          window.open(`/api/v1/documents/${await anyCvUuid()}/pdf?template=${key}`, "_blank");
+        } catch { toast("Generate or upload a résumé first"); }
+      });
+      row.appendChild(preview);
+      card.appendChild(row);
+      card.addEventListener("click", async () => {
+        try {
+          await api("/profile/values", { method: "PATCH",
+            body: JSON.stringify({ values: [{ fieldKey: "resumeTemplate", value: key.toUpperCase() }] }) });
+          TPL_CURRENT = key;
+          toast("Template set: every PDF now uses " + name);
+          renderTemplates();
+        } catch (e2) { toast(e2.message, 2600); }
+      });
+      grid.appendChild(card);
+    });
+  }
+  async function anyCvUuid() {
+    const r = await fetch("/api/v1/documents/any-cv", { credentials: "same-origin" });
+    const b = await r.json();
+    if (!r.ok || !b.data?.uuid) throw new Error("none");
+    return b.data.uuid;
+  }
+
+  // ======================= INBOX ============================================
+  const CAT_LABEL = { all: "All", info: "Info", interview: "Interviews", offer: "Offers", rejection: "Rejections" };
+  async function loadInbox(cat) {
+    const chipsBox = $("#inboxCats"); const list = $("#inboxList");
+    list.innerHTML = ""; list.appendChild(el("div", "muted", "Loading…"));
+    let d;
+    try { d = (await api("/inbox?category=" + cat)).data; }
+    catch (e) { list.innerHTML = ""; list.appendChild(el("div", "banner bad", e.message)); return; }
+    chipsBox.innerHTML = "";
+    ["all", "info", "interview", "offer", "rejection"].forEach((k) => {
+      const c = d.counts[k] || { total: 0, unread: 0 };
+      const total = k === "all" ? Object.values(d.counts).reduce((a, x) => a + x.total, 0) : c.total;
+      const chip2 = el("button", "chip" + (cat === k ? " green" : ""), `${CAT_LABEL[k]}${total ? " " + total : ""}`);
+      chip2.addEventListener("click", () => loadInbox(k));
+      chipsBox.appendChild(chip2);
+    });
+    list.innerHTML = "";
+    if (!d.emails.length) {
+      const p = el("div", "card placeholder");
+      p.innerHTML = '<div class="ph-icon"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>' +
+        "<h3>Nothing here yet</h3><p>Each application you approve gets its own private address. When employers reply, it lands here sorted into Info, Interviews, Offers and Rejections, and your application statuses update on their own.</p>";
+      list.appendChild(p);
+      return;
+    }
+    d.emails.forEach((m) => {
+      const it = el("article", "card inbox-item" + (m.read ? "" : " unread"));
+      const meta = el("div", "meta");
+      meta.appendChild(el("div", "from", (m.from || "") + (m.job ? ` · ${m.job.title} @ ${m.job.company}` : "")));
+      meta.appendChild(el("div", "subj", m.subject || "(no subject)"));
+      meta.appendChild(el("div", "snip", m.snippet));
+      it.appendChild(meta);
+      it.appendChild(el("span", `cat-pill cat-${m.category}`, CAT_LABEL[m.category] || m.category));
+      it.addEventListener("click", async () => {
+        if (!m.read) { try { await api("/inbox", { method: "PATCH", body: JSON.stringify({ id: m.id, read: true }) }); } catch {} }
+        if (m.applicationUuid) openApplication(m.applicationUuid);
+      });
+      list.appendChild(it);
+    });
   }
 
   // ---- base résumé: generate from profile answers + PDF download ----------

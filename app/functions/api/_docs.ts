@@ -247,6 +247,7 @@ export async function tailorCv(
   env: Env, userId: string, values: Record<string, string | null>,
   job: { title: string; company: string | null; description: string | null }
 ): Promise<{ content: CvContent; report: VerifyReport; voice: Voice }> {
+  const AI = { userId, purpose: "tailor_cv" };
   const voice = buildVoice(values);
   const rules = await loadRules(env, userId);
   const { brief, skills } = profileBrief(values, voice);
@@ -262,13 +263,13 @@ export async function tailorCv(
     `"skills" ordered by relevance to this posting.`;
 
   const src = numberTokens(JSON.stringify(Object.values(values)) + " " + (job.description || ""));
-  let reply = await anthropic(env, { system, content: prompt, maxTokens: 2600 });
+  let reply = await anthropic(env, { system, content: prompt, maxTokens: 2600, ...AI });
   let content = stripDashes(extractJson(reply) as CvContent, voice);
   let report = verify(content, skills, voice, rules, job.title, src);
   if (!report.passed) {
     // one self-repair pass: feed the exact gate failures back
     reply = await anthropic(env, { system, content: prompt +
-      `\n\nYour previous attempt failed these checks:\n- ${report.failures.join("\n- ")}\nReturn corrected JSON.`, maxTokens: 2600 });
+      `\n\nYour previous attempt failed these checks:\n- ${report.failures.join("\n- ")}\nReturn corrected JSON.`, maxTokens: 2600, ...AI });
     content = stripDashes(extractJson(reply) as CvContent, voice);
     report = verify(content, skills, voice, rules, job.title, src);
   }
@@ -279,6 +280,7 @@ export async function tailorCoverLetter(
   env: Env, userId: string, values: Record<string, string | null>,
   job: { title: string; company: string | null; description: string | null }
 ): Promise<{ content: CoverContent; report: VerifyReport }> {
+  const AI = { userId, purpose: "tailor_cover" };
   const voice = buildVoice(values);
   const rules = await loadRules(env, userId);
   const { brief, skills } = profileBrief(values, voice);
@@ -291,12 +293,12 @@ export async function tailorCoverLetter(
     `Return JSON: {"greeting": string, "paragraphs": [string], "closing": string}\n` +
     `Open with why this specific role. One paragraph must cite a concrete result from the history above.`;
   const src = numberTokens(JSON.stringify(Object.values(values)) + " " + (job.description || ""));
-  let reply = await anthropic(env, { system, content: prompt, maxTokens: 1400 });
+  let reply = await anthropic(env, { system, content: prompt, maxTokens: 1400, ...AI });
   let content = stripDashes(extractJson(reply) as CoverContent, voice);
   let report = verify(content, skills, voice, rules, job.title, src);
   if (!report.passed) {
     reply = await anthropic(env, { system, content: prompt +
-      `\n\nYour previous attempt failed these checks:\n- ${report.failures.join("\n- ")}\nReturn corrected JSON.`, maxTokens: 1400 });
+      `\n\nYour previous attempt failed these checks:\n- ${report.failures.join("\n- ")}\nReturn corrected JSON.`, maxTokens: 1400, ...AI });
     content = stripDashes(extractJson(reply) as CoverContent, voice);
     report = verify(content, skills, voice, rules, job.title, src);
   }
@@ -305,7 +307,8 @@ export async function tailorCoverLetter(
 
 // Hiring-manager gate: would this get a first-round call, honestly?
 export async function hiringManagerGate(
-  env: Env, cv: CvContent, job: { title: string; company: string | null; description: string | null }
+  env: Env, cv: CvContent, job: { title: string; company: string | null; description: string | null },
+  userId?: string
 ): Promise<{ verdict: "PASS" | "REVISE" | "REJECT"; notes: string[] }> {
   const system =
     "You are a hiring manager screening résumés for this exact role. Six seconds per résumé, sceptical of " +
@@ -315,7 +318,7 @@ export async function hiringManagerGate(
     `ROLE\n${job.title} at ${job.company || ""}\n\nPOSTING\n${(job.description || "").slice(0, 4000)}\n\n` +
     `RESUME\n${JSON.stringify(cv).slice(0, 6000)}`;
   try {
-    const reply = await anthropic(env, { system, content: prompt, maxTokens: 900 });
+    const reply = await anthropic(env, { system, content: prompt, maxTokens: 900, userId, purpose: "gate" });
     const r = extractJson(reply) as { verdict: string; notes: string[] };
     const v = ["PASS", "REVISE", "REJECT"].includes(r?.verdict) ? r.verdict as any : "REVISE";
     return { verdict: v, notes: Array.isArray(r?.notes) ? r.notes : [] };

@@ -23,6 +23,7 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
   const user = currentUser(data);
   const url = new URL(request.url);
   const status = url.searchParams.get("status") || "matched";
+  const origin = url.searchParams.get("origin") || "all";
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit")) || 50));
 
   const rows = await env.DB.prepare(
@@ -31,10 +32,10 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
             j.title, j.company_name, j.location, j.remote, j.salary_min, j.salary_max, j.salary_currency,
             j.url, j.apply_url, j.board, j.source, j.posted_at, j.description
        FROM matches m JOIN jobs j ON j.uuid = m.job_uuid
-      WHERE m.user_id = ? AND (? = 'all' OR m.status = ?)
+      WHERE m.user_id = ? AND (? = 'all' OR m.status = ?) AND (? = 'all' OR m.origin = ?)
       ORDER BY m.total_score DESC
       LIMIT ?`
-  ).bind(user.id, status, status, limit).all<Row>();
+  ).bind(user.id, status, status, origin, origin, limit).all<Row>();
 
   const out = (rows.results ?? []).map((r) => ({
     jobUuid: r.job_uuid,

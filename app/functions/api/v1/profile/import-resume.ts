@@ -131,7 +131,7 @@ export const onRequestPost: PagesFunction<Env, string, Ctx> = async ({ request, 
     const reply = await anthropic(env, {
       system,
       content: [{ type: "text", text: prompt }, ...resumeBlocks],
-      maxTokens: 3000,
+      maxTokens: 3000, userId: user.id, purpose: "resume_parse",
     });
     extracted = extractJson(reply);
   } catch (e: any) {

@@ -67,7 +67,7 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
   let content: CvContent;
   let report;
   try {
-    let reply = await anthropic(env, { system, content: basePrompt, maxTokens: 2600 });
+    let reply = await anthropic(env, { system, content: basePrompt, maxTokens: 2600, userId: user.id, purpose: "base_resume" });
     content = stripDashes(extractJson(reply) as CvContent, voice);
     report = verify(content, skills, voice, rules, null, src);
     if (!report.passed) {
@@ -75,7 +75,7 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
       // stray dashes almost always clear on the second attempt.
       reply = await anthropic(env, { system,
         content: basePrompt + `\n\nYour previous attempt failed these checks:\n- ${report.failures.join("\n- ")}\nReturn corrected JSON.`,
-        maxTokens: 2600 });
+        maxTokens: 2600, userId: user.id, purpose: "base_resume" });
       content = stripDashes(extractJson(reply) as CvContent, voice);
       report = verify(content, skills, voice, rules, null, src);
     }
@@ -87,7 +87,7 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
     title: names(parse("st_jobTitles"))[0] || "the roles you're targeting",
     company: null,
     description: "General screen for the candidate's target roles. Judge the résumé on its own merits.",
-  });
+  }, user.id);
 
   const now = new Date().toISOString();
   const uuid = crypto.randomUUID();

@@ -6,11 +6,36 @@ export const AI_MODEL = "claude-haiku-4-5";
 
 export interface Block { type: string; [k: string]: unknown; }
 
+// Haiku 4.5 pricing, dollars per token.
+const IN_RATE = 1 / 1e6, OUT_RATE = 5 / 1e6;
+export const DAILY_BUDGET_USD = 0.50;   // per user per day; the going-broke guard
+
+export class BudgetExceeded extends Error {
+  constructor() { super("Today's AI budget is used up. Tailoring resumes for tomorrow's matches will work again after midnight UTC — nothing is lost, your queue keeps its place."); }
+}
+
+export async function spentTodayUsd(env: Env, userId: string): Promise<number> {
+  const day = new Date().toISOString().slice(0, 10);
+  const row = await env.DB.prepare(
+    "SELECT COALESCE(SUM(input_tokens),0) AS i, COALESCE(SUM(output_tokens),0) AS o FROM ai_usage WHERE user_id = ? AND created_at >= ?"
+  ).bind(userId, day).first<{ i: number; o: number }>().catch(() => null);
+  return row ? row.i * IN_RATE + row.o * OUT_RATE : 0;
+}
+
 export async function anthropic(
   env: Env,
-  opts: { system?: string; content: Block[] | string; maxTokens?: number; model?: string }
+  opts: { system?: string; content: Block[] | string; maxTokens?: number; model?: string;
+          userId?: string; purpose?: string }
 ): Promise<string> {
   if (!env.ANTHROPIC_API_KEY) throw new Error("AI is not configured (ANTHROPIC_API_KEY missing).");
+
+  // Budget gate. Every call is attributed to a user; the day's spend is summed
+  // from the log, so the ceiling holds across sweeps, bulk queues and retries.
+  if (opts.userId) {
+    const spent = await spentTodayUsd(env, opts.userId);
+    if (spent >= DAILY_BUDGET_USD) throw new BudgetExceeded();
+  }
+
   const content = typeof opts.content === "string" ? [{ type: "text", text: opts.content }] : opts.content;
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -28,6 +53,13 @@ export async function anthropic(
   });
   const json: any = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error?.message || `Anthropic HTTP ${res.status}`);
+
+  const u = json.usage || {};
+  await env.DB.prepare(
+    "INSERT INTO ai_usage (user_id, purpose, model, input_tokens, output_tokens, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+  ).bind(opts.userId ?? null, opts.purpose || "unknown", opts.model || AI_MODEL,
+         u.input_tokens || 0, u.output_tokens || 0, new Date().toISOString()).run().catch(() => {});
+
   return (json.content || []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("");
 }
 

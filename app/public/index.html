@@ -4,7 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Job Search</title>
-  <link rel="stylesheet" href="/styles.css?v=2026072805" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/styles.css?v=2026072806" />
 </head>
 <body>
   <!-- Auth (login / signup) -->
@@ -44,6 +45,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
           <span>Inbox</span>
         </button>
+        <button data-view="templates">
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="10" rx="1.5"/><rect x="13" y="3" width="8" height="6" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="15" width="8" height="6" rx="1.5"/></svg>
+          <span>Templates</span>
+        </button>
         <button data-view="profile">
           <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <span>Profile</span><span class="count" id="cntProfile">0%</span>
@@ -67,12 +72,23 @@
 
         <!-- Jobs / matches -->
         <section id="view-matches" class="view">
-          <div class="page-head">
-            <h1>Jobs</h1>
-            <p>Select jobs to apply for. We'll tailor the documents — you handle the final review.</p>
+          <div class="tabs" style="margin-bottom:14px">
+            <button class="tab active" id="tabForYou">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2L12 3z"/><path d="M19 15l.9 2.6L22.5 18l-2.6.9L19 21l-.9-2.1-2.6-.9 2.6-.4L19 15z"/></svg>
+              Jobs For You
+            </button>
+            <button class="tab" id="tabSearch">Search jobs</button>
+          </div>
+          <div class="page-head" id="jobsHeadAuto">
+            <h1>Jobs For You</h1>
+            <p>Found for you automatically: every morning we sweep the boards, score fresh postings against your profile and experience, and line up the best fits here. Check the ones you want and hit Start.</p>
+          </div>
+          <div class="page-head" id="jobsHeadSearch" hidden>
+            <h1>Search jobs</h1>
+            <p>Search on your own terms: keyword, place and radius. Results are scored the same way and can be queued the same way.</p>
           </div>
           <div id="matchStats" class="stats" hidden></div>
-          <div class="card searchbar">
+          <div class="card searchbar" id="searchbarCard" hidden>
             <div class="row">
               <div class="f">
                 <label for="sKeywords">What are you looking for?</label>
@@ -105,6 +121,11 @@
           </div>
           <div id="matchMsg"></div>
           <div id="matchList" class="joblist"></div>
+          <div id="bulkbar" class="bulkbar" hidden>
+            <span id="bulkCount">0 selected</span>
+            <button id="bulkClear" class="btn ghost">Clear</button>
+            <button id="bulkStart" class="btn primary">Start applications</button>
+          </div>
         </section>
 
         <!-- Applications -->
@@ -119,12 +140,19 @@
 
         <!-- Inbox -->
         <section id="view-inbox" class="view" hidden>
-          <div class="page-head"><h1>Inbox</h1><p>Recruiter replies, rejections and interview invites.</p></div>
-          <div class="card placeholder">
-            <div class="ph-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
-            <h3>Nothing here yet</h3>
-            <p>Once you start applying, replies land here — and the email notifications you get link back to this page.</p>
+          <div class="page-head"><h1>Inbox</h1>
+            <p>Every application gets its own private email address. Replies land here, sorted for you, and your application statuses update automatically.</p></div>
+          <div class="chips" id="inboxCats" style="margin-bottom:12px"></div>
+          <div id="inboxList" class="joblist"></div>
+        </section>
+
+        <!-- Templates -->
+        <section id="view-templates" class="view" hidden>
+          <div class="page-head">
+            <h1>Templates</h1>
+            <p>How your résumé and cover letter PDFs look. Pick one; every download uses it. You can preview your own résumé in any of them before deciding.</p>
           </div>
+          <div class="tplgrid" id="tplGrid"></div>
         </section>
 
         <!-- Profile -->
@@ -176,6 +204,6 @@
     <div id="toast" class="toast" hidden></div>
   </div>
 
-  <script src="/app.js?v=2026072805"></script>
+  <script src="/app.js?v=2026072806"></script>
 </body>
 </html>

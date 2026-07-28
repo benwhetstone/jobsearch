@@ -100,6 +100,14 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     }
   }
 
+  // ---- manual submit done: the user applied on the employer's site ----
+  if (body.action === "markApplied") {
+    await env.DB.prepare("UPDATE applications_v2 SET status = 'applied', submitted_at = ?, updated_at = ? WHERE uuid = ?")
+      .bind(new Date().toISOString(), new Date().toISOString(), uuid).run();
+    await resolveActionItems(env, user.id, uuid);
+    return json({ uuid, status: "applied" });
+  }
+
   // ---- approve: only when nothing still needs a human ----
   if (body.action === "approve") {
     const open = await env.DB.prepare(
