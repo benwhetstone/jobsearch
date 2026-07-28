@@ -456,6 +456,11 @@
     function showCat(key) {
       panels.forEach((p, k) => { p.hidden = k !== key; });
       navBtns.forEach((n, k) => n.classList.toggle("active", k === key));
+      // textareas sized while hidden measure a scrollHeight of 0 and stay
+      // collapsed — remeasure now that this panel is actually visible
+      const panel = panels.get(key);
+      if (panel) requestAnimationFrame(() =>
+        panel.querySelectorAll("textarea.autosize").forEach((t) => autoGrow(t)));
       window.scrollTo(0, 0);
     }
     const first = panels.keys().next().value;

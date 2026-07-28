@@ -26,6 +26,7 @@ export interface ProfileForMatch {
   salaryFloor: number | null;   // the user's target base salary
   remoteOnly: boolean;
   locationCity: string | null;
+  locationState: string | null;
 }
 
 export interface MatchResult {
@@ -62,14 +63,30 @@ export function buildProfileForMatch(
   const months = unionMonths(val(values.st_workExperiences));
   // Location lives as two free-text fields (city + state), not one object.
   const profileCity = typeof val(values.city) === "string" ? (val(values.city) as string) : null;
+  const profileState = typeof val(values.state) === "string" ? (val(values.state) as string) : null;
   return {
     hardSkills, softSkills, domains, desiredTitles,
     yearsExperience: Math.round((months / 12) * 10) / 10,
     salaryFloor,
     remoteOnly: !!prefs?.remoteOnly,
     locationCity: prefs?.locationCity || profileCity || null,
+    locationState: profileState,
   };
 }
+
+// US state abbreviation -> full name, so "FL" also matches "Florida".
+const STATE_NAMES: Record<string, string> = {
+  al: "alabama", ak: "alaska", az: "arizona", ar: "arkansas", ca: "california", co: "colorado",
+  ct: "connecticut", de: "delaware", fl: "florida", ga: "georgia", hi: "hawaii", id: "idaho",
+  il: "illinois", in: "indiana", ia: "iowa", ks: "kansas", ky: "kentucky", la: "louisiana",
+  me: "maine", md: "maryland", ma: "massachusetts", mi: "michigan", mn: "minnesota",
+  ms: "mississippi", mo: "missouri", mt: "montana", ne: "nebraska", nv: "nevada",
+  nh: "new hampshire", nj: "new jersey", nm: "new mexico", ny: "new york", nc: "north carolina",
+  nd: "north dakota", oh: "ohio", ok: "oklahoma", or: "oregon", pa: "pennsylvania",
+  ri: "rhode island", sc: "south carolina", sd: "south dakota", tn: "tennessee", tx: "texas",
+  ut: "utah", vt: "vermont", va: "virginia", wa: "washington", wv: "west virginia",
+  wi: "wisconsin", wy: "wyoming", dc: "district of columbia",
+};
 
 // Merge overlapping [start,end) role intervals and total the covered months.
 function unionMonths(exp: unknown): number {
@@ -131,14 +148,14 @@ function scoreSkills(p: ProfileForMatch, hay: string, missing: string[]): number
 
 function scoreExperience(p: ProfileForMatch, job: JobForMatch, missing: string[]): number {
   const jt = norm(job.title);
-  // Tightened: a role whose title shares nothing with the titles you're after
-  // starts from a low base instead of a friendly middle.
-  let s = 0.3;
+  // A role whose title shares nothing with the titles you're after starts
+  // from nearly zero — relevance has to be earned, not assumed.
+  let s = 0.18;
   if (!p.desiredTitles.length) missing.push("desired job titles");
   // strong signal: a desired-title word overlaps the job title
   const titleWords = new Set(p.desiredTitles.flatMap((t) => tokens(t)));
   const overlap = tokens(job.title).filter((w) => titleWords.has(w)).length;
-  if (overlap >= 2) s += 0.55; else if (overlap === 1) s += 0.35;
+  if (overlap >= 2) s += 0.62; else if (overlap === 1) s += 0.42;
   // domain relevance in the body
   const hay = norm(job.title + " " + (job.description || ""));
   if (p.domains.some((d) => hay.includes(norm(d)))) s += 0.1;
@@ -158,8 +175,10 @@ function scoreCompensation(p: ProfileForMatch, job: JobForMatch, missing: string
   const floor = p.salaryFloor;
   const top = job.salaryMax ?? job.salaryMin;
   if (!floor) missing.push("target salary");
-  if (top == null) return { score: 0.85, mult: 0.85, flag: "undisclosed" };
-  if (!floor) return { score: 0.85, mult: 0.9, flag: "undisclosed" };
+  // Undisclosed pay is unknown, not bad — a light touch, not a 15% haircut,
+  // or every posting that hides salary (most of them) reads as a weak match.
+  if (top == null) return { score: 0.85, mult: 0.93, flag: "undisclosed" };
+  if (!floor) return { score: 0.85, mult: 0.95, flag: "undisclosed" };
   if (top >= floor) return { score: 1.0, mult: 1.0, flag: "ok" };
   if (top >= floor * 0.9) return { score: 0.72, mult: 0.6, flag: "negotiation" };
   return { score: clamp01(top / floor) * 0.5, mult: 0.0, flag: "dropped" };
@@ -168,10 +187,24 @@ function scoreCompensation(p: ProfileForMatch, job: JobForMatch, missing: string
 function scoreTerms(p: ProfileForMatch, job: JobForMatch): number {
   const hybrid = /hybrid/.test(norm(job.title + " " + (job.description || "")));
   if (p.remoteOnly) return job.remote ? 1.0 : hybrid ? 0.55 : 0.3;
-  // Not remote-only: value remote, hybrid, and near-home on-site roles all highly.
-  let s = job.remote ? 0.95 : hybrid ? 0.9 : 0.82;
-  if (p.locationCity && job.location && norm(job.location).includes(norm(p.locationCity))) s = Math.max(s, 0.95);
-  return clamp01(s);
+  if (job.remote) return 0.95;
+  if (hybrid && nearHome(p, job.location)) return 0.92;
+  // On-site (or hybrid) is only a real option when it's actually near home. A
+  // Berlin office is not an 82% terms match for someone in Tampa.
+  const loc = norm(job.location || "");
+  if (!loc) return 0.55;                       // location unknown: neutral, not friendly
+  return nearHome(p, job.location) ? 0.88 : 0.15;
+}
+
+function nearHome(p: ProfileForMatch, jobLocation: string | null): boolean {
+  const loc = norm(jobLocation || "");
+  if (!loc) return false;
+  if (p.locationCity && loc.includes(norm(p.locationCity))) return true;
+  const st = norm(p.locationState || "");
+  if (!st) return false;
+  if (new RegExp(`\\b${st.replace(/[.*+?^${}()|[\]\\]/g, "")}\\b`).test(loc)) return true;
+  const full = STATE_NAMES[st];
+  return !!full && loc.includes(full);
 }
 
 // A months-old posting is usually filled or abandoned. Taper rather than cut, so
@@ -202,7 +235,12 @@ export function scoreJob(p: ProfileForMatch, job: JobForMatch): MatchResult {
   // hard pay multiplier from the user's own floor.
   const core = 0.55 * skills + 0.45 * experience;
   const gates = (0.7 + 0.3 * terms) * (0.85 + 0.15 * company);
-  const total = clamp01(core * gates * comp.mult * freshness(job.postedAt));
+  const raw = clamp01(core * gates * comp.mult * freshness(job.postedAt));
+  // Calibration: four multiplied factors compress everything toward the
+  // middle, so a genuinely strong local fit was topping out near 50%. The
+  // curve restores contrast without touching the RANKING (it's monotonic):
+  // strong fits read strong, junk still reads like junk.
+  const total = clamp01(Math.pow(raw, 0.82) * 1.06);
 
   return { total, skills, experience, compensation: comp.score, terms, company, compFlag: comp.flag, missing };
 }

@@ -93,9 +93,14 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
     return { job: j, uuid: `${j.source}:${j.externalId}`, scam: scamScore(j), match: scoreJob(profile, jm) };
   });
 
-  // keep the strongest, drop obvious scams and hard pay-floor rejects
+  // keep the strongest, drop obvious scams, hard pay-floor rejects, and
+  // on-site roles nowhere near the user (terms <= 0.2 means a geographic
+  // impossibility, not a preference mismatch)
   const keep = scored
-    .filter((s) => s.scam < 2 && s.match.compFlag !== "dropped")
+    .filter((s) => s.scam < 2 && s.match.compFlag !== "dropped" && s.match.terms > 0.2)
+    // relevance floor: a job with neither a skills connection nor a title
+    // connection is noise, no matter how well it pays
+    .filter((s) => s.match.skills >= 0.25 || s.match.experience >= 0.5)
     .sort((a, b) => b.match.total - a.match.total)
     .slice(0, MAX_MATCHES);
 
