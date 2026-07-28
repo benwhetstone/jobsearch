@@ -148,7 +148,9 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
   // globalwork's model: the feed says up front which jobs autopilot can file
   // directly (hasModernAutoApply). Resolve each new company's board against
   // the supported ATSs; hits and misses both cache in ats_boards.
-  await tagAutoApply(env, keep.map((s) => ({ uuid: s.uuid, company: s.job.company })));
+  await tagAutoApply(env, keep.map((s) => ({
+    uuid: s.uuid, company: s.job.company, title: s.job.title, source: s.job.source, url: s.job.url,
+  })));
 
   return {
     ok: true,
@@ -161,30 +163,57 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
   };
 }
 
-// Resolve which of these jobs autopilot can file directly. Bounded: at most
-// 20 uncached company lookups per sweep so a big result set can't stall it —
-// the rest resolve on the next sweep (ats_boards caches hits AND misses).
-async function tagAutoApply(env: Env, jobs: { uuid: string; company: string | null }[]): Promise<void> {
-  const { resolveBoard } = await import("./_ats");
-  const seen = new Map<string, { ats: string | null; token: string | null }>();
+// Resolve which of these jobs autopilot can file directly, and rewrite
+// aggregator links to the employer's REAL application page when the posting
+// is found on their board. Bounded: at most 20 uncached company lookups per
+// sweep — the rest resolve next sweep (ats_boards caches hits AND misses).
+async function tagAutoApply(
+  env: Env,
+  jobs: { uuid: string; company: string | null; title: string; source: string; url: string }[]
+): Promise<void> {
+  const { resolveBoard, boardJobs, refFromUrl } = await import("./_ats");
+  const normT = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+  const boards = new Map<string, { ats: string | null; token: string | null; postings: any[] }>();
   let lookups = 0;
   const updates: D1PreparedStatement[] = [];
+
   for (const j of jobs) {
+    // came straight off a board: already the real application page
+    if (j.source === "greenhouse" || j.source === "lever") {
+      const ref = refFromUrl(j.url);
+      updates.push(env.DB.prepare("UPDATE jobs SET auto_apply = 1, ats = ?, ats_token = ?, ats_job_id = ? WHERE uuid = ?")
+        .bind(j.source, ref?.token ?? null, ref?.jobId ?? null, j.uuid));
+      continue;
+    }
     if (!j.company) continue;
     const key = j.company.toLowerCase();
-    let hit = seen.get(key);
-    if (!hit) {
+    let b = boards.get(key);
+    if (!b) {
       if (lookups >= 20) continue;
       lookups++;
       try {
-        const board = await resolveBoard(env, j.company);
-        hit = { ats: board?.ats ?? null, token: board?.token ?? null };
-      } catch { hit = { ats: null, token: null }; }
-      seen.set(key, hit);
+        const ref = await resolveBoard(env, j.company);
+        const supported = ref && ["greenhouse", "lever"].includes(ref.ats);
+        b = { ats: ref?.ats ?? null, token: ref?.token ?? null,
+              postings: supported ? await boardJobs(ref!, "").catch(() => []) : [] };
+      } catch { b = { ats: null, token: null, postings: [] }; }
+      boards.set(key, b);
     }
-    const supported = hit.ats && ["greenhouse", "lever", "ashby"].includes(hit.ats) ? 1 : 0;
-    updates.push(env.DB.prepare("UPDATE jobs SET auto_apply = ?, ats = ?, ats_token = ? WHERE uuid = ?")
-      .bind(supported, hit.ats, hit.token, j.uuid));
+    // find THIS posting on the company's board so the link is the real one
+    const target = normT(j.title);
+    const found = b.postings.find((p: any) => {
+      const t = normT(p.title);
+      return t === target || t.includes(target) || target.includes(t);
+    });
+    if (found) {
+      const ref = refFromUrl(found.url);
+      updates.push(env.DB.prepare(
+        "UPDATE jobs SET auto_apply = 1, ats = ?, ats_token = ?, ats_job_id = ?, url = ?, apply_url = ? WHERE uuid = ?"
+      ).bind(b.ats, b.token, ref?.jobId ?? found.externalId ?? null, found.url, found.applyUrl || found.url, j.uuid));
+    } else {
+      updates.push(env.DB.prepare("UPDATE jobs SET auto_apply = 0, ats = ?, ats_token = ? WHERE uuid = ?")
+        .bind(b.ats, b.token, j.uuid));
+    }
   }
   for (let i = 0; i < updates.length; i += 50) await env.DB.batch(updates.slice(i, i + 50));
 }

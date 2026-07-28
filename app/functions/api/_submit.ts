@@ -71,10 +71,15 @@ export async function submitToAts(env: Env, userId: string, appUuid: string): Pr
     : null;
   const safe = contact.name.replace(/\s+/g, "-");
 
+  // The application is filed from the relay address (globalwork's trick): the
+  // résumé PDF keeps the real contact details, but the ATS gets the relay so
+  // every reply routes into the platform inbox.
+  const relayEmail = app.relay_slug ? `apply-${app.relay_slug}@benwhetstone.info` : contact.email;
+
   try {
     const res = app.ats === "greenhouse"
-      ? await postGreenhouse(app, fields, contact, cvPdf, coverPdf, safe)
-      : await postLever(app, fields, contact, cvPdf, coverPdf, safe);
+      ? await postGreenhouse(app, fields, { ...contact, email: relayEmail }, cvPdf, coverPdf, safe)
+      : await postLever(app, fields, { ...contact, email: relayEmail }, cvPdf, coverPdf, safe);
     if (res.ok) {
       await env.DB.prepare(
         "UPDATE applications_v2 SET status = 'applied', submitted_at = ?, need_manual_apply = 0, updated_at = ? WHERE uuid = ?"

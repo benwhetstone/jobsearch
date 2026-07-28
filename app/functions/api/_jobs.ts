@@ -184,31 +184,19 @@ async function jsearch(env: Env, q: SearchQuery): Promise<RawJob[]> {
   }));
 }
 
-// ---- Jooble: broad aggregator (needs key) -----------------------------------
-async function jooble(env: Env, q: SearchQuery): Promise<RawJob[]> {
-  if (!env.JOOBLE_KEY) return [];
-  const data = await safeFetch(`https://jooble.org/api/${env.JOOBLE_KEY}`, {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      keywords: q.keywords, location: q.location || "",
-      ...(q.location && q.radiusMi ? { radius: String(Math.round(q.radiusMi * MI_TO_KM)) } : {}), // Jooble radius is km
-    }),
-  });
-  if (!Array.isArray(data?.jobs)) return [];
-  return data.jobs.slice(0, 40).map((r: any): RawJob => ({
-    source: "jooble",
-    externalId: String(r.id || r.link),
-    title: r.title || "",
-    company: r.company || null,
-    location: r.location || null,
-    remote: /remote/i.test((r.title || "") + " " + (r.snippet || "")),
-    salaryMin: null, salaryMax: null, currency: null,
-    url: r.link,
-    applyUrl: r.link,
-    category: null,
-    description: (r.snippet || "").replace(/<[^>]+>/g, " ").slice(0, 2000),
-    postedAt: r.updated || null,
-  }));
+// ---- ATS-direct: postings pulled straight from Greenhouse/Lever boards ------
+// (Jooble was dropped: its links bounce through interstitials that can never
+// be machine-filed. These jobs link to the employer's REAL application page
+// and are 100% auto-applyable.) Boards accumulate in ats_boards as sweeps
+// resolve companies, so this source gets richer every day.
+async function atsDirect(env: Env, q: SearchQuery): Promise<RawJob[]> {
+  const { boardJobs } = await import("./_ats");
+  const rows = await env.DB.prepare(
+    "SELECT ats, token FROM ats_boards WHERE ats IN ('greenhouse','lever') AND token IS NOT NULL ORDER BY checked_at DESC LIMIT 15"
+  ).all<{ ats: string; token: string }>();
+  const lists = await Promise.all((rows.results ?? []).map((r) =>
+    boardJobs({ ats: r.ats as any, token: r.token }, q.keywords).catch(() => [] as RawJob[])));
+  return lists.flat().slice(0, 80);
 }
 
 // ---- Careerjet: broad public search across the open web (needs affid) --------
@@ -352,7 +340,7 @@ export async function fetchAllSources(env: Env, q: SearchQuery): Promise<{ jobs:
     ["remotive", remotive(env, q)],
     ["arbeitnow", arbeitnow(env, q)],
     ["jsearch", jsearch(env, q)],
-    ["jooble", jooble(env, q)],
+    ["ats", atsDirect(env, q)],
     ["careerjet", careerjet(env, q)],
     ["findwork", findwork(env, q)],
     ["usajobs", usajobs(env, q)],

@@ -114,6 +114,12 @@ export async function prepare(env: Env, user: CtxUser, appUuid: string, job: Job
   const values: Record<string, string | null> = {};
   for (const v of vals.results ?? []) values[v.field_key] = v.value_json;
 
+  // globalwork's one architectural trick, adopted: the application is filed
+  // FROM the relay address, so every recruiter reply lands in the platform
+  // inbox, gets classified, and advances this application's status.
+  const relaySlug = appUuid.replace(/-/g, "").slice(0, 10);
+  values.email = JSON.stringify(`apply-${relaySlug}@benwhetstone.info`);
+
   // 3. tailor documents + run the gate. In bulk mode the order is sequential
   //    and a gate REJECT stops the spend right there: no cover letter, no form
   //    fill, no LLM answers for a job not worth submitting to.
@@ -189,9 +195,6 @@ export async function prepare(env: Env, user: CtxUser, appUuid: string, job: Job
                : gate.verdict === "REVISE" ? "actionRequired"
                : "readyToApply";
 
-  // Vanity relay address for this application: everything the employer sends to
-  // it lands in the inbox, classified, and linked back to this application.
-  const relaySlug = appUuid.replace(/-/g, "").slice(0, 10);
   await env.DB.prepare(
     `UPDATE applications_v2 SET ats = ?, ats_token = ?, ats_job_id = ?, supported_ats = ?, need_manual_apply = ?,
             status = ?, cv_uuid = ?, cover_letter_uuid = ?, gate_verdict = ?, gate_report = ?, relay_slug = ?, updated_at = ?

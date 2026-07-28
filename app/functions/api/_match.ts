@@ -231,16 +231,11 @@ export function scoreJob(p: ProfileForMatch, job: JobForMatch): MatchResult {
   const terms = scoreTerms(p, job);
   const company = 0.8; // neutral until we add employer-reputation data
 
-  // Ben's shape, generalized: skills/experience core, soft multiplicative gates,
-  // hard pay multiplier from the user's own floor.
-  const core = 0.55 * skills + 0.45 * experience;
-  const gates = (0.7 + 0.3 * terms) * (0.85 + 0.15 * company);
-  const raw = clamp01(core * gates * comp.mult * freshness(job.postedAt));
-  // Calibration: four multiplied factors compress everything toward the
-  // middle, so a genuinely strong local fit was topping out near 50%. The
-  // curve restores contrast without touching the RANKING (it's monotonic):
-  // strong fits read strong, junk still reads like junk.
-  const total = clamp01(Math.pow(raw, 0.82) * 1.06);
+  // globalwork's EXACT formula, fitted to 16 live samples in the teardown
+  // (README): totalScore = (0.55*skills + 0.45*experience) * (0.91 + 0.09*comp).
+  // Location/terms is a FILTER (runSweep drops geographic impossibilities),
+  // not a multiplier; freshness and company never touch the number.
+  const total = clamp01((0.55 * skills + 0.45 * experience) * (0.91 + 0.09 * comp.score));
 
   return { total, skills, experience, compensation: comp.score, terms, company, compFlag: comp.flag, missing };
 }
