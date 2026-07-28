@@ -275,8 +275,15 @@
     return container;
   }
 
+  // Acronyms that must stay uppercase in labels (country codes, regions, terms).
+  const ACRONYMS = new Set(["US","EU","UK","USA","CAN","GBR","MEX","LATAM","GED","OPT","CPT",
+    "KPI","OKR","OTE","PTO","W2","IC","VP","HR","IT"]);
   function pretty(v) {
-    return String(v).replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+    return String(v).split("_").map((w) => {
+      if (ACRONYMS.has(w.toUpperCase())) return w.toUpperCase();
+      if (/^\d+$/.test(w)) return w;
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    }).join(" ");
   }
 
   // ---- render whole profile ---------------------------------------------
