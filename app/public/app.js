@@ -79,6 +79,7 @@
       b.classList.toggle("active", b.dataset.view === view);
     });
     if (view === "matches" && !MATCHES_LOADED) loadMatches();
+    if (view === "applications") loadApplications();
     if (view === "profile" && !MODEL) loadProfile();
     window.scrollTo(0, 0);
   }
@@ -279,6 +280,20 @@
       { key: "degree", label: "Degree or certificate" }, { key: "school", label: "School" },
       { key: "fieldOfStudy", label: "Field of study" }, { key: "city", label: "Location" },
       { key: "startDate", label: "Start (year)" }, { key: "endDate", label: "Finished (year)" },
+    ] },
+    // Résumé & Voice block
+    employerDescriptions: { kind: "records", singular: "employer description", fields: [
+      { key: "employer", label: "Employer" },
+      { key: "description", label: "Exact wording to use", type: "textarea" },
+    ] },
+    signatureAchievements: { kind: "records", singular: "achievement", fields: [
+      { key: "result", label: "The result", type: "textarea" },
+      { key: "metric", label: "The number that proves it" },
+      { key: "employer", label: "Where it happened" },
+    ] },
+    metricPhrasing: { kind: "records", singular: "phrasing rule", fields: [
+      { key: "number", label: "The number" },
+      { key: "phrasing", label: "How it must be phrased", type: "textarea" },
     ] },
   };
 
@@ -565,9 +580,27 @@
     const actions = el("div", "job-actions");
     const why = el("button", "btn", "Why this score");
     const skip = el("button", "btn ghost", "Not interested");
-    const open = el("a", "btn primary", "View & apply");
-    open.href = j.applyUrl || j.url; open.target = "_blank"; open.rel = "noopener noreferrer";
-    actions.appendChild(why); actions.appendChild(skip); actions.appendChild(open);
+    const view = el("a", "btn ghost", "View posting");
+    view.href = j.url; view.target = "_blank"; view.rel = "noopener noreferrer";
+    // Apply = start autopilot: tailor the résumé and cover letter, run the
+    // hiring-manager gate, mirror the employer's real form and prefill it.
+    // It never opens the posting and it never submits anything.
+    const apply = el("button", "btn primary", "Apply");
+    apply.addEventListener("click", async () => {
+      apply.disabled = true; apply.textContent = "Preparing…";
+      toast("Tailoring your documents and mirroring the application…", 4000);
+      try {
+        const r = await api("/applications", { method: "POST", body: JSON.stringify({ jobUuid: m.jobUuid }) });
+        card.remove();
+        switchView("applications");
+        await loadApplications(true);
+        if (r.data.uuid) openApplication(r.data.uuid);
+      } catch (e) {
+        apply.disabled = false; apply.textContent = "Apply";
+        toast("Could not start: " + e.message, 3600);
+      }
+    });
+    actions.appendChild(why); actions.appendChild(skip); actions.appendChild(view); actions.appendChild(apply);
     mid.appendChild(actions);
     card.appendChild(mid);
 
@@ -655,15 +688,38 @@
     };
   }
 
+  let SWEEP_RUNNING = false;
   async function loadMatches() {
     MATCHES_LOADED = true;
     await loadSearchPrefs();
     try {
       const r = await api("/matches");
-      renderMatches(r.data.matches || []);
+      const list = r.data.matches || [];
+      if (!list.length && SWEEP_RUNNING) {
+        // The daily sweep kicked off at login; matches are on their way.
+        const box = $("#matchList"); box.innerHTML = "";
+        const p = el("div", "card placeholder");
+        p.innerHTML = '<div class="ph-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>' +
+          "<h3>Finding today's matches…</h3><p>We're sweeping the boards for you right now. This takes about half a minute.</p>";
+        box.appendChild(p);
+        pollSweep(0);
+        return;
+      }
+      renderMatches(list);
     } catch (e) {
       if (e.message !== "unauthorized") renderMatches([]);
     }
+  }
+  function pollSweep(tries) {
+    if (tries > 15) { SWEEP_RUNNING = false; renderMatches([]); return; }
+    setTimeout(async () => {
+      try {
+        const r = await api("/matches");
+        const list = r.data.matches || [];
+        if (list.length) { SWEEP_RUNNING = false; renderMatches(list); toast(`${list.length} matches waiting for you`, 3000); }
+        else pollSweep(tries + 1);
+      } catch { SWEEP_RUNNING = false; }
+    }, 4000);
   }
 
   $("#btnRefresh").addEventListener("click", async () => {
@@ -690,6 +746,262 @@
       btn.disabled = false; btn.textContent = "Find jobs";
     }
   });
+
+  // ======================= APPLICATIONS ====================================
+  const STATUS_LABEL = {
+    preparing: "Preparing", actionRequired: "Action required", readyToApply: "Ready to apply",
+    approved: "Approved", applied: "Applied", failed: "Failed",
+  };
+  const STATUS_CLASS = {
+    preparing: "plain", actionRequired: "amber", readyToApply: "green", approved: "green",
+    applied: "green", failed: "amber",
+  };
+
+  async function loadApplications(force) {
+    const box = $("#appList");
+    try {
+      const r = await api("/applications");
+      const apps = r.data.applications || [];
+      const c = $("#cntApps");
+      if (c) { c.textContent = apps.length; c.hidden = apps.length === 0; }
+      renderApplications(apps, r.data.counts || {});
+    } catch (e) {
+      if (e.message !== "unauthorized") { box.innerHTML = ""; box.appendChild(el("div", "banner bad", e.message)); }
+    }
+  }
+
+  function renderApplications(apps, counts) {
+    const box = $("#appList"); box.innerHTML = "";
+    const stats = $("#appStats");
+    if (stats) {
+      stats.innerHTML = ""; stats.hidden = false;
+      [["actionRequired", "Action required", "amber"], ["readyToApply", "Ready to apply", ""],
+       ["approved", "Approved", ""], ["applied", "Applied", "solid"]].forEach(([k, lbl, cls]) => {
+        const s = el("div", "stat" + (cls ? " " + cls : ""));
+        s.appendChild(el("div", "label", lbl));
+        s.appendChild(el("div", "num", String(counts[k] || 0)));
+        stats.appendChild(s);
+      });
+    }
+    if (!apps.length) {
+      const p = el("div", "card placeholder");
+      p.innerHTML =
+        '<div class="ph-icon"><svg viewBox="0 0 24 24"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></div>' +
+        "<h3>No applications yet</h3><p>Hit <strong>Apply</strong> on a job. We tailor the résumé and cover letter, run the hiring-manager check, and prefill the employer's real application for your approval.</p>";
+      box.appendChild(p);
+      return;
+    }
+    apps.forEach((a) => {
+      const card = el("article", "card job appcard");
+      const top = el("div", "job-top");
+      const [bg, fg] = avaFor(a.job.company);
+      const ava = el("span", "job-ava", (a.job.company || "?").trim()[0].toUpperCase());
+      ava.style.background = bg; ava.style.color = fg;
+      top.appendChild(ava);
+      const id = el("div", "job-id");
+      id.appendChild(el("h3", null, a.job.title));
+      id.appendChild(el("div", "co", a.job.company || "Company not listed"));
+      top.appendChild(id);
+      if (a.matchScore != null) {
+        const sc = el("div", "job-score score-" + scoreClass(a.matchScore));
+        sc.appendChild(el("b", null, a.matchScore + "%")); sc.appendChild(el("span", null, "match"));
+        top.appendChild(sc);
+      }
+      card.appendChild(top);
+
+      const mid = el("div", "job-mid");
+      const chips = el("div", "chips");
+      chips.appendChild(chip(STATUS_LABEL[a.status] || a.status, null, STATUS_CLASS[a.status] || "plain"));
+      if (a.ats) chips.appendChild(chip(a.ats, null, "plain"));
+      if (a.needManualApply) chips.appendChild(chip("Needs manual apply", null, "amber"));
+      if (a.gateVerdict) chips.appendChild(chip("Gate: " + a.gateVerdict, null, a.gateVerdict === "PASS" ? "green" : "amber"));
+      if (a.fields.needsHuman > 0) chips.appendChild(chip(`${a.fields.needsHuman} question${a.fields.needsHuman === 1 ? "" : "s"} for you`, null, "amber"));
+      mid.appendChild(chips);
+      const actions = el("div", "job-actions");
+      const openBtn = el("button", "btn primary", a.status === "actionRequired" ? "Finish it" : "Review");
+      openBtn.addEventListener("click", () => openApplication(a.uuid));
+      actions.appendChild(openBtn);
+      mid.appendChild(actions);
+      card.appendChild(mid);
+      if (a.prepareError) card.appendChild(el("p", "job-snip err", a.prepareError));
+      box.appendChild(card);
+    });
+  }
+
+  // ---- detail: résumé redline, cover letter, mirrored form ------------------
+  async function openApplication(uuid) {
+    switchView("applications");
+    const box = $("#appList");
+    const stats = $("#appStats"); if (stats) stats.hidden = true;
+    box.innerHTML = "";
+    box.appendChild(el("div", "muted", "Loading application…"));
+    let d;
+    try { d = (await api(`/applications/${uuid}`)).data; }
+    catch (e) { box.innerHTML = ""; box.appendChild(el("div", "banner bad", e.message)); return; }
+    box.innerHTML = "";
+
+    const back = el("button", "btn ghost", "← All applications");
+    back.addEventListener("click", () => loadApplications(true));
+    box.appendChild(back);
+
+    const head = el("div", "card job");
+    const top = el("div", "job-top");
+    const id = el("div", "job-id");
+    id.appendChild(el("h3", null, d.job.title));
+    id.appendChild(el("div", "co", d.job.company || ""));
+    top.appendChild(id);
+    if (d.matchScore != null) {
+      const sc = el("div", "job-score score-" + scoreClass(d.matchScore));
+      sc.appendChild(el("b", null, d.matchScore + "%")); sc.appendChild(el("span", null, "match"));
+      top.appendChild(sc);
+    }
+    head.appendChild(top);
+    const chips = el("div", "chips"); chips.style.marginTop = "10px";
+    chips.appendChild(chip(STATUS_LABEL[d.status] || d.status, null, STATUS_CLASS[d.status] || "plain"));
+    if (d.ats) chips.appendChild(chip("Real application: " + d.ats, null, "green"));
+    else chips.appendChild(chip("No supported ATS found: manual submit", null, "amber"));
+    if (d.gateVerdict) chips.appendChild(chip("Hiring-manager gate: " + d.gateVerdict, null, d.gateVerdict === "PASS" ? "green" : "amber"));
+    head.appendChild(chips);
+    if (d.gateNotes && d.gateNotes.length) {
+      const gb = el("div", "banner " + (d.gateVerdict === "PASS" ? "info" : "warn"));
+      gb.style.marginTop = "10px"; gb.style.marginBottom = "0";
+      gb.textContent = d.gateNotes.join(" · ");
+      head.appendChild(gb);
+    }
+    box.appendChild(head);
+
+    // tabs
+    const tabs = el("div", "tabs");
+    const panels = {};
+    const needBadge = d.fields.filter((f) => f.fillStatus === "needs_human").length;
+    [["resume", "Résumé"], ["cover", "Cover letter"],
+     ["form", "Apply form" + (needBadge ? ` (${needBadge})` : "")]].forEach(([k, lbl], i) => {
+      const b = el("button", "tab" + (i === 0 ? " active" : ""), lbl);
+      b.addEventListener("click", () => {
+        tabs.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+        b.classList.add("active");
+        Object.entries(panels).forEach(([pk, p]) => (p.hidden = pk !== k));
+      });
+      tabs.appendChild(b);
+    });
+    box.appendChild(tabs);
+
+    // résumé panel: redline against the base
+    const pr = el("div", "card block-body");
+    if (d.cv?.diff) {
+      const legend = el("p", "muted", "Tracked changes against your base résumé: ");
+      legend.appendChild(el("ins", null, "added"));
+      legend.appendChild(document.createTextNode(" / "));
+      legend.appendChild(el("del", null, "removed"));
+      pr.appendChild(legend);
+      const body = el("div", "redline");
+      d.cv.diff.forEach((r) => {
+        const node = r.op === "add" ? el("ins", null, r.text) : r.op === "del" ? el("del", null, r.text) : document.createTextNode(r.text);
+        body.appendChild(node);
+      });
+      pr.appendChild(body);
+    } else if (d.cv?.content) {
+      const c = d.cv.content;
+      pr.appendChild(el("p", null, c.summary));
+      c.sections.forEach((s) => {
+        pr.appendChild(el("h3", null, s.heading));
+        const ul = el("ul"); s.bullets.forEach((b) => ul.appendChild(el("li", null, b))); pr.appendChild(ul);
+      });
+      pr.appendChild(el("p", "muted", "Skills: " + c.skills.join(", ")));
+    } else pr.appendChild(el("p", "muted", "No résumé was generated."));
+    if (d.cv?.verifyReport && !d.cv.verifyPassed) {
+      const vb = el("div", "banner bad");
+      vb.textContent = "Blocked by the quality gate: " + (d.cv.verifyReport.failures || []).join(" · ");
+      pr.insertBefore(vb, pr.firstChild);
+    }
+    panels.resume = pr; box.appendChild(pr);
+
+    // cover letter panel
+    const pc = el("div", "card block-body"); pc.hidden = true;
+    if (d.coverLetter?.content) {
+      const c = d.coverLetter.content;
+      pc.appendChild(el("p", null, c.greeting));
+      c.paragraphs.forEach((p) => pc.appendChild(el("p", null, p)));
+      pc.appendChild(el("p", null, c.closing));
+    } else pc.appendChild(el("p", "muted", "No cover letter was generated."));
+    panels.cover = pc; box.appendChild(pc);
+
+    // form panel: the employer's real questions, prefilled
+    const pf = el("div", "card block-body"); pf.hidden = true;
+    if (!d.fields.length) {
+      pf.appendChild(el("p", "muted", d.ats
+        ? "The form could not be mirrored for this posting."
+        : "This employer's system isn't one we can mirror yet, so this one is a manual submit. Your tailored documents above are ready to use."));
+      if (d.job.applyUrl) {
+        const a = el("a", "btn", "Open the employer's application");
+        a.href = d.job.applyUrl; a.target = "_blank"; a.rel = "noopener noreferrer";
+        pf.appendChild(a);
+      }
+    } else {
+      const pending = new Map();
+      d.fields.forEach((f) => {
+        const row = el("div", "field");
+        const lab = el("label", null, f.label);
+        if (f.required) lab.appendChild(el("span", "req", "*"));
+        row.appendChild(lab);
+        const src = f.fillSource ? ({ enum: "matched to their options", llm: "written for you", human: "your answer" }[f.fillSource] || "from your profile") : null;
+
+        if (f.fillStatus === "needs_human") {
+          let input;
+          if (f.options.length) {
+            input = el("select");
+            input.appendChild(new Option("— choose —", ""));
+            f.options.forEach((o) => input.appendChild(new Option(o.label, o.value)));
+          } else {
+            input = el(f.type === "textarea" ? "textarea" : "input");
+            if (input.tagName === "INPUT") input.type = "text";
+          }
+          input.addEventListener("change", () => pending.set(f.uuid, input.value));
+          row.appendChild(input);
+          row.appendChild(el("div", "help err", "Needs your answer"));
+        } else if (f.type === "file") {
+          row.appendChild(el("div", "help", "Your tailored résumé is attached at submit time."));
+        } else {
+          const shown = f.options.length
+            ? (f.options.find((o) => o.value === f.value)?.label ?? f.value ?? "")
+            : (f.value ?? "");
+          const input = el(f.type === "textarea" ? "textarea" : "input");
+          if (input.tagName === "INPUT") input.type = "text";
+          input.value = shown; input.readOnly = true;
+          row.appendChild(input);
+          if (src) row.appendChild(el("div", "help", src));
+        }
+        pf.appendChild(row);
+      });
+
+      const bar = el("div", "job-actions"); bar.style.marginTop = "16px";
+      const save = el("button", "btn", "Save answers");
+      save.addEventListener("click", async () => {
+        if (!pending.size) { toast("Nothing to save yet"); return; }
+        const answers = [...pending.entries()].map(([fieldUuid, value]) => ({ fieldUuid, value }));
+        try {
+          await api(`/applications/${uuid}`, { method: "PATCH", body: JSON.stringify({ answers }) });
+          toast("Saved"); openApplication(uuid);
+        } catch (e) { toast(e.message, 3000); }
+      });
+      const approve = el("button", "btn primary", "Approve application");
+      approve.addEventListener("click", async () => {
+        try {
+          if (pending.size) {
+            const answers = [...pending.entries()].map(([fieldUuid, value]) => ({ fieldUuid, value }));
+            await api(`/applications/${uuid}`, { method: "PATCH", body: JSON.stringify({ answers }) });
+          }
+          await api(`/applications/${uuid}`, { method: "PATCH", body: JSON.stringify({ action: "approve" }) });
+          toast("Approved. It will be submitted from your desktop session.", 4000);
+          loadApplications(true);
+        } catch (e) { toast(e.message, 4000); }
+      });
+      bar.appendChild(save); bar.appendChild(approve);
+      pf.appendChild(bar);
+      pf.appendChild(el("p", "help", "Approve locks your answers. The browser step then replays them into the employer's page and stops before final submit for your confirmation. Nothing is ever sent without you."));
+    }
+    panels.form = pf; box.appendChild(pf);
+  }
 
   // ---- résumé upload ------------------------------------------------------
   $("#btnResume").addEventListener("click", () => $("#resumeFile").click());
@@ -719,6 +1031,7 @@
       const me = await api("/auth/me");
       if (!me.data.user) { showAuth(); return; }
       const u = me.data.user;
+      SWEEP_RUNNING = !!me.data.sweepStarted;
       $("#userName").textContent = u.name || u.email;
       $("#userEmail").textContent = u.name ? u.email : "";
       $("#userAva").textContent = (u.name || u.email || "?").trim()[0];

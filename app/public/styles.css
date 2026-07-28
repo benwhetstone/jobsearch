@@ -273,3 +273,18 @@ a.btn.primary, a.btn.primary:hover { color: #fff; }
   .tabbar button svg { width: 20px; height: 20px; }
   .tabbar button.active { color: var(--accent); }
 }
+
+/* ---------- Application detail: tabs, redline, status ---------------------- */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 4px 0 12px; }
+.tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px;
+  font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.redline { white-space: pre-wrap; line-height: 1.7; font-size: 13.5px; }
+.redline ins, p ins { background: var(--success-weak); color: #15803d; text-decoration: none;
+  border-radius: 3px; padding: 0 2px; }
+.redline del, p del { background: var(--critical-weak); color: #a81f1f; border-radius: 3px; padding: 0 2px; }
+.appcard { cursor: default; }
+.block-body h3 { margin: 16px 0 6px; font-size: 14px; }
+.block-body ul { margin: 4px 0 10px; padding-left: 20px; }
+.block-body ul li { margin: 3px 0; font-size: 13.5px; }

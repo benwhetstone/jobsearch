@@ -23,13 +23,27 @@ const OBJ_HINTS: Record<string, string> = {
   st_professionalCredential: 'array of {"name": string}',
   st_workExperiences: 'array of {"title","employer","city","startDate":"YYYY-MM or YYYY","endDate":"YYYY-MM/blank if current","description"}',
   st_education: 'array of {"degree","school","fieldOfStudy","city","startDate":"year","endDate":"year"}',
+  signatureAchievements: 'array of {"result": string, "metric": string, "employer": string} — only quantified wins actually stated in the résumé',
+  employerDescriptions: 'array of {"employer": string, "description": string} — only where the résumé itself explains what a company does',
 };
 
-// Fields we ask the model to extract (contact + professional history/skills).
+// Fields we ask the model to extract (contact + professional history/skills, plus
+// the parts of Résumé & Voice a résumé actually evidences).
 // Never EEO, eligibility, or preferences — those aren't on a résumé.
+// Never tone, avoid-words or template either: a résumé shows what someone has
+// done, not how they want future documents to sound. Those stay for the user.
+const VOICE_FROM_RESUME = new Set([
+  "professionalHeadline",    // a summary/objective line, if present
+  "signatureAchievements",   // quantified wins already written down
+  "employerDescriptions",    // how lesser-known employers are described
+  "careerNarrative",         // an explicit career-change framing, if present
+  "proudestWork",
+]);
+
 function extractable(f: FieldDef): boolean {
   if (f.block_key === "personalDetails") return f.category_key === "personalInfo" || f.category_key === "digitalPresence";
   if (f.block_key === "professionalProfile") return true;
+  if (f.block_key === "resumeVoice") return VOICE_FROM_RESUME.has(f.field_key);
   return false;
 }
 
