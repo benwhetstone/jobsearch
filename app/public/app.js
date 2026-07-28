@@ -506,7 +506,16 @@
   }
   // decode entities that older stored descriptions still carry
   const DECODE_TA = document.createElement("textarea");
-  function decodeEnt(str) { DECODE_TA.innerHTML = String(str || ""); return DECODE_TA.value; }
+  function decodeEnt(str) {
+    // strip HTML the boards ship (older stored jobs still carry tags), keep
+    // paragraph/list structure as line breaks, then decode entities
+    const s = String(str || "")
+      .replace(/<\s*(?:br|\/p|\/div|\/h[1-6]|\/ul|\/ol)\s*\/?\s*>/gi, "\n")
+      .replace(/<\s*li[^>]*>/gi, "\n• ")
+      .replace(/<[^>]+>/g, " ");
+    DECODE_TA.innerHTML = s;
+    return DECODE_TA.value.replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  }
   const svg = (paths) =>
     `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
   const ICON = {
@@ -747,6 +756,19 @@
   }
   $("#tabForYou").addEventListener("click", () => setJobsTab("auto"));
   $("#tabSearch").addEventListener("click", () => setJobsTab("search"));
+
+  // re-run the daily sweep on demand
+  const resweep = $("#btnResweep");
+  if (resweep) resweep.addEventListener("click", async () => {
+    resweep.disabled = true; resweep.textContent = "Sweeping…";
+    SWEEP_RUNNING = true; refreshStrip();
+    try {
+      const r = await api("/jobs/refresh", { method: "POST", body: JSON.stringify({ origin: "auto" }) });
+      toast(`Swept the boards: ${r.data.matched} matches from ${r.data.fetched} postings.`, 3200);
+      await loadMatches();
+    } catch (e) { toast(e.message, 3600); }
+    finally { SWEEP_RUNNING = false; resweep.disabled = false; resweep.textContent = "Refresh"; refreshStrip(); }
+  });
 
   function updateBulkBar() {
     const bar = $("#bulkbar");

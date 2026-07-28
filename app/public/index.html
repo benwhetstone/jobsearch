@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Job Search</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="stylesheet" href="/styles.css?v=2026072816" />
+  <link rel="stylesheet" href="/styles.css?v=2026072818" />
 </head>
 <body>
   <!-- Auth (login / signup) -->
@@ -81,7 +81,13 @@
             <button class="tab" id="tabSearch">Search jobs</button>
           </div>
           <div class="page-head" id="jobsHeadAuto">
-            <h1>Jobs For You</h1>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+              <h1>Jobs For You</h1>
+              <button id="btnResweep" class="btn" title="Sweep the boards again right now">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                Refresh
+              </button>
+            </div>
             <p>Found for you automatically: every morning we sweep the boards, score fresh postings against your profile and experience, and line up the best fits here. Check the ones you want and hit Start.</p>
           </div>
           <div class="page-head" id="jobsHeadSearch" hidden>
@@ -213,6 +219,6 @@
     <div id="toast" class="toast" hidden></div>
   </div>
 
-  <script src="/app.js?v=2026072816"></script>
+  <script src="/app.js?v=2026072818"></script>
 </body>
 </html>

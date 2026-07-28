@@ -330,6 +330,11 @@ const ENTITIES: Record<string, string> = {
 export function decodeEntities(text: string | null | undefined): string {
   if (!text) return "";
   return text
+    // some boards (arbeitnow especially) ship raw HTML: turn block ends into
+    // real line breaks, list items into bullets, then strip every other tag
+    .replace(/<\s*(?:br|\/p|\/div|\/h[1-6]|\/ul|\/ol)\s*\/?\s*>/gi, "\n")
+    .replace(/<\s*li[^>]*>/gi, "\n• ")
+    .replace(/<[^>]+>/g, " ")
     .replace(/&[a-z]+;|&#x?[0-9a-f]+;/gi, (m) => {
       const low = m.toLowerCase();
       if (ENTITIES[low] != null) return ENTITIES[low];
@@ -337,7 +342,7 @@ export function decodeEntities(text: string | null | undefined): string {
       if (num) { const code = parseInt(num[1], low.startsWith("&#x") ? 16 : 10); return code ? String.fromCodePoint(code) : m; }
       return m;
     })
-    .replace(/\s{2,}/g, " ").trim();
+    .replace(/[ \t]{2,}/g, " ").replace(/\s*\n\s*/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 // Run every configured connector, in parallel. Keyless ones always run.
