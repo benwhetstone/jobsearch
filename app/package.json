@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260702.1",
+    "pdfjs-dist": "^3.11.174",
     "playwright-core": "^1.62.0",
     "typescript": "^7.0.2",
     "wrangler": "^3.90.0"

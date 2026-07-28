@@ -37,7 +37,10 @@ export async function runSweep(env: Env, userId: string): Promise<SweepResult> {
   if (!keywords) {
     try {
       const titles = JSON.parse(valueMap.st_jobTitles || "[]") as any[];
-      keywords = titles.map((x) => x?.name).filter(Boolean).slice(0, 3).join(" ");
+      // One title only: concatenating several ("Data Analyst Operations & Data
+      // Analyst Business Analyst") reads as ALL-words-required on Adzuna and
+      // Careerjet and returns nothing.
+      keywords = String(titles.map((x) => x?.name).filter(Boolean)[0] || "");
     } catch { /* ignore */ }
   }
   if (!keywords) return { ok: false, error: "Set what you're searching for first (a job title or keywords)." };

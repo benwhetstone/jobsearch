@@ -28,7 +28,7 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
             (SELECT COUNT(*) FROM application_form_fields f
               WHERE f.application_uuid = a.uuid AND f.fill_status = 'needs_human') AS needs,
             (SELECT COUNT(*) FROM application_form_fields f WHERE f.application_uuid = a.uuid) AS total
-       FROM applications a JOIN jobs j ON j.uuid = a.job_uuid
+       FROM applications_v2 a JOIN jobs j ON j.uuid = a.job_uuid
       WHERE a.user_id = ? ORDER BY a.created_at DESC`
   ).bind(user.id).all<any>();
 
@@ -58,7 +58,7 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
   ).bind(jobUuid).first<JobRow>();
   if (!job) return err(404, "No such job.");
 
-  const existing = await env.DB.prepare("SELECT uuid FROM applications WHERE user_id = ? AND job_uuid = ?")
+  const existing = await env.DB.prepare("SELECT uuid FROM applications_v2 WHERE user_id = ? AND job_uuid = ?")
     .bind(user.id, jobUuid).first<{ uuid: string }>();
   if (existing) return json({ uuid: existing.uuid, alreadyStarted: true });
 
@@ -68,7 +68,7 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
     .bind(user.id, jobUuid).first<{ total_score: number }>();
 
   await env.DB.prepare(
-    `INSERT INTO applications (uuid, user_id, job_uuid, status, match_score, created_at, updated_at)
+    `INSERT INTO applications_v2 (uuid, user_id, job_uuid, status, match_score, created_at, updated_at)
      VALUES (?, ?, ?, 'preparing', ?, ?, ?)`
   ).bind(appUuid, user.id, jobUuid, match?.total_score ?? null, now, now).run();
 
@@ -78,11 +78,11 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
   try {
     await prepare(env, user, appUuid, job);
   } catch (e: any) {
-    await env.DB.prepare("UPDATE applications SET status = 'failed', prepare_error = ?, updated_at = ? WHERE uuid = ?")
+    await env.DB.prepare("UPDATE applications_v2 SET status = 'failed', prepare_error = ?, updated_at = ? WHERE uuid = ?")
       .bind(String(e?.message || e).slice(0, 400), new Date().toISOString(), appUuid).run();
   }
 
-  const out = await env.DB.prepare("SELECT status, ats, need_manual_apply, gate_verdict FROM applications WHERE uuid = ?")
+  const out = await env.DB.prepare("SELECT status, ats, need_manual_apply, gate_verdict FROM applications_v2 WHERE uuid = ?")
     .bind(appUuid).first<any>();
   return json({ uuid: appUuid, status: out?.status, ats: out?.ats,
                 needManualApply: !!out?.need_manual_apply, gateVerdict: out?.gate_verdict });
@@ -183,7 +183,7 @@ async function prepare(env: Env, user: CtxUser, appUuid: string, job: JobRow): P
                : "readyToApply";
 
   await env.DB.prepare(
-    `UPDATE applications SET ats = ?, ats_token = ?, ats_job_id = ?, supported_ats = ?, need_manual_apply = ?,
+    `UPDATE applications_v2 SET ats = ?, ats_token = ?, ats_job_id = ?, supported_ats = ?, need_manual_apply = ?,
             status = ?, cv_uuid = ?, cover_letter_uuid = ?, gate_verdict = ?, gate_report = ?, updated_at = ?
       WHERE uuid = ?`
   ).bind(ref?.ats ?? null, ref?.token ?? null, ref?.jobId ?? null, ref ? 1 : 0, manual ? 1 : 0,

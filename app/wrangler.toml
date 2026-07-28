@@ -29,3 +29,7 @@ APP_ENV = "production"
 APP_BASE_URL = "https://jobs.benwhetstone.info"
 # NOTIFY_FROM is safe to keep here (not a secret). Only sends once RESEND_API_KEY is set.
 NOTIFY_FROM = "Job Search <notify@jobs.benwhetstone.info>"
+
+# Tip jar (public Stripe payment link, not a secret). Set to enable the
+# "Leave a tip" line in the sidebar; leave unset to hide it.
+# APP_TIPJAR_URL = "https://buy.stripe.com/..."

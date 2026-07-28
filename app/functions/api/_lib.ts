@@ -23,6 +23,8 @@ export interface Env {
   FINDWORK_KEY?: string;         // Findwork.dev token
   USAJOBS_KEY?: string;          // USAJOBS (federal) Authorization-Key
   USAJOBS_UA?: string;           // USAJOBS requires the registered email as User-Agent
+  // Instance config (public, not secret)
+  APP_TIPJAR_URL?: string;       // Stripe payment link; tip line hidden when unset
 }
 
 const CORS = {

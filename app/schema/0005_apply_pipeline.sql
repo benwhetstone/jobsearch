@@ -1,4 +1,5 @@
--- Phase 3/4: the apply pipeline. Clicking Apply starts autopilot — tailor the
+-- Phase 3/4: the apply pipeline. Named applications_v2 because the database
+-- already holds Ben's legacy 13-column `applications` tracker: do not touch it. Clicking Apply starts autopilot — tailor the
 -- documents, mirror the employer's real form, prefill it, and stop for approval.
 -- Nothing here submits anything on its own.
 -- Idempotent.
@@ -31,7 +32,7 @@ CREATE TABLE IF NOT EXISTS documents (
 CREATE INDEX IF NOT EXISTS idx_documents_user ON documents(user_id, kind, is_default);
 CREATE INDEX IF NOT EXISTS idx_documents_job ON documents(user_id, job_uuid);
 
-CREATE TABLE IF NOT EXISTS applications (
+CREATE TABLE IF NOT EXISTS applications_v2 (
   uuid          TEXT PRIMARY KEY,
   user_id       TEXT NOT NULL REFERENCES users(id),
   job_uuid      TEXT NOT NULL REFERENCES jobs(uuid),
@@ -52,12 +53,12 @@ CREATE TABLE IF NOT EXISTS applications (
   updated_at    TEXT NOT NULL,
   UNIQUE (user_id, job_uuid)
 );
-CREATE INDEX IF NOT EXISTS idx_applications_user ON applications(user_id, status, created_at);
+CREATE INDEX IF NOT EXISTS idx_applications_v2_user ON applications_v2(user_id, status, created_at);
 
 -- The employer's form, mirrored field-for-field so it renders natively in our UI.
 CREATE TABLE IF NOT EXISTS application_form_fields (
   uuid             TEXT PRIMARY KEY,
-  application_uuid TEXT NOT NULL REFERENCES applications(uuid),
+  application_uuid TEXT NOT NULL REFERENCES applications_v2(uuid),
   field_key        TEXT NOT NULL,
   field_type       TEXT NOT NULL,
   label            TEXT NOT NULL,    -- employer's verbatim question

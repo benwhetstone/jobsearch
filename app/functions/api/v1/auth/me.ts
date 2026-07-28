@@ -28,5 +28,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   return json({
     user: { id: u.id, email: u.email, name: u.name, role: u.role, notifyEmail: !!u.notify_email },
     sweepStarted,
+    tipjarUrl: env.APP_TIPJAR_URL || null,
   });
 };

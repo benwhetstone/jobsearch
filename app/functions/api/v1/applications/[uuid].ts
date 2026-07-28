@@ -19,7 +19,7 @@ export const onRequestGet: PagesFunction<Env, string, Ctx> = async ({ params, en
 
   const app = await env.DB.prepare(
     `SELECT a.*, j.title, j.company_name, j.location, j.url AS job_url, j.apply_url, j.description
-       FROM applications a JOIN jobs j ON j.uuid = a.job_uuid
+       FROM applications_v2 a JOIN jobs j ON j.uuid = a.job_uuid
       WHERE a.uuid = ? AND a.user_id = ?`
   ).bind(uuid, user.id).first<any>();
   if (!app) return err(404, "No such application.");
@@ -69,7 +69,7 @@ export const onRequestGet: PagesFunction<Env, string, Ctx> = async ({ params, en
 export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, request, env, data }) => {
   const user = currentUser(data);
   const uuid = String(params.uuid);
-  const app = await env.DB.prepare("SELECT uuid, status FROM applications WHERE uuid = ? AND user_id = ?")
+  const app = await env.DB.prepare("SELECT uuid, status FROM applications_v2 WHERE uuid = ? AND user_id = ?")
     .bind(uuid, user.id).first<{ uuid: string; status: string }>();
   if (!app) return err(404, "No such application.");
 
@@ -106,7 +106,7 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
       "SELECT COUNT(*) AS n FROM application_form_fields WHERE application_uuid = ? AND fill_status = 'needs_human'"
     ).bind(uuid).first<{ n: number }>();
     if ((open?.n ?? 0) > 0) return err(409, `${open!.n} question(s) still need your answer before approving.`);
-    await env.DB.prepare("UPDATE applications SET status = 'approved', updated_at = ? WHERE uuid = ?")
+    await env.DB.prepare("UPDATE applications_v2 SET status = 'approved', updated_at = ? WHERE uuid = ?")
       .bind(new Date().toISOString(), uuid).run();
     await resolveActionItems(env, user.id, uuid);
     return json({ uuid, status: "approved" });
@@ -117,7 +117,7 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     "SELECT COUNT(*) AS n FROM application_form_fields WHERE application_uuid = ? AND fill_status = 'needs_human'"
   ).bind(uuid).first<{ n: number }>();
   const status = (open?.n ?? 0) > 0 ? "actionRequired" : (app.status === "approved" ? "approved" : "readyToApply");
-  await env.DB.prepare("UPDATE applications SET status = ?, updated_at = ? WHERE uuid = ?")
+  await env.DB.prepare("UPDATE applications_v2 SET status = ?, updated_at = ? WHERE uuid = ?")
     .bind(status, new Date().toISOString(), uuid).run();
   // Once nothing is waiting on the user, clear the queue entry so the actions
   // banner and the notification email stop nagging about it.

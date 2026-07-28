@@ -914,6 +914,12 @@
       vb.textContent = "Blocked by the quality gate: " + (d.cv.verifyReport.failures || []).join(" · ");
       pr.insertBefore(vb, pr.firstChild);
     }
+    if (d.cv?.uuid) {
+      const dl = el("a", "btn primary", "Download r\u00e9sum\u00e9 (PDF)");
+      dl.href = `/api/v1/documents/${d.cv.uuid}/pdf`; dl.target = "_blank"; dl.rel = "noopener";
+      dl.style.marginTop = "14px";
+      pr.appendChild(dl);
+    }
     panels.resume = pr; box.appendChild(pr);
 
     // cover letter panel
@@ -924,6 +930,12 @@
       c.paragraphs.forEach((p) => pc.appendChild(el("p", null, p)));
       pc.appendChild(el("p", null, c.closing));
     } else pc.appendChild(el("p", "muted", "No cover letter was generated."));
+    if (d.coverLetter?.uuid) {
+      const dl = el("a", "btn primary", "Download cover letter (PDF)");
+      dl.href = `/api/v1/documents/${d.coverLetter.uuid}/pdf`; dl.target = "_blank"; dl.rel = "noopener";
+      dl.style.marginTop = "14px";
+      pc.appendChild(dl);
+    }
     panels.cover = pc; box.appendChild(pc);
 
     // form panel: the employer's real questions, prefilled
@@ -1003,6 +1015,34 @@
     panels.form = pf; box.appendChild(pf);
   }
 
+  // ---- base résumé: generate from profile answers + PDF download ----------
+  $("#btnGenResume").addEventListener("click", async () => {
+    const btn = $("#btnGenResume"); const out = $("#genResult");
+    btn.disabled = true; btn.textContent = "Writing your résumé…";
+    out.innerHTML = "";
+    try {
+      const r = await api("/documents/base", { method: "POST" });
+      const d = r.data;
+      const dl = $("#btnDlResume");
+      dl.href = `/api/v1/documents/${d.uuid}/pdf`; dl.hidden = false;
+      const rev = d.expertReview || {};
+      const box = el("div", "banner " + (rev.verdict === "PASS" ? "info" : "warn"));
+      const head = rev.verdict === "PASS"
+        ? "Your résumé is ready, and it clears the hiring-manager screen. Download it below or keep sharpening your answers: every improvement flows into it."
+        : "Your résumé is ready. The hiring-manager reviewer left notes to make it stronger: each one is fixable from your profile answers.";
+      box.appendChild(el("strong", null, head));
+      (rev.notes || []).slice(0, 5).forEach((n) => { const li = el("div"); li.textContent = "\u2022 " + n; box.appendChild(li); });
+      out.appendChild(box);
+      toast("Base r\u00e9sum\u00e9 created", 2400);
+    } catch (e) {
+      const box = el("div", "banner bad");
+      box.textContent = e.message || "Could not generate the r\u00e9sum\u00e9.";
+      out.appendChild(box);
+    } finally {
+      btn.disabled = false; btn.textContent = "Write my r\u00e9sum\u00e9 from my answers";
+    }
+  });
+
   // ---- résumé upload ------------------------------------------------------
   $("#btnResume").addEventListener("click", () => $("#resumeFile").click());
   $("#resumeFile").addEventListener("change", async (e) => {
@@ -1032,6 +1072,16 @@
       if (!me.data.user) { showAuth(); return; }
       const u = me.data.user;
       SWEEP_RUNNING = !!me.data.sweepStarted;
+      if (me.data.tipjarUrl) {
+        const foot = document.querySelector(".side-foot");
+        if (foot && !$("#tipjar")) {
+          const a2 = el("a", "btn ghost", "\u2615 Chip in for server costs");
+          a2.id = "tipjar"; a2.href = me.data.tipjarUrl; a2.target = "_blank"; a2.rel = "noopener";
+          a2.style.cssText = "width:100%;justify-content:center;font-size:12px;margin-bottom:4px";
+          a2.title = "This site takes real time to build and real money to run. Tips keep it free.";
+          foot.insertBefore(a2, foot.firstChild);
+        }
+      }
       $("#userName").textContent = u.name || u.email;
       $("#userEmail").textContent = u.name ? u.email : "";
       $("#userAva").textContent = (u.name || u.email || "?").trim()[0];

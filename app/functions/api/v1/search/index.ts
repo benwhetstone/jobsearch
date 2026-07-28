@@ -18,7 +18,7 @@ async function defaults(env: Env, userId: string): Promise<{ keywords: string; l
   const m: Record<string, string | null> = {};
   for (const r of rows.results ?? []) m[r.field_key] = r.value_json;
   let keywords = "";
-  try { keywords = (JSON.parse(m.st_jobTitles || "[]") as any[]).map((x) => x?.name).filter(Boolean).slice(0, 3).join(" "); } catch { /* */ }
+  try { keywords = String((JSON.parse(m.st_jobTitles || "[]") as any[]).map((x) => x?.name).filter(Boolean)[0] || ""); } catch { /* */ }
   const str = (k: string) => { const v = m[k]; if (v == null) return null; try { const p = JSON.parse(v); return typeof p === "string" ? p : null; } catch { return v; } };
   const location = [str("city"), str("state")].filter(Boolean).join(", ");
   return { keywords, location };

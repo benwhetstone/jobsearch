@@ -100,6 +100,25 @@ export async function loadRules(env: Env, userId: string): Promise<RuleRow[]> {
   return r.results ?? [];
 }
 
+// Every significant number in a document must exist in the user's own source
+// material (profile) or the posting being quoted. Invented metrics are the
+// single fastest way to end an interview loop, and models invent them even
+// when told not to. Years and small counts are exempt; $, %, and big scopes
+// are not.
+export function numberTokens(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const m of (text || "").matchAll(/\$?\d[\d,]*(?:\.\d+)?\s*(?:%|percent|million|billion|k\b|m\b)?/gi)) {
+    const raw = m[0].toLowerCase().replace(/[,\s$]/g, "");
+    const digits = raw.replace(/[^\d.]/g, "");
+    const n = parseFloat(digits);
+    if (!Number.isFinite(n)) continue;
+    if (n >= 1900 && n <= 2100 && !raw.includes("%") && !m[0].includes("$")) continue; // years
+    if (n < 10 && !raw.includes("%") && !m[0].includes("$")) continue;                 // small counts
+    out.add(digits);
+  }
+  return out;
+}
+
 function allText(doc: CvContent | CoverContent): string {
   return "sections" in doc
     ? [doc.summary, ...doc.sections.flatMap((s) => [s.heading, ...s.bullets]), ...doc.skills].join("\n")
@@ -108,7 +127,7 @@ function allText(doc: CvContent | CoverContent): string {
 
 export function verify(
   doc: CvContent | CoverContent, profileSkills: string[], voice: Voice, rules: RuleRow[],
-  jobTitle?: string | null
+  jobTitle?: string | null, sourceNumbers?: Set<string>
 ): VerifyReport {
   const failures: string[] = [];
   const warnings: string[] = [];
@@ -151,6 +170,15 @@ export function verify(
     const bucket = r.severity === "warn" ? warnings : failures;
     if (r.forbids && hits(re)) bucket.push(r.message);
     if (!r.forbids && re.test(text) && r.requires && !new RegExp(r.requires, "i").test(text)) bucket.push(r.message);
+  }
+
+  // fabricated-number check
+  if (sourceNumbers) {
+    for (const tok of numberTokens(text)) {
+      if (!sourceNumbers.has(tok)) {
+        failures.push(`The number "${tok}" isn't anywhere in your profile. Nothing goes on a résumé that can't be backed up out loud.`);
+      }
+    }
   }
 
   if ("skills" in doc) {
@@ -200,7 +228,7 @@ function profileBrief(values: Record<string, string | null>, v: Voice): { brief:
 // Models sneak dashes into date ranges no matter what the prompt says. When the
 // user bans them, fix it mechanically instead of failing the document over
 // punctuation: date-range dashes become "to", everything else becomes a colon.
-function stripDashes<T>(doc: T, voice: Voice): T {
+export function stripDashes<T>(doc: T, voice: Voice): T {
   if (!voice.avoidEmDash) return doc;
   const fix = (s: string) =>
     s.replace(/(\d|present)\s*[—–]\s*(?=\d|present)/gi, "$1 to ")
@@ -233,9 +261,18 @@ export async function tailorCv(
     `Every section heading must correspond to a real role above. 3 to 5 bullets for recent roles, fewer for older. ` +
     `"skills" ordered by relevance to this posting.`;
 
-  const reply = await anthropic(env, { system, content: prompt, maxTokens: 2600 });
-  const content = stripDashes(extractJson(reply) as CvContent, voice);
-  return { content, report: verify(content, skills, voice, rules, job.title), voice };
+  const src = numberTokens(JSON.stringify(Object.values(values)) + " " + (job.description || ""));
+  let reply = await anthropic(env, { system, content: prompt, maxTokens: 2600 });
+  let content = stripDashes(extractJson(reply) as CvContent, voice);
+  let report = verify(content, skills, voice, rules, job.title, src);
+  if (!report.passed) {
+    // one self-repair pass: feed the exact gate failures back
+    reply = await anthropic(env, { system, content: prompt +
+      `\n\nYour previous attempt failed these checks:\n- ${report.failures.join("\n- ")}\nReturn corrected JSON.`, maxTokens: 2600 });
+    content = stripDashes(extractJson(reply) as CvContent, voice);
+    report = verify(content, skills, voice, rules, job.title, src);
+  }
+  return { content, report, voice };
 }
 
 export async function tailorCoverLetter(
@@ -253,9 +290,17 @@ export async function tailorCoverLetter(
     `POSTING\n${(job.description || "").slice(0, 5000)}\n\n` +
     `Return JSON: {"greeting": string, "paragraphs": [string], "closing": string}\n` +
     `Open with why this specific role. One paragraph must cite a concrete result from the history above.`;
-  const reply = await anthropic(env, { system, content: prompt, maxTokens: 1400 });
-  const content = stripDashes(extractJson(reply) as CoverContent, voice);
-  return { content, report: verify(content, skills, voice, rules, job.title) };
+  const src = numberTokens(JSON.stringify(Object.values(values)) + " " + (job.description || ""));
+  let reply = await anthropic(env, { system, content: prompt, maxTokens: 1400 });
+  let content = stripDashes(extractJson(reply) as CoverContent, voice);
+  let report = verify(content, skills, voice, rules, job.title, src);
+  if (!report.passed) {
+    reply = await anthropic(env, { system, content: prompt +
+      `\n\nYour previous attempt failed these checks:\n- ${report.failures.join("\n- ")}\nReturn corrected JSON.`, maxTokens: 1400 });
+    content = stripDashes(extractJson(reply) as CoverContent, voice);
+    report = verify(content, skills, voice, rules, job.title, src);
+  }
+  return { content, report };
 }
 
 // Hiring-manager gate: would this get a first-round call, honestly?
