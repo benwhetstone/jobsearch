@@ -35,14 +35,26 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 [hidden] { display: none !important; }
 
 /* Login */
-.login { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-.login-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 32px; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 12px; }
-.login-card h1 { margin: 0; font-size: 22px; }
-.login-card input { padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px;
-  background: var(--panel-2); color: var(--text); font-size: 15px; }
-.login-card button { background: var(--accent); color: #fff; border: 0; padding: 11px; border-radius: 8px;
-  font-weight: 600; cursor: pointer; font-size: 15px; }
+.login { min-height: 100vh; display: grid; place-items: center; padding: 24px;
+  background:
+    radial-gradient(1100px 520px at 50% -10%, var(--accent-weak) 0%, transparent 60%),
+    var(--bg); }
+.login-card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+  padding: 36px 32px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 14px;
+  box-shadow: 0 20px 60px -20px rgba(15, 30, 60, .28); }
+.login-card .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
+.login-card .logo .dot { width: 30px; height: 30px; border-radius: 8px; background: var(--accent);
+  display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 16px; flex: none; }
+.login-card h1 { margin: 0; font-size: 21px; letter-spacing: -0.01em; }
+.login-card .lede { margin: 0 0 6px; color: var(--muted); font-size: 14px; }
+.login-card label.fl { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: -6px; }
+.login-card input { padding: 12px 13px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--panel-2); color: var(--text); font-size: 15px; transition: border-color .15s, box-shadow .15s; }
+.login-card input:focus { outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak); }
+.login-card button[type="submit"] { background: var(--accent); color: #fff; border: 0; padding: 12px;
+  border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 15px; margin-top: 4px; transition: filter .15s; }
+.login-card button[type="submit"]:hover { filter: brightness(1.06); }
 
 /* Topbar */
 .topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between;
@@ -61,8 +73,10 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .usermenu { display: flex; align-items: center; gap: 10px; }
 #whoami { font-size: 13px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.switch { text-align: center; font-size: 13px; margin: 4px 0 0; }
-.login-card .linkbtn { color: var(--accent); font-size: 13px; }
+.switch { text-align: center; font-size: 13.5px; margin: 8px 0 0; color: var(--muted); }
+.login-card .linkbtn { color: var(--accent); font-size: 13.5px; font-weight: 600; margin-left: 4px; }
+.login-card .linkbtn:hover { text-decoration: underline; }
+.login-card .err { font-size: 13px; margin: 0; }
 
 .action-banner { max-width: 1080px; margin: 0 auto; padding: 14px 18px; background: var(--accent-weak);
   border: 1px solid var(--accent); border-radius: var(--radius); color: var(--text); margin-top: 18px; }
