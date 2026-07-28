@@ -139,6 +139,12 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
   // D1 batch has a statement cap; chunk to be safe.
   for (let i = 0; i < stmts.length; i += 50) await env.DB.batch(stmts.slice(i, i + 50));
 
+  // ---- auto-apply capability, resolved now instead of at click time ----
+  // globalwork's model: the feed says up front which jobs autopilot can file
+  // directly (hasModernAutoApply). Resolve each new company's board against
+  // the supported ATSs; hits and misses both cache in ats_boards.
+  await tagAutoApply(env, keep.map((s) => ({ uuid: s.uuid, company: s.job.company })));
+
   return {
     ok: true,
     query: { keywords, location: q.location || null, remoteOnly: !!q.remoteOnly, country: q.country || "us" },
@@ -148,6 +154,34 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
     matched: keep.length,
     refreshedAt: now,
   };
+}
+
+// Resolve which of these jobs autopilot can file directly. Bounded: at most
+// 20 uncached company lookups per sweep so a big result set can't stall it —
+// the rest resolve on the next sweep (ats_boards caches hits AND misses).
+async function tagAutoApply(env: Env, jobs: { uuid: string; company: string | null }[]): Promise<void> {
+  const { resolveBoard } = await import("./_ats");
+  const seen = new Map<string, { ats: string | null; token: string | null }>();
+  let lookups = 0;
+  const updates: D1PreparedStatement[] = [];
+  for (const j of jobs) {
+    if (!j.company) continue;
+    const key = j.company.toLowerCase();
+    let hit = seen.get(key);
+    if (!hit) {
+      if (lookups >= 20) continue;
+      lookups++;
+      try {
+        const board = await resolveBoard(env, j.company);
+        hit = { ats: board?.ats ?? null, token: board?.token ?? null };
+      } catch { hit = { ats: null, token: null }; }
+      seen.set(key, hit);
+    }
+    const supported = hit.ats && ["greenhouse", "lever", "ashby"].includes(hit.ats) ? 1 : 0;
+    updates.push(env.DB.prepare("UPDATE jobs SET auto_apply = ?, ats = ?, ats_token = ? WHERE uuid = ?")
+      .bind(supported, hit.ats, hit.token, j.uuid));
+  }
+  for (let i = 0; i < updates.length; i += 50) await env.DB.batch(updates.slice(i, i + 50));
 }
 
 // Run the daily sweep at most once per user per day. Returns true if a sweep

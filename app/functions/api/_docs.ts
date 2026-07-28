@@ -20,6 +20,7 @@ const names = (x: unknown): string[] => Array.isArray(x) ? (x as any[]).map((i: 
 export interface Voice {
   firstName: string | null;
   headline: string | null;
+  canonicalSummary: string | null;
   narrative: string | null;
   employerDescriptions: { employer: string; description: string }[];
   achievements: { result: string; metric?: string; employer?: string }[];
@@ -37,6 +38,7 @@ export function buildVoice(values: Record<string, string | null>): Voice {
   return {
     firstName: str("applicationFirstName") || str("firstName"),
     headline: str("professionalHeadline"),
+    canonicalSummary: str("canonicalSummary"),
     narrative: str("careerNarrative"),
     employerDescriptions: arr("employerDescriptions"),
     achievements: arr("signatureAchievements"),
@@ -80,6 +82,9 @@ export function styleBlock(v: Voice): string {
     `- ${BULLET_TEXT[v.bulletStyle] || BULLET_TEXT.OUTCOME_FIRST_WITH_METRICS}`,
     "- Never invent an employer, a title, a date, a metric, or a skill.",
     "- Skills may only come from the provided skills list, never from the posting.",
+    "- Never open a bullet with 'Responsible for', 'Helped with', 'Tasked with' or 'Involved in'.",
+    "- Tailoring is selection and emphasis, never rewording facts into the posting's sentences.",
+    "- Scale trivia (table counts, row counts) appears at most once per document and never in the summary.",
   ];
   if (v.avoidEmDash) lines.push("- Never use an em dash or en dash. Use a colon or a full stop.");
   if (v.avoidWords.length) lines.push(`- Never use these words: ${v.avoidWords.join(", ")}.`);
@@ -87,6 +92,8 @@ export function styleBlock(v: Voice): string {
   for (const e of v.employerDescriptions) lines.push(`- Describe ${e.employer} as "${e.description}".`);
   for (const m of v.metricPhrasing) lines.push(`- When citing ${m.number}: ${m.phrasing}.`);
   if (v.narrative) lines.push(`- Career framing: ${v.narrative}`);
+  if (v.canonicalSummary) lines.push(
+    `- The summary must be an ADAPTATION of this approved summary, adjusting emphasis for the role but keeping its spine and facts: "${v.canonicalSummary}"`);
   return lines.join("\n");
 }
 
@@ -181,6 +188,12 @@ export function verify(
     }
   }
 
+  // Copy-quality QA: mechanical artifacts that read as broken writing. These
+  // catch sanitizer scars and model tics before a document can ship.
+  if (/\s[:,;]\s*[:,;]/.test(text) || /::|,,/.test(text)) failures.push("Contains doubled or stray punctuation.");
+  if (/\s:\s[a-z][^.]{0,40}\s:\s/.test(text)) failures.push("Colon-wrapped clause reads as broken syntax. Rephrase as a plain sentence.");
+  if (/\((?:\s*)\)/.test(text)) failures.push("Contains an empty parenthesis.");
+
   if ("skills" in doc) {
     const allowed = new Set(profileSkills.map((s) => s.toLowerCase()));
     // whole-word match: "AI" must flag "AI" but never "Attention to Detail"
@@ -230,9 +243,13 @@ function profileBrief(values: Record<string, string | null>, v: Voice): { brief:
 // punctuation: date-range dashes become "to", everything else becomes a colon.
 export function stripDashes<T>(doc: T, voice: Voice): T {
   if (!voice.avoidEmDash) return doc;
+  // Date ranges become "to". Everything else becomes a comma: turning paired
+  // em dashes into colons produced sentences like "That work: x, y: is the
+  // core", which reads as broken syntax.
   const fix = (s: string) =>
     s.replace(/(\d|present)\s*[—–]\s*(?=\d|present)/gi, "$1 to ")
-     .replace(/\s*[—–]\s*/g, ": ");
+     .replace(/\s*[—–]\s*/g, ", ")
+     .replace(/,\s*,/g, ",").replace(/\s+([,.])/g, "$1");
   const walk = (x: any): any =>
     typeof x === "string" ? fix(x)
     : Array.isArray(x) ? x.map(walk)

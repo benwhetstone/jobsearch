@@ -156,8 +156,12 @@
     wrap.dataset.field = f.fieldKey;
     const label = el("label");
     label.appendChild(document.createTextNode(f.question || f.fieldKey));
-    if (f.isRequired) { const s = el("span", "req", "*"); label.appendChild(s); }
-    if (f.isMatchingInput) { label.appendChild(el("span", "match-badge", "match")); }
+    if (f.isRequired) { const s = el("span", "req", "*"); s.title = "Required"; label.appendChild(s); }
+    if (f.isMatchingInput) {
+      const b = el("span", "match-badge", "match");
+      b.title = "This answer is used to score how well jobs match you";
+      label.appendChild(b);
+    }
     wrap.appendChild(label);
     if (f.helpText) wrap.appendChild(el("div", "help", f.helpText));
 
@@ -396,81 +400,53 @@
     const nav = $("#blockNav"); nav.innerHTML = "";
     const main = $("#blocks"); main.innerHTML = "";
 
-    // One block shown at a time — the reference product pages through blocks
-    // rather than rendering 60+ questions in one endless scroll.
-    const panels = new Map();
+    // One CATEGORY at a time. The left rail lists every block as a small
+    // heading with its categories under it; clicking a category shows just
+    // those questions. Nobody scrolls a 70-question page.
+    const panels = new Map();   // "block:cat" -> panel
     const navBtns = new Map();
 
-    model.blocks.forEach((b, idx) => {
-      const nb = el("button");
-      nb.appendChild(document.createTextNode(b.label));
-      const frac = el("span", "frac", `${b.completion.filledCount}/${b.completion.totalCount}`);
-      frac.dataset.navMini = b.key; nb.appendChild(frac);
-      nb.addEventListener("click", () => showBlock(b.key));
-      nav.appendChild(nb);
-      navBtns.set(b.key, nb);
-
-      const panel = el("section", "card block-body"); panel.id = "block-" + b.key;
-      panel.hidden = idx !== 0;
-      panel.appendChild(el("h2", null, b.label));
-      if (b.description) panel.appendChild(el("p", "desc", b.description));
-
-      const row = el("div", "bar-row");
-      const bar = el("div", "progress"); const fill = el("i");
-      fill.dataset.blockFill = b.key;
-      fill.style.width = pct(b.completion.filledCount, b.completion.totalCount) + "%";
-      bar.appendChild(fill);
-      const lbl = el("span", "frac", `${b.completion.filledCount}/${b.completion.totalCount}`);
-      lbl.dataset.blockLbl = b.key;
-      row.appendChild(bar); row.appendChild(lbl);
-      panel.appendChild(row);
-
+    model.blocks.forEach((b) => {
+      const head = el("div", "navblockhead", b.label);
+      nav.appendChild(head);
       b.categories.forEach((cat) => {
-        const c = el("div", "cat");
-        c.appendChild(el("h3", null, cat.label));
+        const key = b.key + ":" + cat.key;
+        const nb = el("button");
+        nb.appendChild(document.createTextNode(cat.label));
+        const filled = cat.fields.filter((f) => f.filled).length;
+        const frac = el("span", "frac", `${filled}/${cat.fields.length}`);
+        frac.dataset.catMini = key; nb.appendChild(frac);
+        nb.addEventListener("click", () => showCat(key));
+        nav.appendChild(nb);
+        navBtns.set(key, nb);
+
+        const panel = el("section", "card block-body");
+        panel.hidden = true;
+        panel.appendChild(el("h2", null, cat.label));
+        panel.appendChild(el("p", "desc", b.label + (b.description ? " — " + b.description : "")));
         const grid = el("div", "fieldgrid");
         cat.fields.forEach((f) => grid.appendChild(renderField(f)));
-        c.appendChild(grid);
-        panel.appendChild(c);
+        panel.appendChild(grid);
+        main.appendChild(panel);
+        panels.set(key, panel);
       });
-      main.appendChild(panel);
-      panels.set(b.key, panel);
     });
 
-    function showBlock(key) {
+    function showCat(key) {
       panels.forEach((p, k) => { p.hidden = k !== key; });
       navBtns.forEach((n, k) => n.classList.toggle("active", k === key));
       window.scrollTo(0, 0);
     }
-    if (model.blocks.length) showBlock(model.blocks[0].key);
+    const first = panels.keys().next().value;
+    if (first) showCat(first);
     applyCompletion({ score: model.completion.score, blocks: Object.fromEntries(model.blocks.map((b) => [b.key, b.completion])) });
   }
 
-  async function renderActions() {
-    const banner = $("#actionBanner");
-    try {
-      const r = await api("/actions");
-      const items = r.data.items || [];
-      if (!items.length) { banner.hidden = true; return; }
-      banner.innerHTML = "";
-      banner.className = "banner warn";
-      banner.appendChild(el("strong", null, `${items.length} thing${items.length === 1 ? "" : "s"} need your attention`));
-      const ul = el("ul");
-      items.slice(0, 5).forEach((i) => {
-        const li = el("li");
-        if (i.url) { const a = el("a", null, i.title); a.href = i.url; li.appendChild(a); }
-        else li.appendChild(document.createTextNode(i.title));
-        ul.appendChild(li);
-      });
-      banner.appendChild(ul);
-      banner.hidden = false;
-    } catch { banner.hidden = true; }
-  }
-
+  // Action items surface in Applications (red dots + Action-required box),
+  // not on the Profile page — profile is for answering questions, nothing else.
   async function loadProfile() {
     const r = await api("/profile");
     render(r.data);
-    renderActions();
   }
 
   // ======================= JOBS / MATCHES ==================================
@@ -502,6 +478,9 @@
     if (isNaN(d)) return null;
     return d <= 0 ? "today" : d === 1 ? "1 day ago" : `${d} days ago`;
   }
+  // decode entities that older stored descriptions still carry
+  const DECODE_TA = document.createElement("textarea");
+  function decodeEnt(str) { DECODE_TA.innerHTML = String(str || ""); return DECODE_TA.value; }
   const svg = (paths) =>
     `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
   const ICON = {
@@ -565,7 +544,10 @@
     top.appendChild(ava);
 
     const id = el("div", "job-id");
-    id.appendChild(el("h3", null, j.title));
+    const h = el("h3", null, j.title);
+    h.style.cursor = "pointer"; h.title = "View full posting details";
+    h.addEventListener("click", () => openJobDetail(m.jobUuid));
+    id.appendChild(h);
     id.appendChild(el("div", "co", j.company || "Company not listed"));
     top.appendChild(id);
 
@@ -577,6 +559,12 @@
 
     const mid = el("div", "job-mid");
     const chips = el("div", "chips");
+    // first seen in today's sweep -> flag it (already deduped at ingest, so a
+    // reposting of an old job never re-badges)
+    if (j.firstSeenAt && j.firstSeenAt.slice(0, 10) === new Date().toISOString().slice(0, 10))
+      chips.appendChild(chip("New today", null, "green"));
+    if (j.autoApply === true) chips.appendChild(chip("Auto-apply ready", null, "green"));
+    else if (j.autoApply === false) chips.appendChild(chip("Apply on employer site", null, "plain"));
     if (j.location) chips.appendChild(chip(j.location, ICON.pin));
     if (j.remote) chips.appendChild(chip("Remote", ICON.home));
     const pay = payLabel(j);
@@ -591,8 +579,9 @@
     const actions = el("div", "job-actions");
     const why = el("button", "btn", "Why this score");
     const skip = el("button", "btn ghost", "Not interested");
-    const view = el("a", "btn ghost", "View posting");
-    view.href = j.url; view.target = "_blank"; view.rel = "noopener noreferrer";
+    const view = el("button", "btn ghost", "View posting");
+    view.title = "Read the full posting without leaving the page";
+    view.addEventListener("click", () => openJobDetail(m.jobUuid));
     // Apply = start autopilot: tailor the résumé and cover letter, run the
     // hiring-manager gate, mirror the employer's real form and prefill it.
     // It never opens the posting and it never submits anything.
@@ -616,7 +605,7 @@
     card.appendChild(mid);
 
     if (j.snippet) {
-      const s = el("p", "job-snip", j.snippet.replace(/\s+/g, " ").slice(0, 230) + "…");
+      const s = el("p", "job-snip", decodeEnt(j.snippet).replace(/\s+/g, " ").slice(0, 230) + "…");
       card.appendChild(s);
     }
 
@@ -660,7 +649,24 @@
     return card;
   }
 
+  let JOBS_SORT = "newest";
+  $("#sortJobs").addEventListener("change", () => {
+    JOBS_SORT = $("#sortJobs").value;
+    renderMatches(LAST_MATCHES);
+  });
+  let LAST_MATCHES = [];
+  function sortMatches(list) {
+    const bySalary = (m) => Math.max(m.job.salaryMax || 0, m.job.salaryMin || 0);
+    const byDate = (m) => m.job.postedAt ? Date.parse(m.job.postedAt) || 0 : 0;
+    const arr = [...list];
+    if (JOBS_SORT === "newest") arr.sort((a, b) => byDate(b) - byDate(a));
+    else if (JOBS_SORT === "salary") arr.sort((a, b) => bySalary(b) - bySalary(a));
+    else arr.sort((a, b) => b.totalScore - a.totalScore);
+    return arr;
+  }
   function renderMatches(list) {
+    LAST_MATCHES = list;
+    list = sortMatches(list);
     const box = $("#matchList"); box.innerHTML = "";
     if (!list.length) {
       const p = el("div", "card placeholder");
@@ -738,6 +744,21 @@
     } catch (e) { toast(e.message, 3600); }
     finally { btn.disabled = false; updateBulkBar(); }
   });
+  // bulk skip: clear the selection out of the feed in one click
+  const bulkSkipBtn = $("#bulkSkip");
+  if (bulkSkipBtn) bulkSkipBtn.addEventListener("click", async () => {
+    bulkSkipBtn.disabled = true;
+    const picked = [...SELECTED];
+    try {
+      for (const jobUuid of picked) {
+        await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid, status: "skipped" }) });
+      }
+      SELECTED.clear(); updateBulkBar();
+      toast(`${picked.length} hidden`);
+      loadMatches();
+    } catch (e) { toast(e.message, 3200); }
+    finally { bulkSkipBtn.disabled = false; }
+  });
 
   async function loadMatches() {
     MATCHES_LOADED = true;
@@ -776,6 +797,7 @@
     const btn = $("#btnRefresh");
     const msg = $("#matchMsg");
     btn.disabled = true; btn.textContent = "Searching…";
+    SEARCHING = true; refreshStrip();
     msg.innerHTML = "";
     try {
       JOBS_TAB = "search";
@@ -795,30 +817,181 @@
       msg.appendChild(b);
     } finally {
       btn.disabled = false; btn.textContent = "Find jobs";
+      SEARCHING = false; refreshStrip();
     }
   });
+
+  // ======================= JOB DETAIL (in-page) =============================
+  async function openJobDetail(jobUuid, backTo) {
+    // The jobs view hosts the detail panel; make sure it's visible without
+    // letting the first-visit auto-load race us for the same container.
+    if (CURRENT_VIEW !== "matches") { MATCHES_LOADED = true; switchView("matches"); }
+    const box = $("#matchList");
+    box.innerHTML = ""; box.appendChild(el("div", "muted", "Loading posting…"));
+    let d;
+    try { d = (await api(`/jobs/${jobUuid}`)).data; }
+    catch (e) { box.innerHTML = ""; box.appendChild(el("div", "banner bad", e.message)); return; }
+    box.innerHTML = "";
+    const back = el("button", "btn ghost",
+      backTo === "applications" ? "\u2190 Back to applications" : "\u2190 Back to jobs");
+    back.addEventListener("click", () => {
+      if (backTo === "applications") switchView("applications");
+      else loadMatches();
+    });
+    box.appendChild(back);
+
+    const j = d.job;
+    const card = el("article", "card job");
+    const top = el("div", "job-top");
+    const [bg, fg] = avaFor(j.company);
+    const ava = el("span", "job-ava", (j.company || "?").trim()[0].toUpperCase());
+    ava.style.background = bg; ava.style.color = fg;
+    top.appendChild(ava);
+    const id = el("div", "job-id");
+    id.appendChild(el("h3", null, j.title));
+    id.appendChild(el("div", "co", j.company || "Company not listed"));
+    top.appendChild(id);
+    if (d.match) {
+      const sc = el("div", "job-score score-" + scoreClass(d.match.totalScore));
+      sc.appendChild(el("b", null, d.match.totalScore + "%")); sc.appendChild(el("span", null, "match"));
+      top.appendChild(sc);
+    }
+    card.appendChild(top);
+
+    const chips = el("div", "chips"); chips.style.marginTop = "11px";
+    if (j.location) chips.appendChild(chip(j.location, ICON.pin));
+    if (j.remote) chips.appendChild(chip("Remote", ICON.home));
+    const pay = payLabel(j); if (pay) chips.appendChild(chip(pay, ICON.card));
+    if (j.category) chips.appendChild(chip(j.category, null, "plain"));
+    const when = ago(j.postedAt); if (when) chips.appendChild(chip(when, ICON.clock, "plain"));
+    chips.appendChild(chip("via " + j.source, null, "plain"));
+    card.appendChild(chips);
+
+    const actions = el("div", "job-actions"); actions.style.marginTop = "12px";
+    const view = el("a", "btn ghost", "Original posting \u2197");
+    view.href = j.url; view.target = "_blank"; view.rel = "noopener noreferrer";
+    actions.appendChild(view);
+    if (d.application) {
+      const go = el("button", "btn primary", "View application");
+      go.addEventListener("click", () => { switchView("applications"); openApplication(d.application.uuid); });
+      actions.appendChild(go);
+    } else {
+      const skip = el("button", "btn ghost", "Not interested");
+      skip.addEventListener("click", async () => {
+        try { await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid, status: "skipped" }) });
+              toast("Hidden"); loadMatches(); } catch (e) { toast(e.message); }
+      });
+      const apply = el("button", "btn primary", "Apply");
+      apply.addEventListener("click", async () => {
+        apply.disabled = true; apply.textContent = "Preparing\u2026";
+        try {
+          const r = await api("/applications", { method: "POST", body: JSON.stringify({ jobUuid }) });
+          switchView("applications"); await loadApplications(true);
+          if (r.data.uuid) openApplication(r.data.uuid);
+        } catch (e) { apply.disabled = false; apply.textContent = "Apply"; toast(e.message, 3200); }
+      });
+      actions.appendChild(skip); actions.appendChild(apply);
+    }
+    card.appendChild(actions);
+    box.appendChild(card);
+
+    // score breakdown, open by default
+    if (d.match) {
+      const why = el("div", "card block-body");
+      const head = el("div", "why-head");
+      const tile = el("div", "why-tile " + scoreClass(d.match.totalScore), d.match.totalScore + "%");
+      const ht = el("div");
+      ht.appendChild(el("div", "t", headline(d.match.totalScore)));
+      ht.appendChild(el("div", "d", "How this role scored against your profile."));
+      head.appendChild(tile); head.appendChild(ht);
+      why.appendChild(head);
+      ["skills","experience","compensation","terms","company"].forEach((k) => {
+        const n = d.match.rankers[k];
+        const r = el("div", "ranker");
+        r.appendChild(el("div", "pct " + scoreClass(n), n + "%"));
+        const t = el("div");
+        t.appendChild(el("div", "nm", LABELS[k]));
+        t.appendChild(el("div", "ds", bandFor(k, n)));
+        r.appendChild(t);
+        why.appendChild(r);
+      });
+      box.appendChild(why);
+    }
+
+    // the posting itself
+    const body = el("div", "card block-body");
+    body.appendChild(el("h3", null, "About this role"));
+    const txt = decodeEnt(j.description || "").trim();
+    if (txt) {
+      txt.split(/\n{2,}|(?<=\.)\s{2,}/).slice(0, 40).forEach((para) => {
+        if (para.trim()) body.appendChild(el("p", null, para.trim()));
+      });
+      if (txt.length >= 1900) {
+        const more = el("p", "muted", "This is the excerpt the job board provides. The full posting is on the original page.");
+        body.appendChild(more);
+      }
+    } else {
+      body.appendChild(el("p", "muted", "The board didn't provide a description for this one. The original posting has the full text."));
+    }
+    box.appendChild(body);
+    window.scrollTo(0, 0);
+  }
+
+  // ======================= STATUS STRIP ====================================
+  let STRIP_TIMER = null;
+  let SEARCHING = false;   // a manual "Find jobs" run is in flight
+  async function refreshStrip() {
+    try {
+      const d = (await api("/status")).data;
+      if (d.sweep && SWEEP_RUNNING) SWEEP_RUNNING = false;   // morning sweep finished
+      const strip = $("#statusStrip");
+      strip.innerHTML = ""; strip.hidden = false;
+      const busy = d.queue.queued + d.queue.preparing > 0;
+      const live = el("span", "live");
+      live.appendChild(document.createTextNode(
+        SEARCHING ? "Searching the boards right now…"
+        : SWEEP_RUNNING ? "Sweeping the boards for today's matches…"
+        : busy ? `Autopilot working: ${d.queue.preparing || 1} preparing, ${d.queue.queued} in queue`
+        : d.sweep ? `Today's sweep found ${d.sweep.found} matches` : "Autopilot idle"));
+      strip.appendChild(live);
+      if (d.actionRequired > 0) {
+        const w = el("span", "warn", `${d.actionRequired} need${d.actionRequired === 1 ? "s" : ""} your attention`);
+        strip.appendChild(w);
+      }
+      if (d.unreadMail > 0) strip.appendChild(el("span", null, `${d.unreadMail} unread in inbox`));
+      const b = el("span");
+      b.innerHTML = `AI budget today: <b>$${d.budget.spentUsd.toFixed(2)}</b> of $${d.budget.capUsd.toFixed(2)}`;
+      strip.appendChild(b);
+      const dot = $("#cntApps"); if (dot) dot.classList.toggle("reddot", d.actionRequired > 0);
+      clearTimeout(STRIP_TIMER);
+      STRIP_TIMER = setTimeout(refreshStrip, (busy || SWEEP_RUNNING || SEARCHING) ? 4000 : 30000);
+    } catch { /* signed out or transient */ }
+  }
 
   // ======================= APPLICATIONS ====================================
   const STATUS_LABEL = {
     queued: "Queued", preparing: "Preparing", actionRequired: "Action required",
-    readyToApply: "Ready to apply", approved: "Approved", applied: "Applied",
-    interview: "Interview", offer: "Offer", rejected: "Rejected", failed: "Failed",
+    readyToApply: "Ready to apply", approved: "Approved", applying: "Submitting…",
+    applied: "Applied", interview: "Interview", offer: "Offer", rejected: "Rejected",
+    withdrawn: "Withdrawn", failed: "Failed",
   };
   const STATUS_CLASS = {
     queued: "plain", preparing: "plain", actionRequired: "amber", readyToApply: "green",
-    approved: "green", applied: "green", interview: "green", offer: "green",
-    rejected: "plain", failed: "amber",
+    approved: "green", applying: "green", applied: "green", interview: "green", offer: "green",
+    rejected: "plain", withdrawn: "plain", failed: "amber",
   };
   let QUEUE_TIMER = null;
 
+  let APPS_CACHE = [];
+  let APP_FILTER = null;   // null = all; otherwise a list of statuses
   async function loadApplications(force) {
     const box = $("#appList");
     try {
       const r = await api("/applications");
-      const apps = r.data.applications || [];
+      APPS_CACHE = r.data.applications || [];
       const c = $("#cntApps");
-      if (c) { c.textContent = apps.length; c.hidden = apps.length === 0; }
-      renderApplications(apps, r.data.counts || {});
+      if (c) { c.textContent = APPS_CACHE.length; c.hidden = APPS_CACHE.length === 0; }
+      renderApplications(APPS_CACHE, r.data.counts || {});
     } catch (e) {
       if (e.message !== "unauthorized") { box.innerHTML = ""; box.appendChild(el("div", "banner bad", e.message)); }
     }
@@ -831,17 +1004,32 @@
       // The real funnel, in order. Interviews and offers are advanced by the
       // inbox classifier, not by hand.
       stats.innerHTML = ""; stats.hidden = false;
-      const applied = (counts.applied || 0) + (counts.interview || 0) + (counts.offer || 0) + (counts.rejected || 0);
+      // Each box is a filter: click to see just that stage, click again for all.
+      const GROUPS = {
+        queued: ["queued", "preparing"], actionRequired: ["actionRequired"],
+        readyToApply: ["readyToApply", "approved", "applying"],
+        applied: ["applied", "interview", "offer", "rejected", "withdrawn"],
+        interview: ["interview"], offer: ["offer"], rejected: ["rejected", "withdrawn", "failed"],
+      };
+      const applied = (counts.applied || 0) + (counts.interview || 0) + (counts.offer || 0) + (counts.rejected || 0) + (counts.withdrawn || 0);
       [["queued", (counts.queued || 0) + (counts.preparing || 0), "Queued", "plain"],
        ["actionRequired", counts.actionRequired || 0, "Action required", "amber"],
-       ["readyToApply", (counts.readyToApply || 0) + (counts.approved || 0), "Ready to apply", ""],
+       ["readyToApply", (counts.readyToApply || 0) + (counts.approved || 0) + (counts.applying || 0), "Ready to apply", ""],
        ["applied", applied, "Applied", ""],
        ["interview", counts.interview || 0, "Interviews", ""],
-       ["offer", counts.offer || 0, "Offers", "solid"]].forEach(([k, n, lbl, cls]) => {
-        const s = el("div", "stat" + (cls ? " " + cls : ""));
+       ["offer", counts.offer || 0, "Offers", "solid"],
+       ["rejected", (counts.rejected || 0) + (counts.withdrawn || 0) + (counts.failed || 0), "Rejected", "plain"]].forEach(([k, n, lbl, cls]) => {
+        const s = el("button", "stat" + (cls ? " " + cls : ""));
+        s.style.cursor = "pointer"; s.style.border = "0"; s.style.textAlign = "left"; s.style.font = "inherit";
         if (k === "actionRequired" && n > 0) s.classList.add("alert");
+        const active = APP_FILTER && APP_FILTER.join() === GROUPS[k].join();
+        if (active) s.style.outline = "3px solid var(--accent)";
         s.appendChild(el("div", "label", lbl));
         s.appendChild(el("div", "num", String(n)));
+        s.addEventListener("click", () => {
+          APP_FILTER = active ? null : GROUPS[k];
+          renderApplications(APPS_CACHE, counts);
+        });
         stats.appendChild(s);
       });
     }
@@ -859,15 +1047,17 @@
         if (CURRENT_VIEW === "applications") loadApplications(true);
       }, 5000);
     }
-    if (!apps.length) {
+    const shown = APP_FILTER ? apps.filter((a) => APP_FILTER.includes(a.status)) : apps;
+    if (!shown.length) {
       const p = el("div", "card placeholder");
       p.innerHTML =
         '<div class="ph-icon"><svg viewBox="0 0 24 24"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></div>' +
-        "<h3>No applications yet</h3><p>Hit <strong>Apply</strong> on a job. We tailor the résumé and cover letter, run the hiring-manager check, and prefill the employer's real application for your approval.</p>";
+        (APP_FILTER ? "<h3>Nothing in this stage</h3><p>Click the highlighted box again to see everything.</p>"
+                    : "<h3>No applications yet</h3><p>Hit <strong>Apply</strong> on a job. We tailor the résumé and cover letter, run the hiring-manager check, and prefill the employer's real application for your approval.</p>");
       box.appendChild(p);
       return;
     }
-    apps.forEach((a) => {
+    shown.forEach((a) => {
       const card = el("article", "card job appcard");
       const top = el("div", "job-top");
       const [bg, fg] = avaFor(a.job.company);
@@ -894,6 +1084,50 @@
       if (a.fields.needsHuman > 0) chips.appendChild(chip(`${a.fields.needsHuman} question${a.fields.needsHuman === 1 ? "" : "s"} for you`, null, "amber"));
       mid.appendChild(chips);
       const actions = el("div", "job-actions");
+      if (a.jobUuid) {
+        const vp = el("button", "btn ghost", "View posting");
+        vp.title = "Read the full posting without leaving the app";
+        vp.addEventListener("click", (ev) => { ev.stopPropagation(); openJobDetail(a.jobUuid, "applications"); });
+        actions.appendChild(vp);
+      }
+      if (a.cvUuid) {
+        const d1 = el("a", "btn", "R\u00e9sum\u00e9");
+        d1.href = `/api/v1/documents/${a.cvUuid}/pdf`; d1.target = "_blank"; d1.rel = "noopener";
+        d1.title = "Download the tailored r\u00e9sum\u00e9 PDF";
+        actions.appendChild(d1);
+      }
+      if (a.coverLetterUuid) {
+        const d2 = el("a", "btn", "Letter");
+        d2.href = `/api/v1/documents/${a.coverLetterUuid}/pdf`; d2.target = "_blank"; d2.rel = "noopener";
+        d2.title = "Download the cover letter PDF";
+        actions.appendChild(d2);
+      }
+      // manual pipeline movement: phone calls and emails the inbox never saw
+      if (["applied", "interview", "offer", "rejected", "withdrawn", "approved", "readyToApply"].includes(a.status)) {
+        const mv = el("select", "movesel");
+        mv.appendChild(new Option("Move to…", ""));
+        [["applied", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["rejected", "Rejected"], ["withdrawn", "Withdrawn"]]
+          .forEach(([v, l]) => { if (v !== a.status) mv.appendChild(new Option(l, v)); });
+        mv.addEventListener("click", (ev) => ev.stopPropagation());
+        mv.addEventListener("change", async () => {
+          if (!mv.value) return;
+          try {
+            await api(`/applications/${a.uuid}`, { method: "PATCH", body: JSON.stringify({ action: "setStatus", status: mv.value }) });
+            toast("Moved to " + mv.options[mv.selectedIndex].text);
+            loadApplications(true); refreshStrip();
+          } catch (e) { toast(e.message, 3000); }
+        });
+        actions.appendChild(mv);
+      }
+      const discard = el("button", "btn ghost", "Discard");
+      discard.addEventListener("click", async (ev) => {
+        ev.stopPropagation();
+        try {
+          await api(`/applications/${a.uuid}`, { method: "PATCH", body: JSON.stringify({ action: "discard" }) });
+          toast("Discarded"); loadApplications(true); refreshStrip();
+        } catch (e) { toast(e.message, 3000); }
+      });
+      actions.appendChild(discard);
       const openBtn = el("button", "btn primary", a.status === "actionRequired" ? "Finish it" : "Review");
       openBtn.addEventListener("click", () => openApplication(a.uuid));
       actions.appendChild(openBtn);
@@ -1130,6 +1364,7 @@
     ["modern",    "Modern",    "Clean sans-serif with blue accents. Tech, startups, product."],
     ["compact",   "Compact",   "Dense single page. Long work histories that must fit."],
     ["executive", "Executive", "Wide margins, double rules. Senior and leadership roles."],
+    ["swiss",     "Swiss Grid", "Designer grid: monospace margin labels, hairline rules, four grays. Stands out quietly."],
   ];
   let TPL_CURRENT = "classic";
   async function renderTemplates() {
@@ -1144,8 +1379,18 @@
     TPL_META.forEach(([key, name, desc]) => {
       const card = el("button", "tplcard" + (TPL_CURRENT === key ? " on" : ""));
       const mini = el("div", "mini");
+      mini.innerHTML = `<img src="/img/tpl-${key}.png" alt="${name} template preview" style="width:100%;height:100%;object-fit:cover;object-position:top" loading="lazy">`;
+      mini.style.padding = "0";
       // a schematic of each layout, not a screenshot
-      if (key === "classic" || key === "executive") {
+      if (false && key === "swiss") {
+        mini.innerHTML = '<div class="hd" style="width:44%"></div>' +
+          '<div style="border-top:2px solid #141414;margin:8px 0 6px"></div>' +
+          '<div style="display:grid;grid-template-columns:26% 1fr;gap:6px">' +
+          '<div class="ln" style="background:#bbb;width:80%"></div><div><div class="ln"></div><div class="ln" style="width:88%"></div></div>' +
+          '</div><div style="border-top:1px solid #e2e2e2;margin:6px 0"></div>' +
+          '<div style="display:grid;grid-template-columns:26% 1fr;gap:6px">' +
+          '<div class="ln" style="background:#bbb;width:70%"></div><div><div class="ln" style="width:92%"></div><div class="ln" style="width:60%"></div></div></div>';
+      } else if (key === "classic" || key === "executive") {
         mini.innerHTML = '<div class="hd" style="width:56%;margin:0 auto 4px"></div><div class="ln" style="width:70%;margin:0 auto 8px"></div>' +
           '<div class="ln" style="width:34%"></div><div class="ln"></div><div class="ln" style="width:88%"></div><div class="ln" style="width:92%"></div>' +
           '<div class="ln" style="width:30%;margin-top:9px"></div><div class="ln"></div><div class="ln" style="width:84%"></div>';
@@ -1302,6 +1547,7 @@
       $("#userEmail").textContent = u.name ? u.email : "";
       $("#userAva").textContent = (u.name || u.email || "?").trim()[0];
       MODEL = null; MATCHES_LOADED = false;
+      refreshStrip();
       // Deep link from a notification email: /#application=<uuid> opens that
       // application's review screen directly.
       const deep = location.hash.match(/^#application=([a-f0-9-]{8,})$/i);

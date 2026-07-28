@@ -320,6 +320,26 @@ async function usajobs(env: Env, q: SearchQuery): Promise<RawJob[]> {
   });
 }
 
+// Boards ship descriptions full of HTML entities (&nbsp;, &amp;, &#39;). Decode
+// once at ingestion so stored text is text.
+const ENTITIES: Record<string, string> = {
+  "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"',
+  "&#39;": "'", "&#x27;": "'", "&apos;": "'", "&rsquo;": "'", "&lsquo;": "'",
+  "&ldquo;": '"', "&rdquo;": '"', "&ndash;": "-", "&mdash;": "-", "&bull;": "\u2022", "&hellip;": "...",
+};
+export function decodeEntities(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .replace(/&[a-z]+;|&#x?[0-9a-f]+;/gi, (m) => {
+      const low = m.toLowerCase();
+      if (ENTITIES[low] != null) return ENTITIES[low];
+      const num = low.match(/^&#x([0-9a-f]+);$/) || low.match(/^&#(\d+);$/);
+      if (num) { const code = parseInt(num[1], low.startsWith("&#x") ? 16 : 10); return code ? String.fromCodePoint(code) : m; }
+      return m;
+    })
+    .replace(/\s{2,}/g, " ").trim();
+}
+
 // Run every configured connector, in parallel. Keyless ones always run.
 export async function fetchAllSources(env: Env, q: SearchQuery): Promise<{ jobs: RawJob[]; sources: Record<string, number> }> {
   const connectors: [string, Promise<RawJob[]>][] = [
@@ -338,7 +358,12 @@ export async function fetchAllSources(env: Env, q: SearchQuery): Promise<{ jobs:
   connectors.forEach(([name], i) => { sources[name] = settled[i].length; all = all.concat(settled[i]); });
   if (q.remoteOnly) all = all.filter((j) => j.remote);
   // annotate board + attach scam score handled by caller
-  all.forEach((j) => { j.applyUrl = j.applyUrl || j.url; });
+  all.forEach((j) => {
+    j.applyUrl = j.applyUrl || j.url;
+    j.description = decodeEntities(j.description);
+    j.title = decodeEntities(j.title);
+    j.company = j.company ? decodeEntities(j.company) : j.company;
+  });
   return { jobs: all, sources };
 }
 

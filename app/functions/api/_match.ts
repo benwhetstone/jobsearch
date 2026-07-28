@@ -121,20 +121,24 @@ function scoreSkills(p: ProfileForMatch, hay: string, missing: string[]): number
   // A posting names a handful of tools, never your whole toolkit. Scoring hits
   // against the FULL skill list makes a good match mathematically unreachable,
   // so measure against how many skills a posting realistically mentions.
-  const expected = Math.min(4, skills.length);
+  // Tightened: five expected hits, soft-skill credit capped, so a high skills
+  // number means the posting genuinely names your tools.
+  const expected = Math.min(5, skills.length);
   const hits = skills.filter((s) => skillAppears(s, hay)).length;
-  const soft = p.softSkills.filter((s) => skillAppears(s, hay)).length;
-  return clamp01(hits / expected + soft * 0.05);
+  const soft = Math.min(2, p.softSkills.filter((s) => skillAppears(s, hay)).length);
+  return clamp01(hits / expected + soft * 0.04);
 }
 
 function scoreExperience(p: ProfileForMatch, job: JobForMatch, missing: string[]): number {
   const jt = norm(job.title);
-  let s = 0.5;
+  // Tightened: a role whose title shares nothing with the titles you're after
+  // starts from a low base instead of a friendly middle.
+  let s = 0.3;
   if (!p.desiredTitles.length) missing.push("desired job titles");
   // strong signal: a desired-title word overlaps the job title
   const titleWords = new Set(p.desiredTitles.flatMap((t) => tokens(t)));
   const overlap = tokens(job.title).filter((w) => titleWords.has(w)).length;
-  if (overlap >= 2) s += 0.35; else if (overlap === 1) s += 0.2;
+  if (overlap >= 2) s += 0.55; else if (overlap === 1) s += 0.35;
   // domain relevance in the body
   const hay = norm(job.title + " " + (job.description || ""));
   if (p.domains.some((d) => hay.includes(norm(d)))) s += 0.1;

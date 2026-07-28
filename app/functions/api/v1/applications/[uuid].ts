@@ -9,6 +9,7 @@
 // client. Nothing in this file submits anything to an employer.
 import { json, err, currentUser, type Env, type CtxUser } from "../../_lib";
 import { redline, cvToText, type CvContent } from "../../_docs";
+import { submitToAts } from "../../_submit";
 
 type Ctx = { user?: CtxUser };
 const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
@@ -66,7 +67,7 @@ export const onRequestGet: PagesFunction<Env, string, Ctx> = async ({ params, en
   });
 };
 
-export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, request, env, data }) => {
+export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, request, env, data, waitUntil }) => {
   const user = currentUser(data);
   const uuid = String(params.uuid);
   const app = await env.DB.prepare("SELECT uuid, status FROM applications_v2 WHERE uuid = ? AND user_id = ?")
@@ -108,16 +109,63 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     return json({ uuid, status: "applied" });
   }
 
-  // ---- approve: only when nothing still needs a human ----
+  // ---- manual pipeline movement: a phone call, an email the inbox missed,
+  //      or any update from outside the system. Persisted like any other move.
+  if (body.action === "setStatus") {
+    const allowed = new Set(["applied", "interview", "offer", "rejected", "withdrawn"]);
+    const to = String(body.status || "");
+    if (!allowed.has(to)) return err(400, `status must be one of: ${[...allowed].join(", ")}`);
+    await env.DB.prepare("UPDATE applications_v2 SET status = ?, updated_at = ? WHERE uuid = ?")
+      .bind(to, new Date().toISOString(), uuid).run();
+    if (to !== "actionRequired") await resolveActionItems(env, user.id, uuid);
+    return json({ uuid, status: to });
+  }
+
+  // ---- discard: the user said no to this one ----
+  if (body.action === "discard") {
+    await env.DB.prepare("UPDATE applications_v2 SET status = 'discarded', updated_at = ? WHERE uuid = ?")
+      .bind(new Date().toISOString(), uuid).run();
+    await resolveActionItems(env, user.id, uuid);
+    return json({ uuid, status: "discarded" });
+  }
+
+  // ---- approve: the final QA gate before anything can be submitted ----
+  // Three checks, all hard: every employer question answered, and BOTH
+  // documents passed their quality gates. A failed document never ships.
   if (body.action === "approve") {
     const open = await env.DB.prepare(
       "SELECT COUNT(*) AS n FROM application_form_fields WHERE application_uuid = ? AND fill_status = 'needs_human'"
     ).bind(uuid).first<{ n: number }>();
     if ((open?.n ?? 0) > 0) return err(409, `${open!.n} question(s) still need your answer before approving.`);
+    const full = await env.DB.prepare("SELECT cv_uuid, cover_letter_uuid FROM applications_v2 WHERE uuid = ?")
+      .bind(uuid).first<{ cv_uuid: string | null; cover_letter_uuid: string | null }>();
+    for (const [label, docUuid] of [["résumé", full?.cv_uuid], ["cover letter", full?.cover_letter_uuid]] as const) {
+      if (!docUuid) return err(409, `No ${label} exists for this application yet.`);
+      const d = await env.DB.prepare("SELECT verify_passed, verify_report FROM documents WHERE uuid = ?")
+        .bind(docUuid).first<{ verify_passed: number; verify_report: string | null }>();
+      if (!d?.verify_passed) {
+        let why: string[] = [];
+        try { why = JSON.parse(d?.verify_report || "{}").failures || []; } catch { /* */ }
+        return err(409, `QA blocked the ${label}: ${why[0] || "it did not pass the quality gate"}. Regenerate it before approving.`);
+      }
+    }
     await env.DB.prepare("UPDATE applications_v2 SET status = 'approved', updated_at = ? WHERE uuid = ?")
       .bind(new Date().toISOString(), uuid).run();
     await resolveActionItems(env, user.id, uuid);
-    return json({ uuid, status: "approved" });
+    // Approval was the human gate. From here the machine files it with the
+    // employer's ATS where the board accepts a direct post; if that path is
+    // blocked (captcha, unsupported board) it falls back to manual with an
+    // action item saying why.
+    const appRow = await env.DB.prepare("SELECT supported_ats, ats FROM applications_v2 WHERE uuid = ?")
+      .bind(uuid).first<{ supported_ats: number; ats: string | null }>();
+    const canAuto = !!appRow?.supported_ats && ["greenhouse", "lever"].includes(appRow?.ats || "");
+    if (canAuto) {
+      await env.DB.prepare("UPDATE applications_v2 SET status = 'applying', updated_at = ? WHERE uuid = ?")
+        .bind(new Date().toISOString(), uuid).run();
+      waitUntil(submitToAts(env, user.id, uuid));
+      return json({ uuid, status: "applying", submitting: true });
+    }
+    return json({ uuid, status: "approved", submitting: false });
   }
 
   // recompute status after answers

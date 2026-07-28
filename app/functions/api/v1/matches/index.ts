@@ -30,7 +30,7 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
     `SELECT m.job_uuid, m.total_score, m.skills, m.experience, m.compensation, m.terms, m.company,
             m.comp_flag, m.missing_json, m.status, m.created_at,
             j.title, j.company_name, j.location, j.remote, j.salary_min, j.salary_max, j.salary_currency,
-            j.url, j.apply_url, j.board, j.source, j.posted_at, j.description
+            j.url, j.apply_url, j.board, j.source, j.posted_at, j.description, j.auto_apply, j.created_at AS job_created_at
        FROM matches m JOIN jobs j ON j.uuid = m.job_uuid
       WHERE m.user_id = ? AND (? = 'all' OR m.status = ?) AND (? = 'all' OR m.origin = ?)
       ORDER BY m.total_score DESC
@@ -53,6 +53,9 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
       url: r.url, applyUrl: r.apply_url || r.url, board: r.board, source: r.source,
       postedAt: r.posted_at,
       snippet: (r.description || "").slice(0, 320),
+      // null = capability not resolved yet; true = autopilot can file it directly
+      autoApply: (r as any).auto_apply == null ? null : !!(r as any).auto_apply,
+      firstSeenAt: (r as any).job_created_at || null,
     },
     matchedAt: r.created_at,
   }));

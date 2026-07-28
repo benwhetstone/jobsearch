@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Job Search</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="stylesheet" href="/styles.css?v=2026072806" />
+  <link rel="stylesheet" href="/styles.css?v=2026072812" />
 </head>
 <body>
   <!-- Auth (login / signup) -->
@@ -65,6 +65,7 @@
 
     <main class="main">
       <div class="wrap">
+        <div id="statusStrip" class="statusstrip" hidden></div>
         <div class="mobile-head">
           <div class="brand" style="padding:0"><span class="mark">J</span> Job Search</div>
           <button id="logoutM" class="btn ghost">Log out</button>
@@ -119,11 +120,20 @@
               <button id="btnRefresh" class="btn primary">Find jobs</button>
             </div>
           </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span class="muted" style="font-size:12.5px">Sort by</span>
+            <select id="sortJobs" style="width:auto;padding:6px 10px;font-size:13px">
+              <option value="newest" selected>Newest</option>
+              <option value="score">Best match</option>
+              <option value="salary">Highest salary</option>
+            </select>
+          </div>
           <div id="matchMsg"></div>
           <div id="matchList" class="joblist"></div>
           <div id="bulkbar" class="bulkbar" hidden>
             <span id="bulkCount">0 selected</span>
             <button id="bulkClear" class="btn ghost">Clear</button>
+            <button id="bulkSkip" class="btn ghost">Not interested</button>
             <button id="bulkStart" class="btn primary">Start applications</button>
           </div>
         </section>
@@ -161,7 +171,6 @@
             <h1>Profile</h1>
             <p>Answer once. Every application reuses these answers, and matching runs on them.</p>
           </div>
-          <div id="actionBanner" hidden></div>
           <div class="card" style="padding:14px 15px;margin-bottom:14px">
             <strong style="font-size:13.5px">Your profile and your résumé are the same thing</strong>
             <div class="muted" style="font-size:12.5px;margin:4px 0 10px;max-width:640px">
@@ -204,6 +213,6 @@
     <div id="toast" class="toast" hidden></div>
   </div>
 
-  <script src="/app.js?v=2026072806"></script>
+  <script src="/app.js?v=2026072812"></script>
 </body>
 </html>
