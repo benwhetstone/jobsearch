@@ -7,14 +7,21 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <!-- Login -->
-  <div id="login" class="login" hidden>
-    <form id="loginForm" class="login-card">
+  <!-- Auth (login / signup) -->
+  <div id="auth" class="login" hidden>
+    <form id="authForm" class="login-card">
       <h1>Job Search Engine</h1>
-      <p class="muted">Enter your access token to continue.</p>
-      <input id="token" type="password" placeholder="Access token" autocomplete="current-password" />
-      <button type="submit">Unlock</button>
-      <p id="loginErr" class="err" hidden></p>
+      <p id="authSub" class="muted">Sign in to your account.</p>
+      <input id="name" type="text" placeholder="Your name" autocomplete="name" hidden />
+      <input id="email" type="email" placeholder="Email" autocomplete="email" required />
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password" required />
+      <input id="inviteCode" type="text" placeholder="Sign-up code (if you were given one)" hidden />
+      <button type="submit" id="authSubmit">Sign in</button>
+      <p id="authErr" class="err" hidden></p>
+      <p class="muted switch">
+        <span id="switchText">New here?</span>
+        <button type="button" id="switchMode" class="linkbtn">Create an account</button>
+      </p>
     </form>
   </div>
 
@@ -28,9 +35,14 @@
           <div class="bar"><div id="overallFill" class="fill"></div></div>
           <span id="overallPct" class="pct">0%</span>
         </div>
-        <button id="logout" class="ghost">Lock</button>
+        <div class="usermenu">
+          <span id="whoami" class="muted"></span>
+          <button id="logout" class="ghost">Log out</button>
+        </div>
       </div>
     </header>
+
+    <div id="actionBanner" class="action-banner" hidden></div>
 
     <div class="layout">
       <nav id="blockNav" class="blocknav"></nav>

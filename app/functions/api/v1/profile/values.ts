@@ -3,7 +3,7 @@
 // Upserts values, validating against each field's type and enum. Enum validation
 // is what keeps matching deterministic: a value that is not on the option list is
 // rejected, not silently stored. Sending null / "" / [] CLEARS a field.
-import { json, err, computeCompletion, type Env } from "../../_lib";
+import { json, err, computeCompletion, currentUser, type Env, type CtxUser } from "../../_lib";
 
 interface FieldDef {
   field_key: string; field_type: string; options_json: string; is_multi_select: number;
@@ -57,7 +57,8 @@ function isClear(value: unknown): boolean {
     (Array.isArray(value) && value.length === 0);
 }
 
-const handler: PagesFunction<Env> = async ({ request, env }) => {
+const handler: PagesFunction<Env, string, { user?: CtxUser }> = async ({ request, env, data }) => {
+  const user = currentUser(data);
   let body: { values?: Incoming[] };
   try {
     body = await request.json();
@@ -91,7 +92,7 @@ const handler: PagesFunction<Env> = async ({ request, env }) => {
     if (!def) { errors.push({ fieldKey: fk, message: "unknown field" }); continue; }
 
     if (isClear(item.value)) {
-      statements.push(env.DB.prepare("DELETE FROM profile_values WHERE field_key = ?").bind(fk));
+      statements.push(env.DB.prepare("DELETE FROM profile_values WHERE user_id = ? AND field_key = ?").bind(user.id, fk));
       cleared.push(fk);
       continue;
     }
@@ -99,15 +100,15 @@ const handler: PagesFunction<Env> = async ({ request, env }) => {
     if (!c.ok) { errors.push({ fieldKey: fk, message: c.msg }); continue; }
     statements.push(
       env.DB.prepare(
-        "INSERT OR REPLACE INTO profile_values (field_key, value_json, updated_at) VALUES (?, ?, ?)"
-      ).bind(fk, JSON.stringify(c.value), now)
+        "INSERT OR REPLACE INTO profile_values (user_id, field_key, value_json, updated_at) VALUES (?, ?, ?, ?)"
+      ).bind(user.id, fk, JSON.stringify(c.value), now)
     );
     saved.push(fk);
   }
 
   if (statements.length) await env.DB.batch(statements);
 
-  const completion = await computeCompletion(env);
+  const completion = await computeCompletion(env, user.id);
   const status = errors.length && !statements.length ? 422 : 200;
   return json({ saved, cleared, errors, completion }, { savedCount: saved.length, errorCount: errors.length }, status);
 };

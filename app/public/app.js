@@ -1,9 +1,10 @@
-/* Job Search Engine — profile editor (Phase 1). Vanilla JS, no build step. */
+/* Job Search Engine — profile editor (Phase 1). Vanilla JS, no build step.
+   Auth is cookie-session based: the browser holds an HttpOnly session cookie,
+   so nothing sensitive lives in JS. */
 (() => {
   "use strict";
-  const TOKEN_KEY = "jse_token";
-  let TOKEN = localStorage.getItem(TOKEN_KEY) || "";
   let MODEL = null; // last /profile payload
+  let MODE = "login"; // login | signup
 
   const $ = (s, r = document) => r.querySelector(s);
   const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
@@ -11,40 +12,60 @@
   async function api(path, opts = {}) {
     const res = await fetch(`/api/v1${path}`, {
       ...opts,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOKEN}`, ...(opts.headers || {}) },
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
     });
-    if (res.status === 401) { lock(); throw new Error("unauthorized"); }
+    if (res.status === 401) { showAuth(); throw new Error("unauthorized"); }
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw Object.assign(new Error(body.error || res.statusText), { body, status: res.status });
     return body;
   }
 
   // ---- auth --------------------------------------------------------------
-  function lock() {
-    TOKEN = "";
-    localStorage.removeItem(TOKEN_KEY);
-    $("#app").hidden = true;
-    $("#login").hidden = false;
-  }
-  function unlockUI() { $("#login").hidden = true; $("#app").hidden = false; }
+  function showAuth() { $("#app").hidden = true; $("#auth").hidden = false; }
+  function showApp() { $("#auth").hidden = true; $("#app").hidden = false; }
 
-  $("#loginForm").addEventListener("submit", async (e) => {
+  function setMode(mode) {
+    MODE = mode;
+    const signup = mode === "signup";
+    $("#authSub").textContent = signup ? "Create your account." : "Sign in to your account.";
+    $("#authSubmit").textContent = signup ? "Create account" : "Sign in";
+    $("#name").hidden = !signup;
+    $("#inviteCode").hidden = !signup;
+    $("#password").setAttribute("autocomplete", signup ? "new-password" : "current-password");
+    $("#switchText").textContent = signup ? "Already have an account?" : "New here?";
+    $("#switchMode").textContent = signup ? "Sign in" : "Create an account";
+    $("#authErr").hidden = true;
+  }
+  $("#switchMode").addEventListener("click", () => setMode(MODE === "login" ? "signup" : "login"));
+
+  $("#authForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const t = $("#token").value.trim();
-    if (!t) return;
-    TOKEN = t;
+    const email = $("#email").value.trim();
+    const password = $("#password").value;
+    const name = $("#name").value.trim();
+    const inviteCode = $("#inviteCode").value.trim();
+    $("#authErr").hidden = true;
+    if (!email || !password) return;
     try {
-      await api("/health");
-      localStorage.setItem(TOKEN_KEY, t);
-      unlockUI();
+      if (MODE === "signup") {
+        const r = await api("/auth/signup", { method: "POST", body: JSON.stringify({ email, password, name, inviteCode }) });
+        if (r.data.claimed) toast("Welcome back — your profile was already set up.");
+      } else {
+        await api("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+      }
+      showApp();
       boot();
-    } catch {
-      $("#loginErr").hidden = false;
-      $("#loginErr").textContent = "That token was rejected.";
-      TOKEN = "";
+    } catch (err) {
+      $("#authErr").hidden = false;
+      $("#authErr").textContent = err.message || "Something went wrong.";
     }
   });
-  $("#logout").addEventListener("click", lock);
+
+  $("#logout").addEventListener("click", async () => {
+    try { await api("/auth/logout", { method: "POST" }); } catch {}
+    showAuth();
+  });
 
   // ---- toast -------------------------------------------------------------
   let toastTimer;
@@ -302,15 +323,45 @@
     applyCompletion({ score: model.completion.score, blocks: Object.fromEntries(model.blocks.map((b) => [b.key, b.completion])) });
   }
 
+  async function renderActions() {
+    const banner = $("#actionBanner");
+    try {
+      const r = await api("/actions");
+      const items = r.data.items || [];
+      if (!items.length) { banner.hidden = true; return; }
+      banner.innerHTML = "";
+      banner.appendChild(el("strong", null, `${items.length} thing${items.length === 1 ? "" : "s"} need your attention`));
+      const ul = el("ul");
+      items.slice(0, 5).forEach((i) => {
+        const li = el("li");
+        if (i.url) { const a = el("a", null, i.title); a.href = i.url; li.appendChild(a); }
+        else li.appendChild(document.createTextNode(i.title));
+        ul.appendChild(li);
+      });
+      banner.appendChild(ul);
+      banner.hidden = false;
+    } catch { banner.hidden = true; }
+  }
+
   async function boot() {
     try {
+      const me = await api("/auth/me");
+      if (!me.data.user) { showAuth(); return; }
+      $("#whoami").textContent = me.data.user.name || me.data.user.email;
       const r = await api("/profile");
       render(r.data);
+      renderActions();
     } catch (e) {
-      if (e.message !== "unauthorized") toast("Could not load profile: " + e.message);
+      if (e.message !== "unauthorized") toast("Could not load: " + e.message);
     }
   }
 
   // ---- init --------------------------------------------------------------
-  if (TOKEN) { unlockUI(); boot(); } else { lock(); }
+  setMode("login");
+  (async () => {
+    try {
+      const me = await api("/auth/me");
+      if (me.data.user) { showApp(); boot(); } else { showAuth(); }
+    } catch { showAuth(); }
+  })();
 })();

@@ -16,6 +16,23 @@ gate, mirrors the ATS form and prefills it from the profile — and then **stops
 for Ben's approval**. It never submits on its own. Matches repopulate on the
 first login of the day.
 
+## Multi-tenant
+
+Ben can bring friends and family onto the same app. Each person gets their own
+account (email + password) and their own private profile; the field *definitions*
+are shared, the *values* are per-user. Passwords are PBKDF2-hashed in D1, sessions
+are HttpOnly cookies. Ben's pre-filled profile is a **claimable** account: the
+first sign-up with `brwhetstone@gmail.com` sets his password and inherits the
+seeded profile. Optional `APP_SIGNUP_CODE` makes sign-up invite-only.
+
+## Email notifications
+
+When a user needs to log in and do something (new matches, an application that
+needs an answer, an interview reply), later phases insert an `action_item`. A
+daily Cron Trigger calls `POST /api/v1/notifications/run` (admin-token guarded),
+which emails everyone with pending items via Resend. Email degrades to a no-op
+until `RESEND_API_KEY` is set, so the app runs before email is wired up.
+
 ## Phase 1: the Profile engine
 
 The highest-value idea in the whole product. The profile is modeled as a table
@@ -49,12 +66,20 @@ app/
 
 ### Endpoints
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET  | `/api/v1/health` | liveness + field count |
-| GET  | `/api/v1/profile` | whole profile: blocks, categories, fields, values, completion |
-| PATCH| `/api/v1/profile/values` | upsert values. Body `{ values: [{ fieldKey, value }] }`. Enum-validated. `null`/`""`/`[]` clears a field |
-| GET  | `/api/v1/profile/completion` | `{ score, requiredScore, blocks: { <key>: {filledCount,totalCount,...} } }` |
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| GET  | `/api/v1/health` | none | liveness + field count |
+| POST | `/api/v1/auth/signup` | none | `{ email, password, name?, inviteCode? }` → creates/claims account, sets session cookie |
+| POST | `/api/v1/auth/login` | none | `{ email, password }` → sets session cookie |
+| POST | `/api/v1/auth/logout` | cookie | clears the session |
+| GET  | `/api/v1/auth/me` | none | current user or `{ user: null }` |
+| GET  | `/api/v1/profile` | cookie | whole profile: blocks, categories, fields, this user's values, completion |
+| PATCH| `/api/v1/profile/values` | cookie | upsert values. `{ values: [{ fieldKey, value }] }`. Enum-validated. `null`/`""`/`[]` clears |
+| GET  | `/api/v1/profile/completion` | cookie | `{ score, requiredScore, blocks: {...} }` |
+| GET  | `/api/v1/actions` | cookie | this user's pending action items |
+| POST | `/api/v1/actions` | cookie | create an action item `{ kind, title, detail?, url? }` |
+| PATCH| `/api/v1/actions` | cookie | resolve one `{ id, status: 'done'\|'dismissed' }` |
+| POST | `/api/v1/notifications/run` | admin bearer | daily digest: emails users with pending items |
 
 All list responses use the `{ data, meta }` envelope.
 
@@ -70,15 +95,28 @@ npm install
 # 1. Create the tables and seed Ben's profile on the REMOTE D1
 npm run db:setup          # runs 0001, 0002, 0003 against --remote
 
-# 2. Set the shared bearer token (do NOT commit it)
-npx wrangler pages secret put APP_AUTH_TOKEN --project-name jobs-benwhetstone
-#   (the API also accepts the existing ROADMAP_TOKEN as a fallback)
+# 2. Set the admin token used by the daily notifications cron (do NOT commit it)
+npx wrangler pages secret put APP_ADMIN_TOKEN --project-name jobs-benwhetstone
+#   optional: npx wrangler pages secret put APP_SIGNUP_CODE  (invite-only sign-up)
+#   optional: npx wrangler pages secret put RESEND_API_KEY   (enables email)
 
 # 3. Deploy the Pages project (Functions ship with it)
 npm run deploy
 
 # 4. Point jobs.benwhetstone.info at the Pages project in the Cloudflare dashboard
 ```
+
+### Daily notifications cron
+
+Pages Functions don't run on a schedule, so add a tiny Cron Trigger (a Worker, or
+any scheduler) that once a day sends:
+
+```
+POST https://jobs.benwhetstone.info/api/v1/notifications/run
+Authorization: Bearer <APP_ADMIN_TOKEN>
+```
+
+That emails every user who has pending action items.
 
 Local dev against a local copy of the DB:
 

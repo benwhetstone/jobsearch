@@ -58,6 +58,17 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .pct { font-family: var(--mono); font-size: 13px; min-width: 40px; text-align: right; }
 .ghost { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 7px 12px;
   border-radius: 8px; cursor: pointer; font-size: 13px; }
+.usermenu { display: flex; align-items: center; gap: 10px; }
+#whoami { font-size: 13px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.switch { text-align: center; font-size: 13px; margin: 4px 0 0; }
+.login-card .linkbtn { color: var(--accent); font-size: 13px; }
+
+.action-banner { max-width: 1080px; margin: 0 auto; padding: 14px 18px; background: var(--accent-weak);
+  border: 1px solid var(--accent); border-radius: var(--radius); color: var(--text); margin-top: 18px; }
+.action-banner strong { display: block; margin-bottom: 4px; color: var(--accent); }
+.action-banner ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; }
+.action-banner a { color: var(--accent); }
 
 /* Layout */
 .layout { display: grid; grid-template-columns: 240px 1fr; gap: 24px; max-width: 1080px; margin: 0 auto; padding: 24px 20px 80px; }

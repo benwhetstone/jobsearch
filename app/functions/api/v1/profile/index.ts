@@ -1,7 +1,7 @@
 // GET /api/v1/profile
 // Returns the whole profile: blocks -> categories -> fields, each field carrying
 // its definition (question, options, flags) and Ben's current value.
-import { json, isFilled, computeCompletion, type Env } from "../../_lib";
+import { json, isFilled, computeCompletion, currentUser, type Env, type CtxUser } from "../../_lib";
 
 interface BlockRow { key: string; label: string; description: string | null; sort_order: number; }
 interface FieldRow {
@@ -10,14 +10,15 @@ interface FieldRow {
   is_required: number; is_matching_input: number; help_text: string | null; sort_order: number;
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
+export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = async ({ env, data }) => {
+  const user = currentUser(data);
   const [blocks, fields, values, completion] = await Promise.all([
     env.DB.prepare("SELECT * FROM profile_blocks ORDER BY sort_order").all<BlockRow>(),
     env.DB.prepare("SELECT * FROM profile_fields ORDER BY block_key, sort_order").all<FieldRow>(),
-    env.DB.prepare("SELECT field_key, value_json, updated_at FROM profile_values").all<{
+    env.DB.prepare("SELECT field_key, value_json, updated_at FROM profile_values WHERE user_id = ?").bind(user.id).all<{
       field_key: string; value_json: string | null; updated_at: string;
     }>(),
-    computeCompletion(env),
+    computeCompletion(env, user.id),
   ]);
 
   const valueMap = new Map<string, { value_json: string | null; updated_at: string }>();

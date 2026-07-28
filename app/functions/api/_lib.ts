@@ -3,9 +3,15 @@
 
 export interface Env {
   DB: D1Database;
-  APP_AUTH_TOKEN?: string;
-  ROADMAP_TOKEN?: string;
   APP_ENV?: string;
+  // auth / admin
+  APP_ADMIN_TOKEN?: string;      // bearer for cron/admin calls (e.g. notifications runner)
+  ROADMAP_TOKEN?: string;        // existing token, accepted as an admin fallback
+  APP_SIGNUP_CODE?: string;      // if set, sign-up requires this invite code
+  APP_BASE_URL?: string;         // e.g. https://jobs.benwhetstone.info (for links in emails)
+  // email (optional; degrades to no-op if unset)
+  RESEND_API_KEY?: string;
+  NOTIFY_FROM?: string;          // e.g. "Job Search <notify@jobs.benwhetstone.info>"
 }
 
 const CORS = {
@@ -14,10 +20,10 @@ const CORS = {
   "Access-Control-Allow-Headers": "Authorization,Content-Type",
 };
 
-export function json(data: unknown, meta: Record<string, unknown> = {}, status = 200): Response {
+export function json(data: unknown, meta: Record<string, unknown> = {}, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify({ data, meta }), {
     status,
-    headers: { "Content-Type": "application/json", ...CORS },
+    headers: { "Content-Type": "application/json", ...CORS, ...headers },
   });
 }
 
@@ -32,13 +38,11 @@ export function preflight(): Response {
   return new Response(null, { status: 204, headers: CORS });
 }
 
-// Bearer auth. Accepts APP_AUTH_TOKEN, or the existing ROADMAP_TOKEN as a
-// fallback so one secret can cover both surfaces during migration.
-export function checkAuth(request: Request, env: Env): boolean {
-  const expected = env.APP_AUTH_TOKEN || env.ROADMAP_TOKEN;
-  if (!expected) return false; // fail closed: no token configured => no access
-  const header = request.headers.get("Authorization") || "";
-  const m = header.match(/^Bearer\s+(.+)$/i);
+// Admin bearer for cron/automation (notifications runner). Not user auth.
+export function checkAdmin(request: Request, env: Env): boolean {
+  const expected = env.APP_ADMIN_TOKEN || env.ROADMAP_TOKEN;
+  if (!expected) return false;
+  const m = (request.headers.get("Authorization") || "").match(/^Bearer\s+(.+)$/i);
   return !!m && m[1].trim() === expected;
 }
 
@@ -55,11 +59,11 @@ export function isFilled(valueJson: string | null | undefined): boolean {
   if (typeof v === "string") return v.trim().length > 0;
   if (Array.isArray(v)) return v.length > 0;
   if (typeof v === "object") return Object.keys(v as object).length > 0;
-  return true; // numbers, booleans
+  return true;
 }
 
-// Completion payload shared by /profile and /profile/completion.
-export async function computeCompletion(env: Env): Promise<{
+// Completion payload for one user.
+export async function computeCompletion(env: Env, userId: string): Promise<{
   score: number;
   requiredScore: number;
   blocks: Record<string, { filledCount: number; totalCount: number; requiredFilled: number; requiredTotal: number }>;
@@ -67,22 +71,18 @@ export async function computeCompletion(env: Env): Promise<{
   const fields = await env.DB.prepare(
     "SELECT field_key, block_key, is_required FROM profile_fields"
   ).all<{ field_key: string; block_key: string; is_required: number }>();
-  const values = await env.DB.prepare("SELECT field_key, value_json FROM profile_values").all<{
-    field_key: string;
-    value_json: string | null;
-  }>();
+  const values = await env.DB.prepare(
+    "SELECT field_key, value_json FROM profile_values WHERE user_id = ?"
+  ).bind(userId).all<{ field_key: string; value_json: string | null }>();
 
   const filledSet = new Set<string>();
-  for (const row of values.results ?? []) {
-    if (isFilled(row.value_json)) filledSet.add(row.field_key);
-  }
+  for (const row of values.results ?? []) if (isFilled(row.value_json)) filledSet.add(row.field_key);
 
   const blocks: Record<string, { filledCount: number; totalCount: number; requiredFilled: number; requiredTotal: number }> = {};
   let total = 0, filled = 0, reqTotal = 0, reqFilled = 0;
   for (const f of fields.results ?? []) {
     const b = (blocks[f.block_key] ??= { filledCount: 0, totalCount: 0, requiredFilled: 0, requiredTotal: 0 });
-    b.totalCount++;
-    total++;
+    b.totalCount++; total++;
     const isf = filledSet.has(f.field_key);
     if (isf) { b.filledCount++; filled++; }
     if (f.is_required) {
@@ -95,4 +95,10 @@ export async function computeCompletion(env: Env): Promise<{
     requiredScore: reqTotal ? Math.round((100 * reqFilled) / reqTotal) : 0,
     blocks,
   };
+}
+
+// Pull the authenticated user attached by the middleware.
+export interface CtxUser { id: string; email: string; name: string | null; role: string; notify_email: number; }
+export function currentUser(data: { user?: CtxUser }): CtxUser {
+  return data.user as CtxUser;
 }
