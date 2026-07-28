@@ -1036,7 +1036,11 @@
       $("#userEmail").textContent = u.name ? u.email : "";
       $("#userAva").textContent = (u.name || u.email || "?").trim()[0];
       MODEL = null; MATCHES_LOADED = false;
-      switchView("matches");
+      // Deep link from a notification email: /#application=<uuid> opens that
+      // application's review screen directly.
+      const deep = location.hash.match(/^#application=([a-f0-9-]{8,})$/i);
+      if (deep) { switchView("applications"); openApplication(deep[1]); }
+      else switchView("matches");
       loadProfile().catch(() => {});
     } catch (e) {
       if (e.message !== "unauthorized") toast("Could not load: " + e.message);

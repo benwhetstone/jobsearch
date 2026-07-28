@@ -108,6 +108,7 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     if ((open?.n ?? 0) > 0) return err(409, `${open!.n} question(s) still need your answer before approving.`);
     await env.DB.prepare("UPDATE applications SET status = 'approved', updated_at = ? WHERE uuid = ?")
       .bind(new Date().toISOString(), uuid).run();
+    await resolveActionItems(env, user.id, uuid);
     return json({ uuid, status: "approved" });
   }
 
@@ -118,5 +119,14 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
   const status = (open?.n ?? 0) > 0 ? "actionRequired" : (app.status === "approved" ? "approved" : "readyToApply");
   await env.DB.prepare("UPDATE applications SET status = ?, updated_at = ? WHERE uuid = ?")
     .bind(status, new Date().toISOString(), uuid).run();
+  // Once nothing is waiting on the user, clear the queue entry so the actions
+  // banner and the notification email stop nagging about it.
+  if (status !== "actionRequired") await resolveActionItems(env, user.id, uuid);
   return json({ uuid, status, needsHuman: open?.n ?? 0 });
 };
+
+async function resolveActionItems(env: Env, userId: string, appUuid: string): Promise<void> {
+  await env.DB.prepare(
+    "UPDATE action_items SET status = 'done', resolved_at = ? WHERE user_id = ? AND url = ? AND status = 'pending'"
+  ).bind(new Date().toISOString(), userId, `/#application=${appUuid}`).run().catch(() => {});
+}

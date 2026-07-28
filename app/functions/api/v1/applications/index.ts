@@ -188,4 +188,22 @@ async function prepare(env: Env, user: CtxUser, appUuid: string, job: JobRow): P
       WHERE uuid = ?`
   ).bind(ref?.ats ?? null, ref?.token ?? null, ref?.jobId ?? null, ref ? 1 : 0, manual ? 1 : 0,
          status, cvUuid, clUuid, gate.verdict, JSON.stringify(gate.notes), now(), appUuid).run();
+
+  // Anything that stops and waits for the user goes on the action-required
+  // queue, which is what the actions banner shows and the notification email
+  // runner drains. Deep link resolves the item once it's handled.
+  if (status === "actionRequired") {
+    const bits: string[] = [];
+    if (needsHuman > 0) bits.push(`${needsHuman} question${needsHuman === 1 ? " needs" : "s need"} your answer`);
+    if (gate.verdict !== "PASS") bits.push(`the hiring-manager check says ${gate.verdict}`);
+    await env.DB.prepare(
+      `INSERT INTO action_items (id, user_id, kind, title, detail, url, status, created_at)
+       VALUES (?, ?, 'action_required', ?, ?, ?, 'pending', ?)`
+    ).bind(
+      uuid(), user.id,
+      `Your ${job.company_name || ""} application needs you`.replace(/\s+/g, " ").trim(),
+      `${job.title}: ${bits.join(", ")}.`,
+      `/#application=${appUuid}`, now()
+    ).run().catch(() => {});
+  }
 }
