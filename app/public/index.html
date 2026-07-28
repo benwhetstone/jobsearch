@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Job Search Engine — Profile</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- Login -->
+  <div id="login" class="login" hidden>
+    <form id="loginForm" class="login-card">
+      <h1>Job Search Engine</h1>
+      <p class="muted">Enter your access token to continue.</p>
+      <input id="token" type="password" placeholder="Access token" autocomplete="current-password" />
+      <button type="submit">Unlock</button>
+      <p id="loginErr" class="err" hidden></p>
+    </form>
+  </div>
+
+  <!-- App -->
+  <div id="app" hidden>
+    <header class="topbar">
+      <div class="brand">Job Search Engine <span class="tag">Profile</span></div>
+      <div class="top-right">
+        <div class="overall">
+          <span class="overall-label">Profile strength</span>
+          <div class="bar"><div id="overallFill" class="fill"></div></div>
+          <span id="overallPct" class="pct">0%</span>
+        </div>
+        <button id="logout" class="ghost">Lock</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav id="blockNav" class="blocknav"></nav>
+      <main id="blocks" class="content"></main>
+    </div>
+
+    <div id="toast" class="toast" hidden></div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

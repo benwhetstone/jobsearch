@@ -1,0 +1,25 @@
+# Cloudflare Pages + Functions config for jobs.benwhetstone.info
+# Deploy:  npx wrangler pages deploy public --project-name jobs-benwhetstone
+#
+# This app extends Ben's existing stack. It reuses the D1 database that already
+# backs roadmap.benwhetstone.info instead of creating a new one.
+
+name = "jobs-benwhetstone"
+compatibility_date = "2026-07-01"
+pages_build_output_dir = "public"
+
+# --- D1: the existing database (id + account from PROJECT-BRIEF §1) ----------
+# The binding name `DB` is what Functions read via `env.DB`.
+[[d1_databases]]
+binding = "DB"
+database_name = "bens-job-search-db"
+database_id = "b242bc78-7e28-4600-bfde-524ab7842283"
+
+# --- Vars --------------------------------------------------------------------
+# APP_AUTH_TOKEN is the bearer token the dashboard and API share. Set it as a
+# secret, do NOT commit it:
+#   npx wrangler pages secret put APP_AUTH_TOKEN --project-name jobs-benwhetstone
+# The API also accepts the existing ROADMAP_TOKEN as a fallback so one secret
+# can cover both surfaces during migration.
+[vars]
+APP_ENV = "production"

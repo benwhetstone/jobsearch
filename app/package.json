@@ -1,0 +1,18 @@
+{
+  "name": "jobs-benwhetstone",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ben Whetstone's personal job-search engine (globalwork.ai-architecture rebuild on Cloudflare D1). Phase 1: profile engine.",
+  "scripts": {
+    "dev": "wrangler pages dev public --d1 DB=bens-job-search-db",
+    "deploy": "wrangler pages deploy public --project-name jobs-benwhetstone",
+    "db:migrate": "wrangler d1 execute bens-job-search-db --remote --file schema/0001_profile_engine.sql",
+    "db:seed:fields": "wrangler d1 execute bens-job-search-db --remote --file schema/0002_seed_blocks_fields.sql",
+    "db:seed:ben": "wrangler d1 execute bens-job-search-db --remote --file schema/0003_seed_ben_values.sql",
+    "db:setup": "npm run db:migrate && npm run db:seed:fields && npm run db:seed:ben",
+    "db:setup:local": "wrangler d1 execute bens-job-search-db --local --file schema/0001_profile_engine.sql && wrangler d1 execute bens-job-search-db --local --file schema/0002_seed_blocks_fields.sql && wrangler d1 execute bens-job-search-db --local --file schema/0003_seed_ben_values.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

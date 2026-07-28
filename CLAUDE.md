@@ -77,3 +77,19 @@ but the browser submit must happen on the desktop client.
    returns PASS.
 4. **Repo is the only home.** If any of these skills is also installed in a personal/profile
    skill library, remove it there so it is defined exactly once. The copy in this repo wins.
+
+## The web app (`app/`) — structured rebuild in progress
+
+Alongside the skills, this repo now holds **`app/`**: Ben's job-search tooling rebuilt on the
+globalwork.ai architecture (a structured D1 data model instead of prompts), deployed to
+`jobs.benwhetstone.info` on the Cloudflare stack Ben already pays for. The full spec is
+`PROJECT-BRIEF.md` at the repo root; the source teardown notes are in `docs/globalwork-teardown/`.
+
+- **Phase 1 (built): the profile engine** — `profile_blocks` / `profile_fields` /
+  `profile_values`, a bearer-guarded Pages Functions API, and a block-editor UI. See
+  `app/README.md` for endpoints and deploy steps.
+- **Autopilot means human-gated prep, not auto-submit.** Ben clicks Apply per job; the system
+  tailors, gates, mirrors the ATS form and prefills it, then stops for his approval. It never
+  submits on its own. Matches repopulate on the first login of the day.
+- The skills stay the machinery; over later phases they become clients of this API instead of
+  holding state in markdown. Nothing here removes or replaces a skill yet.
