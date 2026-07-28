@@ -5,7 +5,7 @@
 --
 -- Constraints from CLAUDE.md / PROJECT-BRIEF §1 are encoded here, not in prompt:
 --   firstName = Benjamin; address = Apollo Beach (NOT Riverview); $60K salary floor;
---   veteran YES; disability YES; race/ethnicity intentionally UNSET (never auto-answered);
+--   veteran YES; disability YES; race/ethnicity = decline-to-state (auto-answered, never re-asked);
 --   approved skills only (no AI, no Lofty/SkySlope/CRM/Google Ads); $36M annual SST volume;
 --   Closing Day = sales pipeline analytics platform.
 -- updated_at uses a fixed seed timestamp; the API overwrites it on every edit.
@@ -30,6 +30,7 @@ INSERT OR REPLACE INTO profile_values (user_id, field_key, value_json, updated_a
 INSERT OR REPLACE INTO profile_values (user_id, field_key, value_json, updated_at) VALUES ('user_ben', 'disabilityStatus', '"YES"', '2026-07-28T00:00:00Z');
 INSERT OR REPLACE INTO profile_values (user_id, field_key, value_json, updated_at) VALUES ('user_ben', 'gender', '"PREFER_NOT_TO_SAY"', '2026-07-28T00:00:00Z');
 INSERT OR REPLACE INTO profile_values (user_id, field_key, value_json, updated_at) VALUES ('user_ben', 'lgbtqCommunity', '"PREFER_NOT_TO_SAY"', '2026-07-28T00:00:00Z');
+INSERT OR REPLACE INTO profile_values (user_id, field_key, value_json, updated_at) VALUES ('user_ben', 'raceEthnicity', '"PREFER_NOT_TO_SAY"', '2026-07-28T00:00:00Z');
 INSERT OR REPLACE INTO profile_values (user_id, field_key, value_json, updated_at) VALUES ('user_ben', 'legalSetup', '["US_FULL_TIME_EMPLOYEE_W2"]', '2026-07-28T00:00:00Z');
 INSERT OR REPLACE INTO profile_values (user_id, field_key, value_json, updated_at) VALUES ('user_ben', 'residenceCountry', '"USA"', '2026-07-28T00:00:00Z');
 INSERT OR REPLACE INTO profile_values (user_id, field_key, value_json, updated_at) VALUES ('user_ben', 'workAuthorization', '["US_CITIZEN"]', '2026-07-28T00:00:00Z');
