@@ -3,22 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Job Search Engine — Profile</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <title>Job Search</title>
+  <link rel="stylesheet" href="/styles.css?v=2026072803" />
 </head>
 <body>
   <!-- Auth (login / signup) -->
   <div id="auth" class="login" hidden>
     <form id="authForm" class="login-card">
-      <div class="logo"><span class="dot">J</span><h1>Job Search Engine</h1></div>
-      <p id="authSub" class="lede">Sign in to your account.</p>
+      <h1>Job Search</h1>
+      <p id="authSub" class="sub">Sign in to your account.</p>
       <input id="name" type="text" placeholder="Your name" autocomplete="name" hidden />
-      <input id="email" type="email" placeholder="Email" autocomplete="email" required />
-      <input id="password" type="password" placeholder="Password" autocomplete="current-password" required />
+      <label for="email">Email</label>
+      <input id="email" type="email" placeholder="you@example.com" autocomplete="email" required />
+      <label for="password">Password</label>
+      <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" required />
       <input id="inviteCode" type="text" placeholder="Sign-up code (if you were given one)" hidden />
       <button type="submit" id="authSubmit">Sign in</button>
       <p id="authErr" class="err" hidden></p>
-      <p class="muted switch">
+      <p class="muted" style="margin:14px 0 0;font-size:13px;text-align:center">
         <span id="switchText">New here?</span>
         <button type="button" id="switchMode" class="linkbtn">Create an account</button>
       </p>
@@ -26,95 +28,145 @@
   </div>
 
   <!-- App -->
-  <div id="app" hidden>
-    <header class="topbar">
-      <div class="brand"><span class="dot">J</span> Job Search</div>
-      <nav class="mainnav" id="mainnav">
-        <button data-view="profile" class="active">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span>Profile</span>
-        </button>
-        <button data-view="matches">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <span>Matches</span>
+  <div id="app" class="shell" hidden>
+    <aside class="sidebar">
+      <div class="brand"><span class="mark">J</span> Job Search</div>
+      <nav class="sidenav" id="sidenav">
+        <button data-view="matches" class="active">
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>Jobs</span><span class="count" id="cntMatches" hidden>0</span>
         </button>
         <button data-view="applications">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg>
-          <span>Applications</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg>
+          <span>Applications</span><span class="count" id="cntApps" hidden>0</span>
         </button>
         <button data-view="inbox">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
           <span>Inbox</span>
         </button>
+        <button data-view="profile">
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Profile</span><span class="count" id="cntProfile">0%</span>
+        </button>
       </nav>
-      <div class="top-right">
-        <div class="overall" id="overall">
-          <span class="overall-label">Profile</span>
-          <div class="bar"><div id="overallFill" class="fill"></div></div>
-          <span id="overallPct" class="pct">0%</span>
+      <div class="side-foot">
+        <div class="side-user">
+          <span class="avatar" id="userAva">?</span>
+          <span class="who"><strong id="userName">—</strong><span id="userEmail"></span></span>
         </div>
-        <div class="usermenu">
-          <span id="whoami" class="muted"></span>
-          <button id="logout" class="ghost">Log out</button>
-        </div>
+        <button id="logout" class="btn ghost" style="width:100%;justify-content:center">Log out</button>
       </div>
-    </header>
+    </aside>
 
-    <main class="views">
-      <section id="view-profile" class="view">
-        <div id="actionBanner" class="action-banner" hidden></div>
-        <div class="layout">
-          <nav id="blockNav" class="blocknav"></nav>
-          <div id="blocks" class="content"></div>
+    <main class="main">
+      <div class="wrap">
+        <div class="mobile-head">
+          <div class="brand" style="padding:0"><span class="mark">J</span> Job Search</div>
+          <button id="logoutM" class="btn ghost">Log out</button>
         </div>
-      </section>
 
-      <section id="view-matches" class="view" hidden>
-        <div class="placeholder">
-          <div class="ph-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
-          <h2>Matches</h2>
-          <p>Ranked roles with an explained match score will appear here. Finish your profile and this fills up on your first sweep.</p>
-          <span class="ph-tag">Coming in Phase 2</span>
-        </div>
-      </section>
+        <!-- Jobs / matches -->
+        <section id="view-matches" class="view">
+          <div class="page-head">
+            <h1>Jobs</h1>
+            <p>Select jobs to apply for. We'll tailor the documents — you handle the final review.</p>
+          </div>
+          <div id="matchStats" class="stats" hidden></div>
+          <div class="card searchbar">
+            <div class="row">
+              <div class="f">
+                <label for="sKeywords">What are you looking for?</label>
+                <input id="sKeywords" type="text" placeholder="e.g. Data Analyst" />
+              </div>
+              <div class="f">
+                <label for="sLocation">Where?</label>
+                <input id="sLocation" type="text" placeholder="e.g. Tampa, FL" />
+              </div>
+              <div class="f">
+                <label for="sRadius">Radius</label>
+                <select id="sRadius">
+                  <option value="">Any</option>
+                  <option value="10">10 mi</option>
+                  <option value="25">25 mi</option>
+                  <option value="40" selected>40 mi</option>
+                  <option value="75">75 mi</option>
+                  <option value="150">150 mi</option>
+                </select>
+              </div>
+            </div>
+            <div class="row2">
+              <label><input type="checkbox" id="sRemote" /> Remote only</label>
+              <label style="gap:8px">Min salary
+                <input id="sSalary" type="number" placeholder="60000" style="width:104px" />
+              </label>
+              <span class="spacer"></span>
+              <button id="btnRefresh" class="btn primary">Find jobs</button>
+            </div>
+          </div>
+          <div id="matchMsg"></div>
+          <div id="matchList" class="joblist"></div>
+        </section>
 
-      <section id="view-applications" class="view" hidden>
-        <div class="placeholder">
-          <div class="ph-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg></div>
-          <h2>Applications</h2>
-          <p>Every role you apply to, from prepared to submitted to interview, tracked in one pipeline. You approve each one; nothing is submitted for you.</p>
-          <span class="ph-tag">Coming in Phase 2</span>
-        </div>
-      </section>
+        <!-- Applications -->
+        <section id="view-applications" class="view" hidden>
+          <div class="page-head">
+            <h1>Applications</h1>
+            <p>Track your applications — we'll move them forward and ask for your help if needed.</p>
+          </div>
+          <div id="appList" class="joblist"></div>
+        </section>
 
-      <section id="view-inbox" class="view" hidden>
-        <div class="placeholder">
-          <div class="ph-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
-          <h2>Inbox</h2>
-          <p>Recruiter replies, rejections, and interview invites, sorted automatically. This is where the email notifications you get will link back to.</p>
-          <span class="ph-tag">Coming in Phase 2</span>
-        </div>
-      </section>
+        <!-- Inbox -->
+        <section id="view-inbox" class="view" hidden>
+          <div class="page-head"><h1>Inbox</h1><p>Recruiter replies, rejections and interview invites.</p></div>
+          <div class="card placeholder">
+            <div class="ph-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
+            <h3>Nothing here yet</h3>
+            <p>Once you start applying, replies land here — and the email notifications you get link back to this page.</p>
+          </div>
+        </section>
+
+        <!-- Profile -->
+        <section id="view-profile" class="view" hidden>
+          <div class="page-head">
+            <h1>Profile</h1>
+            <p>Answer once. Every application reuses these answers, and matching runs on them.</p>
+          </div>
+          <div id="actionBanner" hidden></div>
+          <div class="card" style="padding:13px;margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div style="flex:1;min-width:200px">
+              <strong style="font-size:13.5px">Start from your résumé</strong>
+              <div class="muted" style="font-size:12.5px">Upload a PDF and we'll fill in what we can. Nothing already filled gets overwritten.</div>
+            </div>
+            <input type="file" id="resumeFile" accept=".pdf,.txt,.md,image/*" hidden />
+            <button id="btnResume" class="btn">Upload résumé</button>
+          </div>
+          <div class="profile-layout">
+            <nav id="blockNav" class="blocklist"></nav>
+            <div id="blocks"></div>
+          </div>
+        </section>
+      </div>
     </main>
 
     <nav class="tabbar" id="tabbar">
-      <button data-view="profile" class="active">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Profile</span>
-      </button>
-      <button data-view="matches">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Matches</span>
+      <button data-view="matches" class="active">
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Jobs</span>
       </button>
       <button data-view="applications">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg><span>Apps</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg><span>Apps</span>
       </button>
       <button data-view="inbox">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg><span>Inbox</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg><span>Inbox</span>
+      </button>
+      <button data-view="profile">
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Profile</span>
       </button>
     </nav>
 
     <div id="toast" class="toast" hidden></div>
   </div>
 
-  <script src="/app.js"></script>
+  <script src="/app.js?v=2026072803"></script>
 </body>
 </html>

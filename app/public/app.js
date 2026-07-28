@@ -62,9 +62,28 @@
     }
   });
 
-  $("#logout").addEventListener("click", async () => {
-    try { await api("/auth/logout", { method: "POST" }); } catch {}
-    showAuth();
+  ["#logout", "#logoutM"].forEach((sel) => {
+    const b = $(sel);
+    if (b) b.addEventListener("click", async () => {
+      try { await api("/auth/logout", { method: "POST" }); } catch {}
+      showAuth();
+    });
+  });
+
+  // ---- view switching (sidebar + mobile tab bar) --------------------------
+  let CURRENT_VIEW = "matches";
+  function switchView(view) {
+    CURRENT_VIEW = view;
+    document.querySelectorAll(".view").forEach((v) => { v.hidden = v.id !== "view-" + view; });
+    document.querySelectorAll("#sidenav button, #tabbar button").forEach((b) => {
+      b.classList.toggle("active", b.dataset.view === view);
+    });
+    if (view === "matches" && !MATCHES_LOADED) loadMatches();
+    if (view === "profile" && !MODEL) loadProfile();
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll("#sidenav button, #tabbar button").forEach((b) => {
+    b.addEventListener("click", () => switchView(b.dataset.view));
   });
 
   // ---- toast -------------------------------------------------------------
@@ -113,8 +132,8 @@
   function pct(filled, total) { return total ? Math.round((100 * filled) / total) : 0; }
   function applyCompletion(c) {
     if (!c) return;
-    $("#overallFill").style.width = c.score + "%";
-    $("#overallPct").textContent = c.score + "%";
+    const cp = $("#cntProfile");
+    if (cp && c.score != null) { cp.textContent = c.score + "%"; cp.hidden = false; }
     if (c.blocks) {
       for (const [key, b] of Object.entries(c.blocks)) {
         const p = pct(b.filledCount, b.totalCount);
@@ -360,33 +379,37 @@
     const nav = $("#blockNav"); nav.innerHTML = "";
     const main = $("#blocks"); main.innerHTML = "";
 
-    model.blocks.forEach((b) => {
-      // nav
+    // One block shown at a time — the reference product pages through blocks
+    // rather than rendering 60+ questions in one endless scroll.
+    const panels = new Map();
+    const navBtns = new Map();
+
+    model.blocks.forEach((b, idx) => {
       const nb = el("button");
       nb.appendChild(document.createTextNode(b.label));
-      const mini = el("span", "mini", `${b.completion.filledCount}/${b.completion.totalCount}`);
-      mini.dataset.navMini = b.key; nb.appendChild(mini);
-      nb.addEventListener("click", () => {
-        document.getElementById("block-" + b.key).scrollIntoView({ behavior: "smooth", block: "start" });
-        nav.querySelectorAll("button").forEach((x) => x.classList.remove("active"));
-        nb.classList.add("active");
-      });
+      const frac = el("span", "frac", `${b.completion.filledCount}/${b.completion.totalCount}`);
+      frac.dataset.navMini = b.key; nb.appendChild(frac);
+      nb.addEventListener("click", () => showBlock(b.key));
       nav.appendChild(nb);
+      navBtns.set(b.key, nb);
 
-      // block panel
-      const panel = el("section", "block"); panel.id = "block-" + b.key;
+      const panel = el("section", "card block-body"); panel.id = "block-" + b.key;
+      panel.hidden = idx !== 0;
       panel.appendChild(el("h2", null, b.label));
-      if (b.description) panel.appendChild(el("p", "desc muted", b.description));
-      const strength = el("div", "block-strength");
-      const bar = el("div", "bar"); const fill = el("div", "fill");
-      fill.dataset.blockFill = b.key; fill.style.width = pct(b.completion.filledCount, b.completion.totalCount) + "%";
+      if (b.description) panel.appendChild(el("p", "desc", b.description));
+
+      const row = el("div", "bar-row");
+      const bar = el("div", "progress"); const fill = el("i");
+      fill.dataset.blockFill = b.key;
+      fill.style.width = pct(b.completion.filledCount, b.completion.totalCount) + "%";
       bar.appendChild(fill);
-      const lbl = el("span", "lbl", `${b.completion.filledCount}/${b.completion.totalCount}`); lbl.dataset.blockLbl = b.key;
-      strength.appendChild(bar); strength.appendChild(lbl);
-      panel.appendChild(strength);
+      const lbl = el("span", "frac", `${b.completion.filledCount}/${b.completion.totalCount}`);
+      lbl.dataset.blockLbl = b.key;
+      row.appendChild(bar); row.appendChild(lbl);
+      panel.appendChild(row);
 
       b.categories.forEach((cat) => {
-        const c = el("div", "category");
+        const c = el("div", "cat");
         c.appendChild(el("h3", null, cat.label));
         const grid = el("div", "fieldgrid");
         cat.fields.forEach((f) => grid.appendChild(renderField(f)));
@@ -394,9 +417,15 @@
         panel.appendChild(c);
       });
       main.appendChild(panel);
+      panels.set(b.key, panel);
     });
 
-    if (nav.firstChild) nav.firstChild.classList.add("active");
+    function showBlock(key) {
+      panels.forEach((p, k) => { p.hidden = k !== key; });
+      navBtns.forEach((n, k) => n.classList.toggle("active", k === key));
+      window.scrollTo(0, 0);
+    }
+    if (model.blocks.length) showBlock(model.blocks[0].key);
     applyCompletion({ score: model.completion.score, blocks: Object.fromEntries(model.blocks.map((b) => [b.key, b.completion])) });
   }
 
@@ -407,6 +436,7 @@
       const items = r.data.items || [];
       if (!items.length) { banner.hidden = true; return; }
       banner.innerHTML = "";
+      banner.className = "banner warn";
       banner.appendChild(el("strong", null, `${items.length} thing${items.length === 1 ? "" : "s"} need your attention`));
       const ul = el("ul");
       items.slice(0, 5).forEach((i) => {
@@ -420,14 +450,281 @@
     } catch { banner.hidden = true; }
   }
 
+  async function loadProfile() {
+    const r = await api("/profile");
+    render(r.data);
+    renderActions();
+  }
+
+  // ======================= JOBS / MATCHES ==================================
+  let MATCHES_LOADED = false;
+
+  const AVA_TINTS = [["#ede9fe","#5b21b6"],["#dcfce7","#15803d"],["#fee2e2","#b91c1c"],
+                     ["#e0f2fe","#0369a1"],["#fef3c7","#92610a"],["#fce7f3","#9d174d"]];
+  function avaFor(name) {
+    const s = name || "?";
+    let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return AVA_TINTS[h % AVA_TINTS.length];
+  }
+  function money(n) { return "$" + Math.round(n / 1000) + "k"; }
+  function payLabel(j) {
+    if (j.salaryMin && j.salaryMax) {
+      // Boards often repeat one figure in both fields; don't render "$115k – $115k".
+      return j.salaryMin === j.salaryMax
+        ? `${money(j.salaryMax)}/year`
+        : `${money(j.salaryMin)} – ${money(j.salaryMax)}/year`;
+    }
+    if (j.salaryMax) return `up to ${money(j.salaryMax)}/year`;
+    if (j.salaryMin) return `${money(j.salaryMin)}+/year`;
+    return null;
+  }
+  function scoreClass(n) { return n >= 70 ? "good" : n >= 38 ? "mid" : "low"; }
+  function ago(iso) {
+    if (!iso) return null;
+    const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+    if (isNaN(d)) return null;
+    return d <= 0 ? "today" : d === 1 ? "1 day ago" : `${d} days ago`;
+  }
+  const svg = (paths) =>
+    `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+  const ICON = {
+    pin: svg('<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>'),
+    home: svg('<path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/>'),
+    card: svg('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'),
+    clock: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  };
+  function chip(text, icon, cls) {
+    const c = el("span", "chip" + (cls ? " " + cls : ""));
+    if (icon) c.innerHTML = icon;
+    c.appendChild(document.createTextNode(text));
+    return c;
+  }
+
+  // Band copy — mirrors the reference product's explanations.
+  const BANDS = {
+    // Thresholds are calibrated to how the skills ranker actually scores: a
+    // posting names a handful of tools, so 50% is genuinely "about half", not weak.
+    skills: [[85,"You've got all the key skills this role is looking for"],
+             [65,"You have most of the key skills this role needs"],
+             [40,"You have about half the key skills for this role"],
+             [0, "Most of the must-have skills for this role aren't a match"]],
+    experience: [[90,"Your experience level and work history are a great fit for this role"],
+                 [75,"Your experience is a good fit for what this role needs"],
+                 [55,"Your background is relevant, even if it's not a perfect fit"],
+                 [0, "Your experience is a bit far from what this role is looking for"]],
+    compensation: [[95,"The pay here meets or beats what you're looking for"],
+                   [80,"A little under your target, but still in a comfortable range"],
+                   [60,"Pay comes in a bit below your target"],
+                   [0, "This role likely won't meet your pay expectations"]],
+    terms: [[90,"Work style, schedule and location all match what you're after"],
+            [60,"Mostly a fit, with a small difference in the work setup"],
+            [0, "The format, schedule or location doesn't line up with your preferences"]],
+    company: [[80,"Nothing on file suggests a problem with this employer"],
+              [0, "We don't have much on this employer yet"]],
+  };
+  const LABELS = { skills:"Skills", experience:"Experience", compensation:"Compensation", terms:"Terms", company:"Company" };
+  function bandFor(key, n) { return (BANDS[key] || []).find(([min]) => n >= min)?.[1] || ""; }
+  function headline(n) {
+    return n >= 70 ? "Strong match" : n >= 55 ? "Good match" : n >= 38 ? "Worth a look" : "Long shot";
+  }
+
+  function matchCard(m) {
+    const j = m.job;
+    const card = el("article", "card job");
+
+    const top = el("div", "job-top");
+    const [bg, fg] = avaFor(j.company);
+    const ava = el("span", "job-ava", (j.company || "?").trim()[0].toUpperCase());
+    ava.style.background = bg; ava.style.color = fg;
+    top.appendChild(ava);
+
+    const id = el("div", "job-id");
+    id.appendChild(el("h3", null, j.title));
+    id.appendChild(el("div", "co", j.company || "Company not listed"));
+    top.appendChild(id);
+
+    const sc = el("div", "job-score " + "score-" + scoreClass(m.totalScore));
+    sc.appendChild(el("b", null, m.totalScore + "%"));
+    sc.appendChild(el("span", null, "match"));
+    top.appendChild(sc);
+    card.appendChild(top);
+
+    const mid = el("div", "job-mid");
+    const chips = el("div", "chips");
+    if (j.location) chips.appendChild(chip(j.location, ICON.pin));
+    if (j.remote) chips.appendChild(chip("Remote", ICON.home));
+    const pay = payLabel(j);
+    if (pay) chips.appendChild(chip(pay, ICON.card));
+    else chips.appendChild(chip("Pay not listed", ICON.card, "plain"));
+    if (m.compFlag === "negotiation") chips.appendChild(chip("Negotiation candidate", null, "amber"));
+    const when = ago(j.postedAt);
+    if (when) chips.appendChild(chip(when, ICON.clock, "plain"));
+    chips.appendChild(chip(j.source, null, "plain"));
+    mid.appendChild(chips);
+
+    const actions = el("div", "job-actions");
+    const why = el("button", "btn", "Why this score");
+    const skip = el("button", "btn ghost", "Not interested");
+    const open = el("a", "btn primary", "View & apply");
+    open.href = j.applyUrl || j.url; open.target = "_blank"; open.rel = "noopener noreferrer";
+    actions.appendChild(why); actions.appendChild(skip); actions.appendChild(open);
+    mid.appendChild(actions);
+    card.appendChild(mid);
+
+    if (j.snippet) {
+      const s = el("p", "job-snip", j.snippet.replace(/\s+/g, " ").slice(0, 230) + "…");
+      card.appendChild(s);
+    }
+
+    // score breakdown (collapsed)
+    const panel = el("div", "job-why"); panel.hidden = true;
+    const head = el("div", "why-head");
+    const tile = el("div", "why-tile " + scoreClass(m.totalScore), m.totalScore + "%");
+    const ht = el("div");
+    ht.appendChild(el("div", "t", headline(m.totalScore)));
+    ht.appendChild(el("div", "d", `Based on your profile, you have ${m.totalScore}% of what this role is asking for.`));
+    head.appendChild(tile); head.appendChild(ht);
+    panel.appendChild(head);
+    ["skills","experience","compensation","terms","company"].forEach((k) => {
+      const n = m.rankers[k];
+      const r = el("div", "ranker");
+      r.appendChild(el("div", "pct " + scoreClass(n), n + "%"));
+      const t = el("div");
+      t.appendChild(el("div", "nm", LABELS[k]));
+      t.appendChild(el("div", "ds", bandFor(k, n)));
+      r.appendChild(t);
+      panel.appendChild(r);
+    });
+    if (m.missing && m.missing.length) {
+      const b = el("div", "banner warn");
+      b.style.marginTop = "10px"; b.style.marginBottom = "0";
+      b.textContent = "Add these to your profile for a sharper score: " + m.missing.join(", ") + ".";
+      panel.appendChild(b);
+    }
+    card.appendChild(panel);
+
+    why.addEventListener("click", () => {
+      panel.hidden = !panel.hidden;
+      why.textContent = panel.hidden ? "Why this score" : "Hide breakdown";
+    });
+    skip.addEventListener("click", async () => {
+      try {
+        await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid: m.jobUuid, status: "skipped" }) });
+        card.remove(); toast("Hidden");
+      } catch (e) { toast("Could not hide: " + e.message); }
+    });
+    return card;
+  }
+
+  function renderMatches(list) {
+    const box = $("#matchList"); box.innerHTML = "";
+    if (!list.length) {
+      const p = el("div", "card placeholder");
+      p.innerHTML =
+        '<div class="ph-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>' +
+        '<h3>No jobs yet</h3><p>Set what you\'re looking for above and hit <strong>Find jobs</strong>. ' +
+        'We search several boards at once — local, hybrid and remote together.</p>';
+      box.appendChild(p);
+      return;
+    }
+    list.forEach((m) => box.appendChild(matchCard(m)));
+    const c = $("#cntMatches");
+    if (c) { c.textContent = list.length; c.hidden = false; }
+  }
+
+  async function loadSearchPrefs() {
+    try {
+      const r = await api("/search");
+      const d = r.data;
+      $("#sKeywords").value = d.keywords || "";
+      if (d.keywordsFallback) $("#sKeywords").placeholder = d.keywordsFallback;
+      $("#sLocation").value = d.location || "";
+      if (d.locationFallback) $("#sLocation").placeholder = d.locationFallback;
+      $("#sRemote").checked = !!d.remoteOnly;
+      if (d.salaryMin != null) $("#sSalary").value = d.salaryMin;
+      if (d.radiusMi != null) $("#sRadius").value = String(d.radiusMi);
+    } catch { /* first run: leave defaults */ }
+  }
+  function currentPrefs() {
+    return {
+      keywords: $("#sKeywords").value.trim() || $("#sKeywords").placeholder.replace(/^e\.g\. /, ""),
+      location: $("#sLocation").value.trim(),
+      remoteOnly: $("#sRemote").checked,
+      salaryMin: $("#sSalary").value === "" ? null : Number($("#sSalary").value),
+      radiusMi: $("#sRadius").value === "" ? null : Number($("#sRadius").value),
+    };
+  }
+
+  async function loadMatches() {
+    MATCHES_LOADED = true;
+    await loadSearchPrefs();
+    try {
+      const r = await api("/matches");
+      renderMatches(r.data.matches || []);
+    } catch (e) {
+      if (e.message !== "unauthorized") renderMatches([]);
+    }
+  }
+
+  $("#btnRefresh").addEventListener("click", async () => {
+    const btn = $("#btnRefresh");
+    const msg = $("#matchMsg");
+    btn.disabled = true; btn.textContent = "Searching…";
+    msg.innerHTML = "";
+    try {
+      await api("/search", { method: "PATCH", body: JSON.stringify(currentPrefs()) });
+      const r = await api("/jobs/refresh", { method: "POST" });
+      const d = r.data;
+      const live = Object.entries(d.sources || {}).filter(([, n]) => n > 0).map(([s, n]) => `${s} ${n}`).join(" · ");
+      msg.innerHTML = "";
+      const b = el("div", "banner info");
+      b.textContent = `Found ${d.fetched} postings, ${d.deduped} unique, ${d.matched} scored${live ? " — " + live : ""}.`;
+      msg.appendChild(b);
+      const m = await api("/matches");
+      renderMatches(m.data.matches || []);
+    } catch (e) {
+      const b = el("div", "banner bad");
+      b.textContent = e.message || "Search failed.";
+      msg.appendChild(b);
+    } finally {
+      btn.disabled = false; btn.textContent = "Find jobs";
+    }
+  });
+
+  // ---- résumé upload ------------------------------------------------------
+  $("#btnResume").addEventListener("click", () => $("#resumeFile").click());
+  $("#resumeFile").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const btn = $("#btnResume");
+    btn.disabled = true; btn.textContent = "Reading résumé…";
+    try {
+      const fd = new FormData(); fd.append("file", file);
+      const res = await fetch("/api/v1/profile/import-resume", { method: "POST", body: fd, credentials: "same-origin" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || "Import failed");
+      const n = body.data.appliedCount, s = body.data.suggestionCount;
+      toast(n ? `Filled in ${n} field${n === 1 ? "" : "s"}${s ? ` (${s} already had answers)` : ""}` : "Nothing new to add", 3200);
+      await loadProfile();
+    } catch (err) {
+      toast(err.message || "Could not read that résumé", 3600);
+    } finally {
+      btn.disabled = false; btn.textContent = "Upload résumé";
+      e.target.value = "";
+    }
+  });
+
   async function boot() {
     try {
       const me = await api("/auth/me");
       if (!me.data.user) { showAuth(); return; }
-      $("#whoami").textContent = me.data.user.name || me.data.user.email;
-      const r = await api("/profile");
-      render(r.data);
-      renderActions();
+      const u = me.data.user;
+      $("#userName").textContent = u.name || u.email;
+      $("#userEmail").textContent = u.name ? u.email : "";
+      $("#userAva").textContent = (u.name || u.email || "?").trim()[0];
+      MODEL = null; MATCHES_LOADED = false;
+      switchView("matches");
+      loadProfile().catch(() => {});
     } catch (e) {
       if (e.message !== "unauthorized") toast("Could not load: " + e.message);
     }

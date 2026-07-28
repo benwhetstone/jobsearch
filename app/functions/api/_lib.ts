@@ -14,6 +14,15 @@ export interface Env {
   NOTIFY_FROM?: string;          // e.g. "Job Search <notify@jobs.benwhetstone.info>"
   // AI (résumé parsing, tailoring, classification)
   ANTHROPIC_API_KEY?: string;
+  // Job sources (aggregators). Keyless connectors need nothing.
+  ADZUNA_APP_ID?: string;
+  ADZUNA_APP_KEY?: string;
+  RAPIDAPI_KEY?: string;         // JSearch (Google-for-Jobs via RapidAPI)
+  JOOBLE_KEY?: string;
+  CAREERJET_AFFID?: string;      // Careerjet public search affiliate id
+  FINDWORK_KEY?: string;         // Findwork.dev token
+  USAJOBS_KEY?: string;          // USAJOBS (federal) Authorization-Key
+  USAJOBS_UA?: string;           // USAJOBS requires the registered email as User-Agent
 }
 
 const CORS = {

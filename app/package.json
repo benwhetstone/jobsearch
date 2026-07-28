@@ -10,9 +10,14 @@
     "db:seed:fields": "wrangler d1 execute bens-job-search-db --remote --file schema/0002_seed_blocks_fields.sql",
     "db:seed:ben": "wrangler d1 execute bens-job-search-db --remote --file schema/0003_seed_ben_values.sql",
     "db:setup": "npm run db:migrate && npm run db:seed:fields && npm run db:seed:ben",
-    "db:setup:local": "wrangler d1 execute bens-job-search-db --local --file schema/0001_profile_engine.sql && wrangler d1 execute bens-job-search-db --local --file schema/0002_seed_blocks_fields.sql && wrangler d1 execute bens-job-search-db --local --file schema/0003_seed_ben_values.sql"
+    "db:setup:local": "wrangler d1 execute bens-job-search-db --local --file schema/0001_profile_engine.sql && wrangler d1 execute bens-job-search-db --local --file schema/0002_seed_blocks_fields.sql && wrangler d1 execute bens-job-search-db --local --file schema/0003_seed_ben_values.sql",
+    "typecheck": "tsc --noEmit",
+    "db:migrate:jobs": "wrangler d1 execute bens-job-search-db --remote --file schema/0004_jobs_match.sql"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "playwright-core": "^1.62.0",
+    "typescript": "^7.0.2",
     "wrangler": "^3.90.0"
   }
 }
