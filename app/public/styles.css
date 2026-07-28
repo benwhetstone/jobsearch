@@ -84,17 +84,24 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .action-banner ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; }
 .action-banner a { color: var(--accent); }
 
+/* Stroked (Feather-style) icons everywhere */
+.mainnav svg, .tabbar svg, .ph-icon svg { fill: none; stroke: currentColor;
+  stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
 /* Primary nav (desktop, in the topbar) */
-.mainnav { display: flex; gap: 2px; margin-right: auto; margin-left: 12px; }
-.mainnav button { background: transparent; border: 0; color: var(--muted); font-size: 14px; font-weight: 600;
-  padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+.mainnav { display: flex; gap: 4px; margin-right: auto; margin-left: 18px; }
+.mainnav button { display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 0;
+  color: var(--muted); font-size: 14px; font-weight: 600; padding: 9px 14px; border-radius: 9px;
+  cursor: pointer; transition: background .12s, color .12s; }
+.mainnav button svg { width: 17px; height: 17px; opacity: .9; }
 .mainnav button:hover { background: var(--panel-2); color: var(--text); }
 .mainnav button.active { background: var(--accent-weak); color: var(--accent); }
 
 /* Views + Phase-2 placeholders */
 .view[hidden] { display: none; }
 .placeholder { max-width: 460px; margin: 12vh auto; text-align: center; padding: 0 24px; }
-.placeholder .ph-icon { font-size: 42px; color: var(--accent); opacity: .75; }
+.placeholder .ph-icon { color: var(--accent); display: flex; justify-content: center; margin-bottom: 4px; }
+.placeholder .ph-icon svg { width: 44px; height: 44px; }
 .placeholder h2 { margin: 12px 0 8px; font-size: 22px; }
 .placeholder p { color: var(--muted); font-size: 15px; line-height: 1.6; }
 .placeholder .ph-tag { display: inline-block; margin-top: 18px; font-size: 12px; font-weight: 700; color: var(--accent);
@@ -245,6 +252,17 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
   .chip { padding: 9px 14px; }
   .chip.bool { min-width: 80px; }
   .tags input { padding: 8px 4px; }
+
+  /* Desktop nav hides; native-style bottom tab bar takes over */
+  .mainnav { display: none; }
+  .tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: var(--panel); border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .tabbar button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: transparent; border: 0; color: var(--muted); font-size: 11px; font-weight: 600;
+    padding: 4px; cursor: pointer; }
+  .tabbar button svg { width: 22px; height: 22px; }
+  .tabbar button.active { color: var(--accent); }
 }
 
 /* ---- Small phones ---- */

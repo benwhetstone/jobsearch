@@ -12,6 +12,8 @@ export interface Env {
   // email (optional; degrades to no-op if unset)
   RESEND_API_KEY?: string;
   NOTIFY_FROM?: string;          // e.g. "Job Search <notify@jobs.benwhetstone.info>"
+  // AI (résumé parsing, tailoring, classification)
+  ANTHROPIC_API_KEY?: string;
 }
 
 const CORS = {
