@@ -128,7 +128,12 @@
   }
   function flashSaved(fieldEl) {
     fieldEl.classList.add("saved-flash");
-    setTimeout(() => fieldEl.classList.remove("saved-flash"), 1200);
+    const msg = $(".fieldmsg", fieldEl);
+    if (msg) { msg.textContent = "Saved"; msg.classList.add("ok"); }
+    setTimeout(() => {
+      fieldEl.classList.remove("saved-flash");
+      if (msg && msg.textContent === "Saved") { msg.textContent = ""; msg.classList.remove("ok"); }
+    }, 1400);
   }
 
   // ---- completion bars ---------------------------------------------------
@@ -237,10 +242,19 @@
       return objectArray(f, wrap);
     }
 
-    // default string -> text
-    const i = el("input"); i.type = "text"; if (f.value != null) i.value = f.value;
-    i.addEventListener("input", () => queueSave(f.fieldKey, i.value === "" ? null : i.value, wrap));
+    // default string -> auto-growing textarea. One-line answers look like an
+    // input; long answers wrap instead of forcing sideways scrolling.
+    const i = el("textarea", "autosize");
+    i.rows = 1;
+    if (f.value != null) i.value = f.value;
+    i.addEventListener("input", () => { autoGrow(i); queueSave(f.fieldKey, i.value === "" ? null : i.value, wrap); });
+    requestAnimationFrame(() => autoGrow(i));
     return i;
+  }
+
+  function autoGrow(t) {
+    t.style.height = "auto";
+    t.style.height = Math.min(360, Math.max(42, t.scrollHeight + 2)) + "px";
   }
 
   function tagInput(f, wrap) {
@@ -293,13 +307,13 @@
       { key: "description", label: "Exact wording to use", type: "textarea" },
     ] },
     signatureAchievements: { kind: "records", singular: "achievement", fields: [
-      { key: "result", label: "The result", type: "textarea" },
-      { key: "metric", label: "The number that proves it" },
-      { key: "employer", label: "Where it happened" },
+      { key: "result", label: "What you did — one sentence, said plainly", type: "textarea" },
+      { key: "metric", label: "The number that backs it up (optional but powerful)" },
+      { key: "employer", label: "Where this happened" },
     ] },
     metricPhrasing: { kind: "records", singular: "phrasing rule", fields: [
-      { key: "number", label: "The number" },
-      { key: "phrasing", label: "How it must be phrased", type: "textarea" },
+      { key: "number", label: "The number (e.g. $36 million)" },
+      { key: "phrasing", label: "How you want it said, every time", type: "textarea" },
     ] },
   };
 
@@ -367,19 +381,26 @@
         spec.fields.forEach((fld) => {
           const w = el("div", "recfield");
           w.appendChild(el("label", null, fld.label));
-          const inp = fld.type === "textarea" ? el("textarea") : el("input");
+          const inp = fld.type === "textarea" ? el("textarea", "autosize") : el("input");
           if (fld.type !== "textarea") inp.type = "text";
+          else { inp.rows = 1; requestAnimationFrame(() => autoGrow(inp)); }
           inp.value = rec[fld.key] != null ? rec[fld.key] : "";
-          inp.addEventListener("input", () => { rec[fld.key] = inp.value || undefined; commit(); });
+          inp.addEventListener("input", () => {
+            if (fld.type === "textarea") autoGrow(inp);
+            rec[fld.key] = inp.value || undefined; commit();
+          });
           w.appendChild(inp); card.appendChild(w);
         });
         list.appendChild(card);
       });
     }
-    const add = el("button", "addbtn", "Add a " + (spec.singular || "entry")); add.type = "button";
-    add.addEventListener("click", () => { arr.push({}); render(); commit(); });
+    const noun = spec.singular || "entry";
+    const article = /^[aeiou]/i.test(noun) ? "an" : "a";
+    const add = el("button", "addbtn"); add.type = "button";
+    const setAddText = () => { add.textContent = arr.length ? `Add another ${noun}` : `Add ${article} ${noun}`; };
+    add.addEventListener("click", () => { arr.push({}); render(); setAddText(); commit(); });
     box.appendChild(list); box.appendChild(add);
-    render();
+    render(); setAddText();
     return box;
   }
 

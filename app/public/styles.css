@@ -155,6 +155,19 @@ a.btn.primary, a.btn.primary:hover { color: #fff; }
 .match-badge { display: inline-block; margin-left: 7px; padding: 1px 7px; border-radius: 999px;
   background: var(--accent-weak, #dbeafe); color: var(--accent); font-size: 10px; font-weight: 700;
   letter-spacing: .04em; text-transform: uppercase; vertical-align: 1px; cursor: help; }
+/* long-form answers grow downward instead of scrolling sideways */
+textarea.autosize { resize: none; overflow: hidden; min-height: 42px; line-height: 1.45; }
+/* save feedback: amber ring while in flight, green ring + "Saved" once stored */
+.field.saving input, .field.saving textarea, .field.saving select {
+  border-color: #d9a514; box-shadow: 0 0 0 3px rgba(217, 165, 20, .12); }
+.field.saved-flash input, .field.saved-flash textarea, .field.saved-flash select {
+  border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22, 163, 74, .13);
+  transition: border-color .2s, box-shadow .2s; }
+.fieldmsg { min-height: 16px; font-size: 12px; color: #b91c1c; margin-top: 3px; }
+.fieldmsg.ok { color: #15803d; }
+.field.error-flash input, .field.error-flash textarea, .field.error-flash select {
+  border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, .12); }
+.rechead { display: flex; align-items: baseline; gap: 10px; margin: 8px 0 4px; }
 
 /* ---------- Search bar ----------------------------------------------------- */
 .searchbar { padding: 13px; margin-bottom: 14px; }
@@ -237,6 +250,35 @@ a.btn.primary, a.btn.primary:hover { color: #fff; }
 .namelist .tag button { background: none; border: 0; color: inherit; opacity: .6; padding: 0; font-size: 14px; line-height: 1; }
 .namelist .tag button:hover { opacity: 1; }
 .records { display: flex; flex-direction: column; gap: 10px; }
+/* tag editor: pills inside one input-shaped box */
+.tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--panel); padding: 7px 9px; }
+.tags:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+.tags input { border: 0; outline: none; box-shadow: none; flex: 1 1 140px; min-width: 120px;
+  padding: 4px 2px; background: transparent; font: inherit; }
+.tagitem { display: inline-flex; align-items: center; gap: 6px; background: var(--panel-2);
+  border: 1px solid var(--border-strong); border-radius: 999px; padding: 3px 10px;
+  font-size: 12.5px; line-height: 1.3; white-space: nowrap; }
+.tagitem b { cursor: pointer; font-weight: 600; color: var(--muted); padding: 0 1px; }
+.tagitem b:hover { color: #b91c1c; }
+/* skills-with-level pills: keep the level dropdown compact inside the pill */
+.tagitem .levelsel { width: auto; padding: 2px 22px 2px 8px; font-size: 11.5px;
+  border-radius: 6px; background: var(--panel); }
+.namelist { display: flex; flex-direction: column; gap: 9px; }
+.namelist .chips { row-gap: 7px; }
+.addrow { display: flex; gap: 8px; align-items: stretch; }
+.addrow input { flex: 1; }
+.addrow .addbtn { flex: 0 0 auto; padding: 8px 18px; }
+/* record cards (work history, achievements, employer descriptions) */
+.reccard { border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--panel); padding: 11px 13px 13px; }
+.reccard + .reccard { margin-top: 2px; }
+.recnum { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); }
+.recfield { margin-top: 8px; }
+.recfield label { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted);
+  margin-bottom: 3px; }
 .record { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; background: var(--panel-2); }
 .record .rgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .record .rgrid .full { grid-column: 1 / -1; }
