@@ -1,0 +1,41 @@
+// POST /api/v1/applications/manual
+//   { company, title, url?, location?, status?, appliedAt? }
+// Log an application you submitted yourself, off-platform (straight on the
+// employer's site). Creates a minimal 'manual' job row and an application
+// already in the given stage (default 'applied'), so your own applications
+// live in the same funnel as the autopiloted ones.
+import { json, err, currentUser, type Env, type CtxUser } from "../../_lib";
+
+const uuid = () => crypto.randomUUID();
+const STAGES = ["applied", "interview", "offer", "rejected"];
+
+export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = async ({ request, env, data }) => {
+  const user = currentUser(data);
+  let body: any;
+  try { body = await request.json(); } catch { return err(400, "Invalid JSON body."); }
+
+  const company = String(body?.company || "").trim();
+  const title = String(body?.title || "").trim();
+  if (!company || !title) return err(400, "Company and job title are required.");
+
+  const url = String(body?.url || "").trim();
+  const location = String(body?.location || "").trim() || null;
+  const status = STAGES.includes(body?.status) ? body.status : "applied";
+  const appliedAt = body?.appliedAt ? new Date(body.appliedAt).toISOString() : new Date().toISOString();
+  const now = new Date().toISOString();
+
+  const jobUuid = "manual:" + uuid();
+  const appUuid = uuid();
+
+  await env.DB.prepare(
+    `INSERT INTO jobs (uuid, source, external_id, title, company_name, location, remote, url, apply_url, description, created_at)
+     VALUES (?, 'manual', ?, ?, ?, ?, 0, ?, ?, 'Logged manually — applied off-platform.', ?)`
+  ).bind(jobUuid, appUuid, title, company, location, url || "", url || null, now).run();
+
+  await env.DB.prepare(
+    `INSERT INTO applications_v2 (uuid, user_id, job_uuid, status, need_manual_apply, submitted_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 0, ?, ?, ?)`
+  ).bind(appUuid, user.id, jobUuid, status, appliedAt, appliedAt, now).run();
+
+  return json({ uuid: appUuid, status });
+};

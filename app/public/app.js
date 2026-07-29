@@ -1054,6 +1054,14 @@
 
   let APPS_CACHE = [];
   let APP_FILTER = null;   // null = all; otherwise a list of statuses
+  let APP_SORT = "recent"; // recent | oldest | company | match
+  function fmtDate(iso) {
+    if (!iso) return "";
+    const d = new Date(iso); if (isNaN(d.getTime())) return "";
+    const opts = { month: "short", day: "numeric" };
+    if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+    return d.toLocaleDateString(undefined, opts);
+  }
   async function loadApplications(force) {
     const box = $("#appList");
     try {
@@ -1069,6 +1077,23 @@
 
   function renderApplications(apps, counts) {
     const box = $("#appList"); box.innerHTML = "";
+    // toolbar: log an off-site application + sort control (always visible)
+    const bar = el("div", "app-toolbar");
+    bar.style.cssText = "display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px";
+    const logBtn = el("button", "btn primary", "+ Log an application");
+    logBtn.title = "Record an application you submitted yourself, off-platform";
+    logBtn.addEventListener("click", () => openManualApply());
+    bar.appendChild(logBtn);
+    const sortWrap = el("label", "sortwrap");
+    sortWrap.style.cssText = "display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)";
+    sortWrap.appendChild(el("span", null, "Sort"));
+    const sortSel = el("select", "movesel");
+    [["recent", "Newest first"], ["oldest", "Oldest first"], ["company", "Company A–Z"], ["match", "Match %"]]
+      .forEach(([v, l]) => { const o = new Option(l, v); if (v === APP_SORT) o.selected = true; sortSel.appendChild(o); });
+    sortSel.addEventListener("change", () => { APP_SORT = sortSel.value; renderApplications(APPS_CACHE, counts); });
+    sortWrap.appendChild(sortSel);
+    bar.appendChild(sortWrap);
+    box.appendChild(bar);
     const stats = $("#appStats");
     if (stats) {
       // The real funnel, in order. Interviews and offers are advanced by the
@@ -1144,10 +1169,20 @@
     // divider, then the ones still being worked. A live status line on every
     // card shows resume / cover letter / apply-form progress.
     const PREP = new Set(["queued", "preparing", "applying"]);
-    const ordered = APP_FILTER ? shown : [...shown].sort((a, b) => (PREP.has(a.status) ? 1 : 0) - (PREP.has(b.status) ? 1 : 0));
+    const dt = (x) => new Date(x.submittedAt || x.createdAt || 0).getTime();
+    const SORTERS = {
+      recent: (a, b) => dt(b) - dt(a),
+      oldest: (a, b) => dt(a) - dt(b),
+      company: (a, b) => (a.job.company || "").localeCompare(b.job.company || ""),
+      match: (a, b) => (b.matchScore || 0) - (a.matchScore || 0),
+    };
+    let ordered = [...shown].sort(SORTERS[APP_SORT] || SORTERS.recent);
+    // default (newest) view keeps still-working items grouped at the bottom
+    if (!APP_FILTER && APP_SORT === "recent")
+      ordered = ordered.sort((a, b) => (PREP.has(a.status) ? 1 : 0) - (PREP.has(b.status) ? 1 : 0));
     let dividerDrawn = false;
     ordered.forEach((a) => {
-      if (!APP_FILTER && !dividerDrawn && PREP.has(a.status)) {
+      if (!APP_FILTER && APP_SORT === "recent" && !dividerDrawn && PREP.has(a.status)) {
         dividerDrawn = true;
         const div = el("div", "prep-divider"); div.appendChild(el("span", null, "Preparing"));
         box.appendChild(div);
@@ -1161,6 +1196,12 @@
       const id = el("div", "job-id");
       id.appendChild(el("h3", null, a.job.title));
       id.appendChild(el("div", "co", a.job.company || "Company not listed"));
+      const dstr = (a.submittedAt ? "Applied " : "Added ") + fmtDate(a.submittedAt || a.createdAt);
+      if (dstr.trim() !== "Added") {
+        const dEl = el("div", "appdate", dstr);
+        dEl.style.cssText = "font-size:12px;color:var(--muted);margin-top:3px";
+        id.appendChild(dEl);
+      }
       top.appendChild(id);
       if (a.matchScore != null) {
         const sc = el("div", "job-score score-" + scoreClass(a.matchScore));
@@ -1255,6 +1296,70 @@
       if (a.prepareError) card.appendChild(el("p", "job-snip err", a.prepareError));
       box.appendChild(card);
     });
+  }
+
+  // Log an application the user submitted themselves, off-platform. Lightweight
+  // self-contained modal (no CSS dependency) → POST /applications/manual.
+  function openManualApply() {
+    const ov = el("div", "manual-ov");
+    ov.style.cssText = "position:fixed;inset:0;background:rgba(15,20,30,.55);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px";
+    const card = el("div");
+    card.style.cssText = "background:var(--panel,#fff);color:var(--text,#14181d);border-radius:14px;max-width:440px;width:100%;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.35);max-height:90vh;overflow:auto";
+    card.addEventListener("click", (e) => e.stopPropagation());
+    card.appendChild(el("h3", null, "Log an application"));
+    const sub = el("p", null, "Record something you applied to yourself, off-platform. It drops straight into your funnel.");
+    sub.style.cssText = "margin:4px 0 16px;font-size:13px;color:var(--muted)";
+    card.appendChild(sub);
+    const field = (label, ph, type) => {
+      const w = el("label"); w.style.cssText = "display:block;margin-bottom:12px;font-size:13px;font-weight:600";
+      w.appendChild(el("span", null, label));
+      const i = el("input");
+      if (type) i.type = type;
+      i.placeholder = ph || "";
+      i.style.cssText = "display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--border,#d7dbe3);border-radius:8px;font:inherit;font-weight:400;box-sizing:border-box";
+      w.appendChild(i); card.appendChild(w); return i;
+    };
+    const company = field("Company *", "Acme Corp");
+    const title = field("Job title *", "Data Analyst");
+    const url = field("Posting link", "https://…", "url");
+    const location = field("Location", "Remote · Tampa, FL");
+    const row = el("div"); row.style.cssText = "display:flex;gap:10px";
+    const stW = el("label"); stW.style.cssText = "flex:1;font-size:13px;font-weight:600";
+    stW.appendChild(el("span", null, "Stage"));
+    const stage = el("select");
+    stage.style.cssText = "display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--border,#d7dbe3);border-radius:8px;font:inherit;font-weight:400";
+    [["applied", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["rejected", "Rejected"]].forEach(([v, l]) => stage.appendChild(new Option(l, v)));
+    stW.appendChild(stage); row.appendChild(stW);
+    const dtW = el("label"); dtW.style.cssText = "flex:1;font-size:13px;font-weight:600";
+    dtW.appendChild(el("span", null, "Date applied"));
+    const date = el("input"); date.type = "date";
+    date.style.cssText = "display:block;width:100%;margin-top:5px;padding:8px 11px;border:1px solid var(--border,#d7dbe3);border-radius:8px;font:inherit;font-weight:400;box-sizing:border-box";
+    try { date.value = new Date().toISOString().slice(0, 10); } catch {}
+    dtW.appendChild(date); row.appendChild(dtW);
+    card.appendChild(row);
+    const btns = el("div"); btns.style.cssText = "display:flex;gap:10px;justify-content:flex-end;margin-top:18px";
+    const cancel = el("button", "btn ghost", "Cancel");
+    cancel.addEventListener("click", () => ov.remove());
+    const save = el("button", "btn primary", "Add to funnel");
+    save.addEventListener("click", async () => {
+      if (!company.value.trim() || !title.value.trim()) { toast("Company and job title are required"); return; }
+      save.disabled = true; save.textContent = "Adding…";
+      try {
+        await api("/applications/manual", { method: "POST", body: JSON.stringify({
+          company: company.value.trim(), title: title.value.trim(), url: url.value.trim(),
+          location: location.value.trim(), status: stage.value,
+          appliedAt: date.value ? new Date(date.value).toISOString() : undefined,
+        }) });
+        ov.remove(); toast("Logged"); loadApplications(true);
+        if (typeof refreshStrip === "function") refreshStrip();
+      } catch (e) { toast(e.message, 3000); save.disabled = false; save.textContent = "Add to funnel"; }
+    });
+    btns.appendChild(cancel); btns.appendChild(save);
+    card.appendChild(btns);
+    ov.appendChild(card);
+    ov.addEventListener("click", () => ov.remove());
+    document.body.appendChild(ov);
+    company.focus();
   }
 
   // ---- detail: resume redline, cover letter, mirrored form ------------------
