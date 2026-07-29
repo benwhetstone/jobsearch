@@ -1260,6 +1260,20 @@
         });
         actions.appendChild(mv);
       }
+      // pre-submit apps can be sent back to the Jobs list (un-apply)
+      if (["readyToApply", "approved", "actionRequired", "queued", "preparing"].includes(a.status)) {
+        const back = el("button", "btn ghost", "← Back to Jobs");
+        back.title = "Move this out of the funnel and back into your Jobs list";
+        back.addEventListener("click", async (ev) => {
+          ev.stopPropagation();
+          try {
+            await api(`/applications/${a.uuid}`, { method: "PATCH", body: JSON.stringify({ action: "moveBack" }) });
+            toast("Moved back to Jobs"); loadApplications(true);
+            if (typeof refreshStrip === "function") refreshStrip();
+          } catch (e) { toast(e.message, 3000); }
+        });
+        actions.appendChild(back);
+      }
       const discard = el("button", "btn ghost", "Discard");
       discard.addEventListener("click", async (ev) => {
         ev.stopPropagation();

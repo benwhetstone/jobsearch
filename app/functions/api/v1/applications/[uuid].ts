@@ -147,6 +147,20 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     return json({ uuid, status: "discarded" });
   }
 
+  // ---- move back to Jobs: undo starting an application. Drops it from the
+  //      funnel and un-applies the match so the job reappears in "Jobs For
+  //      You", ready to reconsider. Only meaningful before submission.
+  if (body.action === "moveBack") {
+    const now = new Date().toISOString();
+    await env.DB.prepare("UPDATE applications_v2 SET status = 'discarded', updated_at = ? WHERE uuid = ?")
+      .bind(now, uuid).run();
+    await env.DB.prepare(
+      "UPDATE matches SET status = 'matched' WHERE user_id = ? AND job_uuid = (SELECT job_uuid FROM applications_v2 WHERE uuid = ?)"
+    ).bind(user.id, uuid).run();
+    await resolveActionItems(env, user.id, uuid);
+    return json({ uuid, status: "movedBack" });
+  }
+
   // ---- approve: the final QA gate before anything can be submitted ----
   // Three checks, all hard: every employer question answered, and BOTH
   // documents passed their quality gates. A failed document never ships.
