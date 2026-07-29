@@ -294,13 +294,25 @@ const TITLE_FILLER = new Set([
 const sameFamily = (a: string, b: string) =>
   a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5));
 
+// Role-nouns so broad they appear across totally different fields. A title
+// match on one of these ALONE ("Financial Analyst" vs "Data Analyst") isn't
+// proof of fit — it needs a second, distinctive signal.
+const BROAD_HEADS = new Set([
+  "analyst", "specialist", "manager", "coordinator", "associate", "consultant",
+  "administrator", "representative", "officer", "lead", "director", "engineer",
+  "developer", "designer", "strategist", "planner", "advisor", "generalist",
+]);
+
 // The PROFESSION word in a title is its last meaningful token: "Data Analyst"
 // -> analyst, "Business Analyst" -> analyst. "Data" is a modifier, not the
 // profession — which is exactly why matching on it let Data Scientist and
 // "Human Data" Program Manager through. We match on the profession head.
+// Cut at the first comma/slash first, so "Analyst, Business Operations" and
+// "Data Analyst / BI Analyst" resolve the role noun correctly.
 function professionHeads(titles: string[]): string[] {
   return titles.map((t) => {
-    const toks = tokens(t).filter((w) => w.length > 2 && !TITLE_FILLER.has(w));
+    const cut = t.split(/[,/|]/)[0];
+    const toks = tokens(cut).filter((w) => w.length > 2 && !TITLE_FILLER.has(w));
     return toks[toks.length - 1];
   }).filter(Boolean);
 }
@@ -309,10 +321,27 @@ function professionHeads(titles: string[]): string[] {
 // targeting "Data Analyst / Business Analyst" sees analyst/analytics/analysis
 // roles — NOT Data Scientist, Data Engineer, or Program Manager, however much
 // "data" they share. Fully profile-driven: the heads come from their titles.
+//
+// When the shared head is a BROAD role-noun (analyst, manager…), the title
+// alone isn't enough — "Financial Analyst" and "Credit Analyst" share
+// "analyst" with "Data Analyst" but are different fields. In that case require
+// a real second signal: a distinctive word from the user's own titles, a
+// domain they know, or clear analytics language in the posting.
 function isOnField(p: ProfileForMatch, job: JobForMatch): boolean {
   const heads = professionHeads(p.desiredTitles);
   if (!heads.length) return true;   // no titles on file: don't over-filter
-  return tokens(job.title).some((jw) => heads.some((h) => sameFamily(jw, h)));
+  const jt = tokens(job.title);
+  if (!jt.some((jw) => heads.some((h) => sameFamily(jw, h)))) return false;
+
+  // If the user's titles are ALL broad role-nouns, a bare head match is weak.
+  if (!heads.every((h) => BROAD_HEADS.has(h))) return true;
+  const distinctive = distinctiveTitleTokens(p.desiredTitles);
+  if (jt.some((w) => distinctive.has(w))) return true;                 // shares "data"/"business"/…
+  const hay = norm(job.title + " " + (job.description || ""));
+  if (p.domains.some((d) => hay.includes(norm(d)))) return true;       // a domain they know
+  // genuine analytics signals — NOT the bare word "analyst"/"analysis", which
+  // every analyst posting carries and so can't discriminate.
+  return /analytics|dashboard|reporting|insight|business intelligence|\bsql\b|\bbi\b|kpi|metrics|tableau|power ?bi|looker|data (analy|model|visual|warehous)/.test(hay);
 }
 
 export function scoreJob(p: ProfileForMatch, job: JobForMatch): MatchResult {
