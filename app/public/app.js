@@ -1055,12 +1055,18 @@
   let APPS_CACHE = [];
   let APP_FILTER = null;   // null = all; otherwise a list of statuses
   let APP_SORT = "recent"; // recent | oldest | company | match
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   function fmtDate(iso) {
     if (!iso) return "";
-    const d = new Date(iso); if (isNaN(d.getTime())) return "";
-    const opts = { month: "short", day: "numeric" };
-    if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
-    return d.toLocaleDateString(undefined, opts);
+    const s = String(iso);
+    const d = new Date(s); if (isNaN(d.getTime())) return "";
+    // A date-only / midnight-UTC stamp carries no real time-of-day; render its
+    // UTC calendar day so a negative local offset can't roll it back a day.
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(s) || /t00:00:00(\.000)?z$/i.test(s);
+    const mo = dateOnly ? d.getUTCMonth() : d.getMonth();
+    const day = dateOnly ? d.getUTCDate() : d.getDate();
+    const yr = dateOnly ? d.getUTCFullYear() : d.getFullYear();
+    return MON[mo] + " " + day + (yr !== new Date().getFullYear() ? ", " + yr : "");
   }
   async function loadApplications(force) {
     const box = $("#appList");
@@ -1348,7 +1354,11 @@
         await api("/applications/manual", { method: "POST", body: JSON.stringify({
           company: company.value.trim(), title: title.value.trim(), url: url.value.trim(),
           location: location.value.trim(), status: stage.value,
-          appliedAt: date.value ? new Date(date.value).toISOString() : undefined,
+          appliedAt: (() => {
+            if (!date.value) return undefined;
+            const [y, m, dd] = date.value.split("-").map(Number);
+            return new Date(y, m - 1, dd, 12, 0, 0).toISOString(); // local noon → no day-shift
+          })(),
         }) });
         ov.remove(); toast("Logged"); loadApplications(true);
         if (typeof refreshStrip === "function") refreshStrip();
