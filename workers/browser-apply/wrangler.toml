@@ -17,4 +17,8 @@ database_id = "b242bc78-7e28-4600-bfde-524ab7842283"
 
 [vars]
 APP_BASE = "https://jobs.benwhetstone.info"
+# The relay domain candidate accounts + application emails are filed from —
+# must match the app's RELAY_DOMAIN so verification mail routes back to the
+# same relay inbox we poll.
+RELAY_DOMAIN = "benwhetstone.info"
 # ADMIN_TOKEN is set as a secret (matches the app's APP_ADMIN_TOKEN)

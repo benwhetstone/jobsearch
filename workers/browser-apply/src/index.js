@@ -110,6 +110,20 @@ async function runApply(env, appUuid, dryRun = false) {
       return dryRun ? { ok: false, reason: "couldn't reach a fillable form from the posting", log, screenshot: await shotData(page) }
                     : fail(env, appUuid, "couldn't reach a fillable application form from the posting", await screenshot(page));
     }
+    // Workday/iCIMS gate the form behind a candidate account. If we hit that
+    // wall, sign in with the account we already made for this employer, or
+    // register with the vanity relay address and click the verification link
+    // that lands in the relay inbox. Once it clears, the real form renders —
+    // re-find the form frame.
+    const acct = await ensureAccount(env, page, app, log);
+    if (acct.blocked && !dryRun) {
+      return fail(env, appUuid, acct.reason || "couldn't create or verify a candidate account on the employer's site", await screenshot(page));
+    }
+    if (acct.handled) {
+      await sleep(2000);
+      frame = await findFormFrame(page) || frame;
+    }
+
     const inputs = await frame.$$eval("input, textarea, select", (els) => els.length).catch(() => 0);
     log.push(`form frame has ${inputs} input(s)`);
 
@@ -158,17 +172,14 @@ async function runApply(env, appUuid, dryRun = false) {
       return fail(env, appUuid, "the employer's form uses a captcha, which only a person can complete — open it from here and finish the last step", await screenshot(page));
     }
 
-    // A login / account wall means this ATS wants a real account — that's a
-    // verification-code flow. Try it; if we can't clear it, hand back.
-    const codeNeeded = await detectVerification(page);
-    if (codeNeeded) {
-      const code = await waitForCode(env, appUuid, 90000);
-      if (!code) {
-        const shot = await screenshot(page);
-        return fail(env, appUuid, "the employer's system asked for an email verification code we didn't receive in time", shot);
+    // A verification-code wall before submit (some ATSs verify the email up
+    // front). Pull the code from the relay inbox and enter it; if it never
+    // arrives, hand back to the human.
+    if (await detectVerification(page)) {
+      const entered = await enterVerificationCode(env, frame, page, appUuid, log);
+      if (!entered) {
+        return fail(env, appUuid, "the employer's system asked for an email verification code we didn't receive in time", await screenshot(page));
       }
-      await fillByLabel(frame, "code", code, "text").catch(() => {});
-      await clickByText(frame, ["verify", "continue", "submit code"]).catch(() => {});
       await sleep(2000);
     }
 
@@ -186,6 +197,18 @@ async function runApply(env, appUuid, dryRun = false) {
       return fail(env, appUuid, "couldn't find the submit button on the employer's form", shot);
     }
     await sleep(4000);
+
+    // Greenhouse (and others) email a confirmation CODE only AFTER you submit —
+    // a "verify it's really you" step that gates the final receipt. If that wall
+    // appears now, pull the code from the relay inbox, enter it, and confirm.
+    for (let round = 0; round < 2 && await detectVerification(page); round++) {
+      const entered = await enterVerificationCode(env, frame, page, appUuid, log);
+      if (!entered) {
+        return fail(env, appUuid, "the employer emailed a verification code after submit that we didn't receive in time — enter it from here to finish", await screenshot(page));
+      }
+      await sleep(3500);
+    }
+
     const bodyText = norm(await page.evaluate(() => document.body.innerText || ""));
     const confirmed = /(thank you|application (received|submitted)|we(?:'ve| have) received|successfully applied|submission received)/.test(bodyText);
     const stillForm = /captcha/.test(bodyText);
@@ -581,7 +604,179 @@ async function clickByText(page, texts) {
 
 async function detectVerification(page) {
   const t = norm(await page.evaluate(() => document.body.innerText || "").catch(() => ""));
-  return /(verification code|verify your email|enter the code|we sent (?:you )?a code|confirm your email)/.test(t);
+  return /(verification code|verify your email|enter the code|we sent (?:you )?a code|confirm your email|enter the (?:6|five|six).?digit)/.test(t);
+}
+
+// Enter an emailed verification code. The email worker extracts the code from
+// the relay inbox into action_items; we poll for it, type it into the code
+// field (main doc or form frame), and confirm. Used both for a pre-form account
+// wall and Greenhouse's post-submit "verify it's really you" step.
+async function enterVerificationCode(env, frame, page, appUuid, log) {
+  const code = await waitForCode(env, appUuid, 120000);
+  if (!code) { log?.push("verification code not received in time"); return false; }
+  // The code field can live in the main page or the form frame; some forms
+  // split it into single-digit boxes.
+  let ok = await fillByLabel(frame, "code", code, "text").catch(() => false);
+  if (!ok) ok = await fillByLabel(page, "code", code, "text").catch(() => false);
+  if (!ok) ok = await fillCodeBoxes(page, code).catch(() => false);
+  await clickByText(frame, ["verify", "continue", "submit code", "confirm", "submit"]).catch(() => {});
+  await clickByText(page, ["verify", "continue", "submit code", "confirm", "submit"]).catch(() => {});
+  log?.push("entered verification code from relay inbox");
+  return true;
+}
+
+// Some verification screens use N single-character inputs. Fill them in order.
+async function fillCodeBoxes(page, code) {
+  return await page.evaluate((code) => {
+    const boxes = [...document.querySelectorAll("input")]
+      .filter((el) => el.offsetParent !== null && el.maxLength === 1 && !["hidden", "submit", "button", "checkbox", "radio"].includes(el.type));
+    if (boxes.length < code.length) return false;
+    const set = (el, v) => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+      setter.call(el, v);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    for (let i = 0; i < code.length; i++) set(boxes[i], code[i]);
+    return true;
+  }, code);
+}
+
+// ---- candidate accounts (Workday / iCIMS) -----------------------------------
+// Some ATSs won't show the application until you have an account. We make one
+// per (user, ats, tenant) with the vanity relay address, verify it via the
+// link the employer emails to that relay, and store the credentials so every
+// future application to the same employer just signs in.
+
+// A candidate-account wall = password field(s) plus create-account / sign-in
+// wording, in any frame. Returns the frame that holds it, or null.
+async function detectAccountWall(page) {
+  for (const fr of page.frames()) {
+    const hit = await fr.evaluate(() => {
+      if (!document.querySelector("input[type=password]")) return false;
+      const t = (document.body?.innerText || "").toLowerCase();
+      return /create account|create an account|create your account|sign in|new to |register|create profile|set up your account/.test(t);
+    }).catch(() => false);
+    if (hit) return fr;
+  }
+  return null;
+}
+
+async function ensureAccount(env, page, app, log) {
+  const wallFrame = await detectAccountWall(page);
+  if (!wallFrame) return { handled: false, noWall: true };
+  const host = (() => { try { return new URL(page.url()).host; } catch { return ""; } })();
+  const ats = app.ats || atsFromHost(host);
+  const tenant = host;
+  const email = relayEmailFor(env, app);
+  log.push(`candidate-account wall on ${host}`);
+
+  const existing = await env.DB.prepare(
+    "SELECT email, password FROM ats_accounts WHERE user_id=? AND ats=? AND tenant=?"
+  ).bind(app.user_id, ats, tenant).first().catch(() => null);
+
+  if (existing?.password) {
+    // Sign in with the account we made earlier for this employer.
+    await clickByText(page, ["sign in", "log in", "sign in to your account"]).catch(() => {});
+    await sleep(1200);
+    const f = await detectAccountWall(page) || wallFrame;
+    await fillByLabel(f, "email", existing.email, "text").catch(() => {});
+    await fillByLabel(f, "password", existing.password, "text").catch(() => {});
+    await clickByText(f, ["sign in", "log in", "login"]).catch(() => {});
+    await clickByText(page, ["sign in", "log in", "login"]).catch(() => {});
+    await sleep(3500);
+    const still = await detectAccountWall(page);
+    log.push(still ? "sign-in did not clear the wall" : "signed in to stored account");
+    return still ? { blocked: true, reason: "couldn't sign in to the stored candidate account" }
+                 : { handled: true, signedIn: true };
+  }
+
+  // No account yet — register with the vanity relay address.
+  await clickByText(page, ["create account", "create an account", "new account", "sign up", "register"]).catch(() => {});
+  await sleep(1200);
+  const f = await detectAccountWall(page) || wallFrame;
+  const password = genPassword();
+  await fillByLabel(f, "email", email, "text").catch(() => {});
+  await fillByLabel(f, "verify email", email, "text").catch(() => {});
+  await fillPasswordFields(f, password).catch(() => {});
+  await checkAgreements(f).catch(() => {});
+  await clickByText(f, ["create account", "create my account", "register", "sign up", "submit", "continue"]).catch(() => {});
+  await clickByText(page, ["create account", "create my account", "register", "sign up", "submit", "continue"]).catch(() => {});
+  await sleep(3500);
+
+  // Persist the credentials for this tenant (encrypt-at-rest is a tracked TODO).
+  await env.DB.prepare(
+    `INSERT INTO ats_accounts (id, user_id, ats, tenant, email, password, status, created_at)
+     VALUES (?,?,?,?,?,?, 'pending', ?)
+     ON CONFLICT(user_id, ats, tenant) DO UPDATE SET email=excluded.email, password=excluded.password, status='pending'`
+  ).bind(crypto.randomUUID(), app.user_id, ats, tenant, email, password, now()).run().catch(() => {});
+
+  // Workday usually emails a verification link before it lets you in. It lands
+  // in the relay inbox → the email worker files it as a 'verification_link'
+  // action item → we poll for it and navigate the browser there.
+  await sleep(1500);
+  const needLink = await page.evaluate(() =>
+    /verify your email|confirm your email|check your (?:email|inbox)|we(?:'ve| have) sent|activation|activate your account/i.test(document.body?.innerText || "")
+  ).catch(() => false);
+  if (needLink || await detectAccountWall(page)) {
+    log.push("waiting for account-verification link in relay inbox");
+    const link = await waitForLink(env, app.uuid, 150000);
+    if (!link) return { blocked: true, reason: "the employer emailed an account-verification link we didn't receive in time" };
+    await page.goto(link, { waitUntil: "networkidle0", timeout: 45000 }).catch(() => {});
+    await sleep(2500);
+    log.push("followed account-verification link");
+  }
+
+  await env.DB.prepare("UPDATE ats_accounts SET status='verified', verified_at=? WHERE user_id=? AND ats=? AND tenant=?")
+    .bind(now(), app.user_id, ats, tenant).run().catch(() => {});
+  const still = await detectAccountWall(page);
+  return still ? { blocked: true, reason: "created an account but couldn't get past the sign-in wall" }
+               : { handled: true, created: true };
+}
+
+function relayEmailFor(env, app) {
+  const slug = app.relay_slug || "candidate";
+  return `${slug}@${env.RELAY_DOMAIN || "benwhetstone.info"}`;
+}
+
+// A strong random password that satisfies typical ATS complexity rules
+// (upper, lower, digit, symbol). Ambiguous glyphs (0/O, 1/l/I) are excluded.
+function genPassword() {
+  const pick = (set, n) => {
+    const a = new Uint32Array(n); crypto.getRandomValues(a);
+    return [...a].map((x) => set[x % set.length]).join("");
+  };
+  return pick("ABCDEFGHJKLMNPQRSTUVWXYZ", 3) + pick("abcdefghijkmnpqrstuvwxyz", 5) +
+         pick("23456789", 3) + pick("!@#$%*", 2);
+}
+
+// Fill "Password" and "Confirm/Verify Password" with the same value.
+async function fillPasswordFields(frame, password) {
+  return await frame.evaluate((pw) => {
+    const boxes = [...document.querySelectorAll("input[type=password]")].filter((el) => el.offsetParent !== null);
+    const set = (el, v) => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+      setter.call(el, v);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    for (const b of boxes) set(b, pw);
+    return boxes.length;
+  }, password);
+}
+
+// Tick required agreement / terms checkboxes on a registration form.
+async function checkAgreements(frame) {
+  return await frame.evaluate(() => {
+    let n = 0;
+    for (const el of document.querySelectorAll("input[type=checkbox]")) {
+      if (el.offsetParent === null || el.checked) continue;
+      const t = ((el.closest("label")?.innerText || "") + " " + (el.getAttribute("aria-label") || "") +
+        " " + (el.parentElement?.innerText || "")).toLowerCase();
+      if (/agree|terms|privacy|consent|acknowledge|read and understood/.test(t)) { el.click(); n++; }
+    }
+    return n;
+  });
 }
 
 // Poll D1 for the code the email worker extracted into action_items.
@@ -596,6 +791,23 @@ async function waitForCode(env, appUuid, ms) {
     ).bind(`/#application=${appUuid}`, since).first();
     const m = row?.detail && String(row.detail).match(/\b(\d{4,8})\b/);
     if (m) return m[1];
+    await sleep(5000);
+  }
+  return null;
+}
+
+// Poll D1 for an account-verification LINK the email worker extracted from the
+// relay inbox into action_items (kind='verification_link').
+async function waitForLink(env, appUuid, ms) {
+  const deadline = Date.now() + ms;
+  const since = now();
+  while (Date.now() < deadline) {
+    const row = await env.DB.prepare(
+      `SELECT detail FROM action_items
+        WHERE url = ? AND kind = 'verification_link' AND created_at >= ?
+        ORDER BY created_at DESC LIMIT 1`
+    ).bind(`/#application=${appUuid}`, since).first();
+    if (row?.detail && /^https?:\/\//i.test(String(row.detail))) return String(row.detail);
     await sleep(5000);
   }
   return null;

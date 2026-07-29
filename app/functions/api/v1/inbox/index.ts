@@ -134,6 +134,18 @@ export async function ingest(env: Env, msg: { to: string; from: string; subject:
            `From ${msg.from}: "${subject}"`, appUuid ? `/#application=${appUuid}` : null, now).run().catch(() => {});
   }
 
+  // Verification / account-activation LINKS (Workday "sign in to your candidate
+  // home", iCIMS "confirm your email"). The browser worker polls for these to
+  // finish account creation, so an ATS that demands an account never stalls.
+  const linkMatch = text.match(/https?:\/\/[^\s"'<>]*(?:verify|activate|confirm|candidate|sign[-_]?in|account|password|token)[^\s"'<>]*/i);
+  if (linkMatch && /verify|activate|confirm|candidate home|sign in|create.*account|complete.*registration|outstanding task/i.test(subject + " " + text)) {
+    await env.DB.prepare(
+      `INSERT INTO action_items (id, user_id, kind, title, detail, url, status, created_at)
+       VALUES (?, ?, 'verification_link', ?, ?, ?, 'pending', ?)`
+    ).bind(crypto.randomUUID(), userId, "Account verification link", linkMatch[0],
+           appUuid ? `/#application=${appUuid}` : null, now).run().catch(() => {});
+  }
+
   // advance the application + queue an action item for the ones that matter
   const newStatus = STATUS_FOR[category];
   if (appUuid && newStatus) {
