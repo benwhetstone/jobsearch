@@ -301,7 +301,7 @@
       { key: "fieldOfStudy", label: "Field of study" }, { key: "city", label: "Location" },
       { key: "startDate", label: "Start (year)" }, { key: "endDate", label: "Finished (year)" },
     ] },
-    // Résumé & Voice block
+    // Resume & Voice block
     employerDescriptions: { kind: "records", singular: "employer description", fields: [
       { key: "employer", label: "Employer" },
       { key: "description", label: "Exact wording to use", type: "textarea" },
@@ -617,7 +617,7 @@
     const view = el("button", "btn ghost", "View posting");
     view.title = "Read the full posting without leaving the page";
     view.addEventListener("click", () => openJobDetail(m.jobUuid));
-    // Apply = start autopilot: tailor the résumé and cover letter, run the
+    // Apply = start autopilot: tailor the resume and cover letter, run the
     // hiring-manager gate, mirror the employer's real form and prefill it.
     // It never opens the posting and it never submits anything.
     const apply = el("button", "btn primary", "Apply");
@@ -1123,7 +1123,7 @@
       p.innerHTML =
         '<div class="ph-icon"><svg viewBox="0 0 24 24"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></div>' +
         (APP_FILTER ? "<h3>Nothing in this stage</h3><p>Click the highlighted box again to see everything.</p>"
-                    : "<h3>No applications yet</h3><p>Hit <strong>Apply</strong> on a job. We tailor the résumé and cover letter, run the hiring-manager check, and prefill the employer's real application for your approval.</p>");
+                    : "<h3>No applications yet</h3><p>Hit <strong>Apply</strong> on a job. We tailor the resume and cover letter, run the hiring-manager check, and prefill the employer's real application for your approval.</p>");
       box.appendChild(p);
       return;
     }
@@ -1161,9 +1161,9 @@
         actions.appendChild(vp);
       }
       if (a.cvUuid) {
-        const d1 = el("a", "btn", "R\u00e9sum\u00e9");
+        const d1 = el("a", "btn", "Resume");
         d1.href = `/api/v1/documents/${a.cvUuid}/pdf`; d1.target = "_blank"; d1.rel = "noopener";
-        d1.title = "Download the tailored r\u00e9sum\u00e9 PDF";
+        d1.title = "Download the tailored resume PDF";
         actions.appendChild(d1);
       }
       if (a.coverLetterUuid) {
@@ -1208,7 +1208,7 @@
     });
   }
 
-  // ---- detail: résumé redline, cover letter, mirrored form ------------------
+  // ---- detail: resume redline, cover letter, mirrored form ------------------
   async function openApplication(uuid) {
     switchView("applications");
     const box = $("#appList");
@@ -1254,7 +1254,7 @@
     const tabs = el("div", "tabs");
     const panels = {};
     const needBadge = d.fields.filter((f) => f.fillStatus === "needs_human").length;
-    [["resume", "Résumé"], ["cover", "Cover letter"],
+    [["resume", "Resume"], ["cover", "Cover letter"],
      ["form", "Apply form" + (needBadge ? ` (${needBadge})` : "")]].forEach(([k, lbl], i) => {
       const b = el("button", "tab" + (i === 0 ? " active" : ""), lbl);
       b.addEventListener("click", () => {
@@ -1266,10 +1266,10 @@
     });
     box.appendChild(tabs);
 
-    // résumé panel: redline against the base
+    // resume panel: redline against the base
     const pr = el("div", "card block-body");
     if (d.cv?.diff) {
-      const legend = el("p", "muted", "Tracked changes against your base résumé: ");
+      const legend = el("p", "muted", "Tracked changes against your base resume: ");
       legend.appendChild(el("ins", null, "added"));
       legend.appendChild(document.createTextNode(" / "));
       legend.appendChild(el("del", null, "removed"));
@@ -1288,14 +1288,14 @@
         const ul = el("ul"); s.bullets.forEach((b) => ul.appendChild(el("li", null, b))); pr.appendChild(ul);
       });
       pr.appendChild(el("p", "muted", "Skills: " + c.skills.join(", ")));
-    } else pr.appendChild(el("p", "muted", "No résumé was generated."));
+    } else pr.appendChild(el("p", "muted", "No resume was generated."));
     if (d.cv?.verifyReport && !d.cv.verifyPassed) {
       const vb = el("div", "banner bad");
       vb.textContent = "Blocked by the quality gate: " + (d.cv.verifyReport.failures || []).join(" · ");
       pr.insertBefore(vb, pr.firstChild);
     }
     if (d.cv?.uuid) {
-      const dl = el("a", "btn primary", "Download r\u00e9sum\u00e9 (PDF)");
+      const dl = el("a", "btn primary", "Download resume (PDF)");
       dl.href = `/api/v1/documents/${d.cv.uuid}/pdf`; dl.target = "_blank"; dl.rel = "noopener";
       dl.style.marginTop = "14px";
       pr.appendChild(dl);
@@ -1326,18 +1326,18 @@
       const expl = el("p", "muted");
       expl.textContent = d.ats
         ? "We found this employer's system but couldn't mirror this particular form. Your tailored documents are still ready below."
-        : "This employer's application system isn't one we can fill for you yet. Your tailored r\u00e9sum\u00e9 and cover letter are still written, gated and ready: download both, then attach them on the employer's page.";
+        : "This employer's application system isn't one we can fill for you yet. Your tailored resume and cover letter are still written, gated and ready: download both, then attach them on the employer's page.";
       pf.appendChild(expl);
       const steps = el("ol");
       steps.style.cssText = "font-size:13px;margin:8px 0 14px;padding-left:20px;line-height:1.9";
-      [["Download your tailored r\u00e9sum\u00e9 and cover letter below."],
+      [["Download your tailored resume and cover letter below."],
        ["Open the employer's application page."],
        ["Attach the PDFs and submit: the rest of the form is usually just your contact details, which are on your Profile page."]]
         .forEach(([t]) => steps.appendChild(el("li", null, t)));
       pf.appendChild(steps);
       const row = el("div", "job-actions"); row.style.justifyContent = "flex-start";
       if (d.cv?.uuid) {
-        const a1 = el("a", "btn primary", "Download r\u00e9sum\u00e9 (PDF)");
+        const a1 = el("a", "btn primary", "Download resume (PDF)");
         a1.href = `/api/v1/documents/${d.cv.uuid}/pdf`; a1.target = "_blank"; a1.rel = "noopener";
         row.appendChild(a1);
       }
@@ -1385,7 +1385,7 @@
           row.appendChild(input);
           row.appendChild(el("div", "help err", "Needs your answer"));
         } else if (f.type === "file") {
-          row.appendChild(el("div", "help", "Your tailored résumé is attached at submit time."));
+          row.appendChild(el("div", "help", "Your tailored resume is attached at submit time."));
         } else {
           const shown = f.options.length
             ? (f.options.find((o) => o.value === f.value)?.label ?? f.value ?? "")
@@ -1476,14 +1476,14 @@
       card.appendChild(el("h4", null, name + (TPL_CURRENT === key ? "  ✓" : "")));
       card.appendChild(el("p", null, desc));
       const row = el("div", "chips");
-      const preview = el("a", "chip", "Preview with my résumé");
+      const preview = el("a", "chip", "Preview with my resume");
       preview.href = "#"; preview.addEventListener("click", async (e) => {
         e.preventDefault(); e.stopPropagation();
         try {
           const r = await api("/applications");
           // any existing cv doc works for preview; fall back to base
           window.open(`/api/v1/documents/${await anyCvUuid()}/pdf?template=${key}`, "_blank");
-        } catch { toast("Generate or upload a résumé first"); }
+        } catch { toast("Generate or upload a resume first"); }
       });
       row.appendChild(preview);
       card.appendChild(row);
@@ -1546,10 +1546,10 @@
     });
   }
 
-  // ---- base résumé: generate from profile answers + PDF download ----------
+  // ---- base resume: generate from profile answers + PDF download ----------
   $("#btnGenResume").addEventListener("click", async () => {
     const btn = $("#btnGenResume"); const out = $("#genResult");
-    btn.disabled = true; btn.textContent = "Writing your résumé…";
+    btn.disabled = true; btn.textContent = "Writing your resume…";
     out.innerHTML = "";
     try {
       const r = await api("/documents/base", { method: "POST" });
@@ -1559,28 +1559,28 @@
       const rev = d.expertReview || {};
       const box = el("div", "banner " + (rev.verdict === "PASS" ? "info" : "warn"));
       const head = rev.verdict === "PASS"
-        ? "Your résumé is ready, and it clears the hiring-manager screen. Download it below or keep sharpening your answers: every improvement flows into it."
-        : "Your résumé is ready. The hiring-manager reviewer left notes to make it stronger: each one is fixable from your profile answers.";
+        ? "Your resume is ready, and it clears the hiring-manager screen. Download it below or keep sharpening your answers: every improvement flows into it."
+        : "Your resume is ready. The hiring-manager reviewer left notes to make it stronger: each one is fixable from your profile answers.";
       box.appendChild(el("strong", null, head));
       (rev.notes || []).slice(0, 5).forEach((n) => { const li = el("div"); li.textContent = "\u2022 " + n; box.appendChild(li); });
       out.appendChild(box);
-      toast("Base r\u00e9sum\u00e9 created", 2400);
+      toast("Base resume created", 2400);
     } catch (e) {
       const box = el("div", "banner bad");
-      box.textContent = e.message || "Could not generate the r\u00e9sum\u00e9.";
+      box.textContent = e.message || "Could not generate the resume.";
       out.appendChild(box);
     } finally {
-      btn.disabled = false; btn.textContent = "Write my r\u00e9sum\u00e9 from my answers";
+      btn.disabled = false; btn.textContent = "Write my resume from my answers";
     }
   });
 
-  // ---- résumé upload ------------------------------------------------------
+  // ---- resume upload ------------------------------------------------------
   $("#btnResume").addEventListener("click", () => $("#resumeFile").click());
   $("#resumeFile").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const btn = $("#btnResume");
-    btn.disabled = true; btn.textContent = "Reading résumé…";
+    btn.disabled = true; btn.textContent = "Reading resume…";
     try {
       const fd = new FormData(); fd.append("file", file);
       const res = await fetch("/api/v1/profile/import-resume", { method: "POST", body: fd, credentials: "same-origin" });
@@ -1590,9 +1590,9 @@
       toast(n ? `Filled in ${n} field${n === 1 ? "" : "s"}${s ? ` (${s} already had answers)` : ""}` : "Nothing new to add", 3200);
       await loadProfile();
     } catch (err) {
-      toast(err.message || "Could not read that résumé", 3600);
+      toast(err.message || "Could not read that resume", 3600);
     } finally {
-      btn.disabled = false; btn.textContent = "Upload résumé";
+      btn.disabled = false; btn.textContent = "Upload resume";
       e.target.value = "";
     }
   });
