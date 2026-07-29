@@ -1537,7 +1537,17 @@
       meta.appendChild(el("div", "subj", m.subject || "(no subject)"));
       meta.appendChild(el("div", "snip", m.snippet));
       it.appendChild(meta);
-      it.appendChild(el("span", `cat-pill cat-${m.category}`, CAT_LABEL[m.category] || m.category));
+      const right = el("div", "inbox-right");
+      right.appendChild(el("span", `cat-pill cat-${m.category}`, CAT_LABEL[m.category] || m.category));
+      const del = el("button", "btn ghost inbox-del", "Delete");
+      del.title = "Remove this message";
+      del.addEventListener("click", async (ev) => {
+        ev.stopPropagation();
+        try { await api("/inbox", { method: "DELETE", body: JSON.stringify({ id: m.id }) });
+              it.remove(); toast("Deleted"); } catch (e) { toast(e.message, 3000); }
+      });
+      right.appendChild(del);
+      it.appendChild(right);
       it.addEventListener("click", async () => {
         if (!m.read) { try { await api("/inbox", { method: "PATCH", body: JSON.stringify({ id: m.id, read: true }) }); } catch {} }
         if (m.applicationUuid) openApplication(m.applicationUuid);

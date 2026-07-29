@@ -70,6 +70,17 @@ export const onRequestPatch: PagesFunction<Env, string, { user?: CtxUser }> = as
   return json({ ok: true });
 };
 
+// DELETE /api/v1/inbox   { id }   — remove a message from the inbox.
+export const onRequestDelete: PagesFunction<Env, string, { user?: CtxUser }> = async ({ request, env, data }) => {
+  const user = currentUser(data);
+  let body: any;
+  try { body = await request.json(); } catch { return err(400, "Invalid JSON body."); }
+  if (!body.id) return err(400, "id required.");
+  await env.DB.prepare("DELETE FROM inbox_emails WHERE id = ? AND user_id = ?")
+    .bind(String(body.id), user.id).run();
+  return json({ ok: true });
+};
+
 // ---- ingest (email worker -> here) -------------------------------------------
 export async function ingest(env: Env, msg: { to: string; from: string; subject: string; text: string }) {
   const slugMatch = (msg.to || "").toLowerCase().match(/apply-([a-z0-9]{6,16})@/);
