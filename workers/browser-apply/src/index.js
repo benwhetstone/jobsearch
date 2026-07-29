@@ -969,6 +969,18 @@ async function fail(env, appUuid, reason, shot) {
        FROM applications_v2 WHERE uuid = ?`
   ).bind(crypto.randomUUID(), `Automatic submission stopped: ${reason}.`, `/#application=${appUuid}`, now(), appUuid)
     .run().catch(() => {});
+  // A blocked application — a captcha we couldn't beat, a field we couldn't
+  // fill — is an important update, so it also lands in the app inbox next to
+  // recruiter mail, not only in the action queue.
+  await env.DB.prepare(
+    `INSERT INTO inbox_emails (id, user_id, application_uuid, relay_slug, from_addr, subject, body_text, category, classified_by, received_at)
+     SELECT ?, a.user_id, a.uuid, a.relay_slug, ?,
+            'Autopilot paused: ' || COALESCE(j.company_name, 'an application') || ' needs you',
+            ?, 'info', 'system', ?
+       FROM applications_v2 a LEFT JOIN jobs j ON j.uuid = a.job_uuid WHERE a.uuid = ?`
+  ).bind(crypto.randomUUID(), "autopilot@jobs.benwhetstone.info",
+         `We stopped the automatic submission and saved your place: ${reason}. Open the application from here and finish the last step.`,
+         now(), appUuid).run().catch(() => {});
   return { ok: false, reason, screenshot: shot ? `data:image/png;base64,${shot}` : undefined };
 }
 function json(o, status = 200) { return new Response(JSON.stringify(o), { status, headers: { "content-type": "application/json" } }); }
