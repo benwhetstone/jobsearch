@@ -395,7 +395,9 @@ const APPLY_AFFORDANCES = [
   "apply to this job", "start your application", "start application",
   "submit application", "apply", "i'm interested",
 ];
-const DEAD_POSTING = /page not found|no longer active|position (is )?(closed|filled|no longer)|this job is no longer|posting (is )?(closed|expired)|applications are closed|not accepting applications|this posting (is|has)|job has been filled/i;
+// Only UNAMBIGUOUS "this posting is gone" phrases — an over-broad pattern here
+// wrongly skips live forms (a footer saying "this posting has…" is not dead).
+const DEAD_POSTING = /page not found|no longer active|position (is )?(closed|filled|no longer accepting)|this job is no longer|this posting is no longer|posting (is )?(closed|expired)|applications (are|have) closed|no longer accepting applications|this (job|position|role|req) has been filled/i;
 
 async function navigateToForm(page, candidates, log) {
   let frame = null, deadSeen = false;
