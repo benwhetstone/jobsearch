@@ -34,6 +34,7 @@ export interface MatchResult {
   skills: number; experience: number; compensation: number; terms: number; company: number;
   compFlag: "ok" | "negotiation" | "dropped" | "undisclosed";
   missing: string[];
+  onField: boolean;             // the role is actually in the user's field (not just tool overlap)
 }
 
 const val = (json: string | null | undefined): unknown => {
@@ -256,6 +257,28 @@ function freshness(postedAt: string | null | undefined): number {
 
 // ---- combine -----------------------------------------------------------------
 
+// Pure filler in a job title — carries no professional meaning. Everything
+// NOT in here that appears in the user's desired titles IS their profession
+// (analyst, developer, nurse, designer…), and a job must share one of those
+// words to be in the user's field at all. This is entirely profile-driven:
+// change the user's titles and "on-field" changes with them.
+const TITLE_FILLER = new Set([
+  "senior", "junior", "sr", "jr", "i", "ii", "iii", "iv", "v", "mid", "level",
+  "entry", "lead", "principal", "staff", "remote", "hybrid", "onsite", "on",
+  "site", "full", "part", "time", "the", "and", "of", "for", "to", "a", "an",
+  "job", "jobs", "new", "with", "in", "at",
+]);
+
+// Is this role in the same field the user is targeting? True when the job
+// title shares any meaningful word with the user's OWN desired titles.
+function isOnField(p: ProfileForMatch, job: JobForMatch): boolean {
+  const wanted = new Set(
+    p.desiredTitles.flatMap((t) => tokens(t)).filter((w) => w.length > 2 && !TITLE_FILLER.has(w))
+  );
+  if (!wanted.size) return true;   // no titles on file: don't over-filter
+  return tokens(job.title).some((w) => wanted.has(w));
+}
+
 export function scoreJob(p: ProfileForMatch, job: JobForMatch): MatchResult {
   const missing: string[] = [];
   const hay = norm(job.title + " " + (job.description || ""));
@@ -264,6 +287,7 @@ export function scoreJob(p: ProfileForMatch, job: JobForMatch): MatchResult {
   const comp = scoreCompensation(p, job, missing);
   const terms = scoreTerms(p, job);
   const company = 0.8; // neutral until we add employer-reputation data
+  const onField = isOnField(p, job);
 
   // globalwork's fitted formula (teardown README, 16 live samples):
   // (0.55*skills + 0.45*experience) * (0.91 + 0.09*comp). Location/terms is a
@@ -272,7 +296,9 @@ export function scoreJob(p: ProfileForMatch, job: JobForMatch): MatchResult {
   // "Software Developer" that names your tools but isn't an analyst caps out
   // well below a real data role. Full credit once experience >= 0.6.
   const titleFit = 0.55 + 0.45 * Math.min(1, experience / 0.6);
-  const total = clamp01((0.55 * skills + 0.45 * experience) * (0.91 + 0.09 * comp.score) * titleFit);
+  // Off-field roles (title shares nothing with the user's own titles) are never
+  // a real match no matter how many tools overlap — they're dropped in runSweep.
+  const total = clamp01((0.55 * skills + 0.45 * experience) * (0.91 + 0.09 * comp.score) * titleFit * (onField ? 1 : 0.4));
 
-  return { total, skills, experience, compensation: comp.score, terms, company, compFlag: comp.flag, missing };
+  return { total, skills, experience, compensation: comp.score, terms, company, compFlag: comp.flag, missing, onField };
 }
