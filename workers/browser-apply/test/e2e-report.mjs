@@ -20,8 +20,20 @@ import { fileURLToPath } from "node:url";
 const __dir = dirname(fileURLToPath(import.meta.url));
 const WORKER_URL = (process.env.WORKER_URL || "https://jobsearch-browser-apply.ben-322.workers.dev").replace(/\/$/, "");
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-const USER_ID = process.env.USER_ID || "user_ben";
 if (!ADMIN_TOKEN) { console.error("Set ADMIN_TOKEN in the environment (the worker's admin bearer)."); process.exit(1); }
+
+// The probe loads a real profile by user id. Default to the account's first
+// user (single-tenant) so names/phone/résumé actually fill, unless overridden.
+function d1Rows(sql) {
+  const out = execFileSync("npx", ["wrangler", "d1", "execute", "jobsearch", "--remote", "--json", "--command", sql],
+    { cwd: join(fileURLToPath(new URL(".", import.meta.url)), ".."), encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  const parsed = JSON.parse(out);
+  return (Array.isArray(parsed) ? parsed[0]?.results : parsed?.results) || [];
+}
+function firstUserId() {
+  try { return d1Rows("SELECT id FROM users ORDER BY created_at LIMIT 1")[0]?.id || null; } catch { return null; }
+}
+const USER_ID = process.env.USER_ID || firstUserId() || "user_ben";
 
 function targetsFromD1() {
   // one representative live auto_apply posting per ATS the sweep has found
