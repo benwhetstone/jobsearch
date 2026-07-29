@@ -981,6 +981,14 @@ async function fail(env, appUuid, reason, shot) {
   ).bind(crypto.randomUUID(), "autopilot@jobs.benwhetstone.info",
          `We stopped the automatic submission and saved your place: ${reason}. Open the application from here and finish the last step.`,
          now(), appUuid).run().catch(() => {});
+  // And a REAL email to the user's account address — a blocked application
+  // shouldn't wait to be noticed. The app sends via Resend and respects the
+  // user's email opt-out.
+  await fetch(`${env.APP_BASE}/api/v1/admin/notify`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${env.ADMIN_TOKEN}`, "content-type": "application/json" },
+    body: JSON.stringify({ appUuid, reason }),
+  }).catch(() => {});
   return { ok: false, reason, screenshot: shot ? `data:image/png;base64,${shot}` : undefined };
 }
 function json(o, status = 200) { return new Response(JSON.stringify(o), { status, headers: { "content-type": "application/json" } }); }
