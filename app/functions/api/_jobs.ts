@@ -245,9 +245,10 @@ async function careerjet(env: Env, q: SearchQuery): Promise<RawJob[]> {
 // ---- Findwork.dev: keyword/location/remote filtering (needs token) -----------
 async function findwork(env: Env, q: SearchQuery): Promise<RawJob[]> {
   if (!env.FINDWORK_KEY) return [];
+  // Findwork's `location` filter is exact-city and zeroes out almost every
+  // query (0 for "Tampa", 104 without it). It's a remote-heavy tech board, so
+  // we search by keyword only and let the local/remote split fall out of scoring.
   const params = new URLSearchParams({ search: q.keywords, sort_by: "relevance" });
-  if (q.location) params.set("location", q.location);
-  if (q.remoteOnly) params.set("remote", "true");
   const data = await safeFetch(`https://findwork.dev/api/jobs/?${params}`, {
     headers: { Authorization: `Token ${env.FINDWORK_KEY}` },
   });
@@ -266,6 +267,54 @@ async function findwork(env: Env, q: SearchQuery): Promise<RawJob[]> {
     description: (r.text || "").replace(/<[^>]+>/g, " ").slice(0, 2000),
     postedAt: r.date_posted || null,
   }));
+}
+
+const kwTokens = (s: string) => (s || "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2);
+
+// ---- The Muse: curated employer postings, keyless ---------------------------
+async function themuse(env: Env, q: SearchQuery): Promise<RawJob[]> {
+  const kw = kwTokens(q.keywords);
+  const hit = (t: string) => !kw.length || kw.some((w) => t.toLowerCase().includes(w));
+  // Muse filters by fixed category, not free text, so pull the data category
+  // and a couple of pages, then keyword-filter to the user's search locally.
+  const out: RawJob[] = [];
+  for (const page of [0, 1]) {
+    const data = await safeFetch(
+      `https://www.themuse.com/api/public/jobs?category=${encodeURIComponent("Data and Analytics")}&category=${encodeURIComponent("Data Science")}&page=${page}`, {});
+    for (const r of data?.results ?? []) {
+      if (!hit(r.name || "")) continue;
+      const loc = (r.locations || []).map((l: any) => l.name).filter(Boolean).join("; ");
+      out.push({
+        source: "themuse", externalId: String(r.id), title: r.name || "",
+        company: r.company?.name || null, location: loc || null,
+        remote: /remote|flexible/i.test(loc),
+        salaryMin: null, salaryMax: null, currency: null,
+        url: r.refs?.landing_page, applyUrl: r.refs?.landing_page,
+        category: (r.categories || [])[0]?.name || null,
+        description: (r.contents || "").replace(/<[^>]+>/g, " ").slice(0, 2000),
+        postedAt: r.publication_date || null,
+      });
+    }
+  }
+  return out;
+}
+
+// ---- RemoteOK: remote-first board, keyless ----------------------------------
+async function remoteok(env: Env, q: SearchQuery): Promise<RawJob[]> {
+  const kw = kwTokens(q.keywords);
+  const hit = (t: string) => !kw.length || kw.some((w) => t.toLowerCase().includes(w));
+  const data = await safeFetch("https://remoteok.com/api", { headers: { "User-Agent": "Mozilla/5.0" } });
+  if (!Array.isArray(data)) return [];
+  return data.filter((r: any) => r?.position && hit(`${r.position} ${(r.tags || []).join(" ")}`))
+    .slice(0, 40).map((r: any): RawJob => ({
+      source: "remoteok", externalId: String(r.id || r.slug), title: r.position || "",
+      company: r.company || null, location: r.location || "Remote", remote: true,
+      salaryMin: r.salary_min ?? null, salaryMax: r.salary_max ?? null, currency: "USD",
+      url: r.url || r.apply_url, applyUrl: r.apply_url || r.url,
+      category: (r.tags || [])[0] || null,
+      description: (r.description || "").replace(/<[^>]+>/g, " ").slice(0, 2000),
+      postedAt: r.date || null,
+    }));
 }
 
 // ---- USAJOBS: federal jobs, strong for local government roles (needs key) -----
@@ -339,11 +388,13 @@ export async function fetchAllSources(env: Env, q: SearchQuery): Promise<{ jobs:
     ["adzuna", adzuna(env, q)],
     ["remotive", remotive(env, q)],
     ["arbeitnow", arbeitnow(env, q)],
-    ["jsearch", jsearch(env, q)],
     ["ats", atsDirect(env, q)],
+    ["themuse", themuse(env, q)],
+    ["remoteok", remoteok(env, q)],
     ["careerjet", careerjet(env, q)],
     ["findwork", findwork(env, q)],
     ["usajobs", usajobs(env, q)],
+    // jsearch (RapidAPI) removed: its /search path 404s — subscription is dead.
   ];
   const settled = await Promise.all(connectors.map(([, p]) => p.catch(() => [] as RawJob[])));
   const sources: Record<string, number> = {};
