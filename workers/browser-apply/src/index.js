@@ -78,25 +78,10 @@ async function runApply(env, appUuid, dryRun = false) {
   try {
     // Navigate like a human: try the canonical ATS form, but if that 404s
     // (custom-domain / embedded boards), fall back to the posting and click
-    // through to Apply. The form often lives in an iframe — we search every
-    // frame for it, so we never need the "exact" application link.
-    const candidates = [canonicalFormUrl(app), applyUrl].filter(Boolean);
-    let frame = null, deadSeen = false;
-    for (const url of candidates) {
-      await page.goto(url, { waitUntil: "networkidle0", timeout: 45000 }).catch(() => {});
-      await sleep(1800);
-      const body = (await page.evaluate(() => document.body.innerText || "").catch(() => "")).toLowerCase();
-      if (/page not found|no longer active|position (is )?(closed|filled|no longer)|this job is no longer|posting (is )?(closed|expired)|applications are closed/.test(body)) { log.push(`skip (dead): ${url}`); deadSeen = true; continue; }
-      log.push(`opened ${url}`);
-      frame = await findFormFrame(page);
-      if (!frame) {
-        // click any apply affordance, then look again (incl. new frames)
-        await clickByText(page, ["apply for this job", "apply now", "apply to this job", "submit application", "start application", "apply", "i'm interested"]).catch(() => {});
-        await sleep(2500);
-        frame = await findFormFrame(page);
-      }
-      if (frame) break;
-    }
+    // through to Apply. The form often lives in an iframe — navigateToForm
+    // searches every frame, so we never need the "exact" application link.
+    const { frame: reached, deadSeen } = await navigateToForm(page, [canonicalFormUrl(app), applyUrl], log);
+    let frame = reached;
     if (!frame) {
       // The posting is gone — mark it expired so it lands in the Expired stage
       // and the user can start over on a fresh req if they want.
@@ -254,17 +239,7 @@ async function probeForm(env, url, userId, label) {
   await page.setViewport({ width: 1280, height: 1700 });
   const log = [], insights = [];
   try {
-    await page.goto(url, { waitUntil: "networkidle0", timeout: 45000 }).catch(() => {});
-    await sleep(2000);
-    let frame = await findFormFrame(page);
-    for (let attempt = 0; attempt < 3 && !frame; attempt++) {
-      // Ashby shows an "Application" tab; Workday an "Apply"/"Apply Manually";
-      // Greenhouse company embeds an "Apply for this job" button.
-      await clickByText(page, ["application", "apply for this job", "apply now", "apply manually",
-        "apply to this job", "start your application", "start application", "submit application", "apply", "i'm interested"]).catch(() => {});
-      await sleep(2600);
-      frame = await findFormFrame(page);
-    }
+    const { frame } = await navigateToForm(page, [url], log);
     if (!frame) {
       return { ok: false, label, host, ats, reason: "no fillable form found from this URL", log, screenshot: await shotData(page) };
     }
@@ -304,6 +279,10 @@ function atsFromHost(host) {
   if (/myworkdayjobs|workday/.test(host)) return "workday";
   if (/jazz|applytojob/.test(host)) return "jazzhr";
   if (/icims/.test(host)) return "icims";
+  if (/smartrecruiters/.test(host)) return "smartrecruiters";
+  if (/bamboohr/.test(host)) return "bamboohr";
+  if (/taleo/.test(host)) return "taleo";
+  if (/successfactors|sapsf/.test(host)) return "successfactors";
   return "generic";
 }
 
@@ -405,10 +384,45 @@ async function fillTypeaheads(frame, prof) {
   return count;
 }
 
-// ---- navigation: find the frame that actually holds the application form ----
-// The form may be the main document or an embedded iframe (Greenhouse/Lever
-// embeds, Workday portals). We pick the frame with the most application-shaped
-// inputs, so we never need the "exact" form URL.
+// ---- navigation: reach the frame that actually holds the application form ---
+// Try each candidate URL; on each, look for the form, and if it isn't there
+// yet, scroll (to trigger lazy-loaded embedded iframes — Greenhouse on custom
+// domains) and click any apply/tab affordance, then look again. "Application"
+// is first so Ashby/Workday tabbed layouts switch to the form tab instead of
+// sitting on Overview. Returns { frame, deadSeen }.
+const APPLY_AFFORDANCES = [
+  "application", "apply for this job", "apply now", "apply manually",
+  "apply to this job", "start your application", "start application",
+  "submit application", "apply", "i'm interested",
+];
+const DEAD_POSTING = /page not found|no longer active|position (is )?(closed|filled|no longer)|this job is no longer|posting (is )?(closed|expired)|applications are closed|not accepting applications|this posting (is|has)|job has been filled/i;
+
+async function navigateToForm(page, candidates, log) {
+  let frame = null, deadSeen = false;
+  for (const url of candidates.filter(Boolean)) {
+    await page.goto(url, { waitUntil: "networkidle0", timeout: 45000 }).catch(() => {});
+    await sleep(1800);
+    const body = (await page.evaluate(() => document.body.innerText || "").catch(() => "")).toLowerCase();
+    if (DEAD_POSTING.test(body)) { log?.push(`skip (dead): ${url}`); deadSeen = true; continue; }
+    log?.push(`opened ${url}`);
+    frame = await findFormFrame(page);
+    for (let attempt = 0; attempt < 3 && !frame; attempt++) {
+      // scroll to force lazy iframes (embedded Greenhouse) to load
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)).catch(() => {});
+      await sleep(600);
+      await clickByText(page, APPLY_AFFORDANCES).catch(() => {});
+      await sleep(2400);
+      frame = await findFormFrame(page);
+    }
+    if (frame) break;
+  }
+  return { frame, deadSeen };
+}
+
+// Find the frame that holds the application form. The form may be the main
+// document or an embedded iframe (Greenhouse/Lever embeds, Workday portals).
+// We pick the frame with the most application-shaped inputs, so we never need
+// the "exact" form URL.
 async function findFormFrame(page) {
   const frames = page.frames();
   let best = null, bestScore = 0;
