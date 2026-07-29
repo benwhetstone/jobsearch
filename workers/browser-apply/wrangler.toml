@@ -1,0 +1,20 @@
+name = "jobsearch-browser-apply"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Browser Rendering binding: gives the worker a real Chromium to drive with
+# puppeteer, the same capability globalwork uses to file Workday/Workable/iCIMS
+# applications that have no public submit API.
+browser = { binding = "BROWSER" }
+
+# D1 so the worker can read the mirrored form answers + the pending
+# verification code the email worker extracts, and write status back.
+[[d1_databases]]
+binding = "DB"
+database_name = "jobsearch"
+database_id = "b242bc78-7e28-4600-bfde-524ab7842283"
+
+[vars]
+APP_BASE = "https://jobs.benwhetstone.info"
+# ADMIN_TOKEN is set as a secret (matches the app's APP_ADMIN_TOKEN)

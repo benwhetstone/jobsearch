@@ -156,14 +156,20 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     // employer's ATS where the board accepts a direct post; if that path is
     // blocked (captcha, unsupported board) it falls back to manual with an
     // action item saying why.
-    const appRow = await env.DB.prepare("SELECT supported_ats, ats FROM applications_v2 WHERE uuid = ?")
-      .bind(uuid).first<{ supported_ats: number; ats: string | null }>();
-    const canAuto = !!appRow?.supported_ats && ["greenhouse", "lever"].includes(appRow?.ats || "");
-    if (canAuto) {
+    const appRow = await env.DB.prepare("SELECT supported_ats, ats, need_manual_apply FROM applications_v2 WHERE uuid = ?")
+      .bind(uuid).first<{ supported_ats: number; ats: string | null; need_manual_apply: number }>();
+    // Two submission paths, both after the human gate:
+    //  1. form-post ATSs (Greenhouse/Lever) — filed server-side, no browser.
+    //  2. everything else with a real application URL — driven by the
+    //     browser-apply worker (Workday/Workable/iCIMS/Ashby), like globalwork.
+    const directPost = !!appRow?.supported_ats && ["greenhouse", "lever"].includes(appRow?.ats || "");
+    const browserApply = !directPost && !!env.BROWSER_APPLY_URL && !appRow?.need_manual_apply;
+    if (directPost || browserApply) {
       await env.DB.prepare("UPDATE applications_v2 SET status = 'applying', updated_at = ? WHERE uuid = ?")
         .bind(new Date().toISOString(), uuid).run();
-      waitUntil(submitToAts(env, user.id, uuid));
-      return json({ uuid, status: "applying", submitting: true });
+      if (directPost) waitUntil(submitToAts(env, user.id, uuid));
+      else waitUntil(dispatchBrowserApply(env, uuid));
+      return json({ uuid, status: "applying", submitting: true, via: directPost ? "direct" : "browser" });
     }
     return json({ uuid, status: "approved", submitting: false });
   }
@@ -180,6 +186,18 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
   if (status !== "actionRequired") await resolveActionItems(env, user.id, uuid);
   return json({ uuid, status, needsHuman: open?.n ?? 0 });
 };
+
+// Hand an approved application to the browser-apply worker. Fire-and-forget:
+// the worker drives the employer's real form and writes status back to D1.
+async function dispatchBrowserApply(env: Env, appUuid: string): Promise<void> {
+  try {
+    await fetch(env.BROWSER_APPLY_URL!, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${env.APP_ADMIN_TOKEN || ""}` },
+      body: JSON.stringify({ appUuid }),
+    });
+  } catch { /* worker writes its own failure state; nothing to do here */ }
+}
 
 async function resolveActionItems(env: Env, userId: string, appUuid: string): Promise<void> {
   await env.DB.prepare(

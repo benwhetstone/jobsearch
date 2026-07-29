@@ -6,6 +6,7 @@ export interface Env {
   APP_ENV?: string;
   // auth / admin
   APP_ADMIN_TOKEN?: string;      // bearer for cron/admin calls (e.g. notifications runner)
+  BROWSER_APPLY_URL?: string;    // jobsearch-browser-apply worker endpoint (browser ATS submit)
   ROADMAP_TOKEN?: string;        // existing token, accepted as an admin fallback
   APP_SIGNUP_CODE?: string;      // if set, sign-up requires this invite code
   APP_BASE_URL?: string;         // e.g. https://jobs.benwhetstone.info (for links in emails)
