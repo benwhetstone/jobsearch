@@ -453,6 +453,25 @@ textarea.autosize { resize: none; overflow: hidden; min-height: 42px; line-heigh
 .wn-step.done .ring::after { content: "\2713"; position: absolute; inset: -3px 0 0 1px; font-size: 10px; color: var(--success); }
 .wn-step.wait { color: var(--muted); opacity: .55; }
 .wn-step.wait .ring { animation: none; border-color: var(--border); }
+
+/* per-card status line: Resume / Cover letter / Apply form */
+.statusline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px;
+  border-top: 1px solid var(--border); margin-top: 12px; padding-top: 11px; font-size: 12.5px; }
+.sl-label { color: var(--muted); font-weight: 600; }
+.sl-step { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.sl-step .sl-mark { width: 15px; height: 15px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+.sl-step.done { color: var(--success); font-weight: 600; }
+.sl-step.done .sl-mark { background: var(--success-weak); position: relative; }
+.sl-step.done .sl-mark::after { content: "\2713"; position: absolute; inset: 0; display: flex;
+  align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--success); }
+.sl-step.busy { color: var(--accent); }
+.sl-step.busy .sl-mark { border: 2px solid var(--accent-weak); border-top-color: var(--accent);
+  box-sizing: border-box; animation: spin .8s linear infinite; }
+.sl-step:not(.done):not(.busy) .sl-mark { border: 2px solid var(--border); box-sizing: border-box; }
+
+.prep-divider { display: flex; align-items: center; gap: 12px; margin: 18px 2px 4px; color: var(--muted);
+  font-size: 12px; font-weight: 600; letter-spacing: .03em; }
+.prep-divider::before, .prep-divider::after { content: ""; height: 1px; background: var(--border); flex: 1; }
 .statusstrip .warn { color: var(--caution); font-weight: 600; }
 .movesel { width: auto !important; padding: 5px 8px !important; font-size: 12.5px !important; }
 .navblockhead { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;

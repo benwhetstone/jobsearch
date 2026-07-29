@@ -1043,12 +1043,12 @@
     queued: "Queued", preparing: "Preparing", actionRequired: "Action required",
     readyToApply: "Ready to apply", approved: "Approved", applying: "Submitting…",
     applied: "Applied", interview: "Interview", offer: "Offer", rejected: "Rejected",
-    withdrawn: "Withdrawn", failed: "Failed",
+    withdrawn: "Withdrawn", failed: "Failed", expired: "Expired",
   };
   const STATUS_CLASS = {
     queued: "plain", preparing: "plain", actionRequired: "amber", readyToApply: "green",
     approved: "green", applying: "green", applied: "green", interview: "green", offer: "green",
-    rejected: "plain", withdrawn: "plain", failed: "amber",
+    rejected: "plain", withdrawn: "plain", failed: "amber", expired: "plain",
   };
   let QUEUE_TIMER = null;
 
@@ -1076,19 +1076,20 @@
       stats.innerHTML = ""; stats.hidden = false;
       // Each box is a filter: click to see just that stage, click again for all.
       const GROUPS = {
-        queued: ["queued", "preparing"], actionRequired: ["actionRequired"],
-        readyToApply: ["readyToApply", "approved", "applying"],
-        applied: ["applied", "interview", "offer", "rejected", "withdrawn"],
-        interview: ["interview"], offer: ["offer"], rejected: ["rejected", "withdrawn", "failed"],
+        actionRequired: ["actionRequired"],
+        readyToApply: ["readyToApply", "approved", "queued", "preparing"],
+        applying: ["applying"],
+        applied: ["applied", "interview", "offer"],
+        rejected: ["rejected", "withdrawn", "failed"],
+        expired: ["expired"],
       };
-      const applied = (counts.applied || 0) + (counts.interview || 0) + (counts.offer || 0) + (counts.rejected || 0) + (counts.withdrawn || 0);
-      [["queued", (counts.queued || 0) + (counts.preparing || 0), "Queued", "plain"],
-       ["actionRequired", counts.actionRequired || 0, "Action required", "amber"],
-       ["readyToApply", (counts.readyToApply || 0) + (counts.approved || 0) + (counts.applying || 0), "Ready to apply", ""],
+      const applied = (counts.applied || 0) + (counts.interview || 0) + (counts.offer || 0);
+      [["actionRequired", counts.actionRequired || 0, "Action required", "amber"],
+       ["readyToApply", (counts.readyToApply || 0) + (counts.approved || 0) + (counts.queued || 0) + (counts.preparing || 0), "Ready to apply", ""],
+       ["applying", counts.applying || 0, "Applying", ""],
        ["applied", applied, "Applied", ""],
-       ["interview", counts.interview || 0, "Interviews", ""],
-       ["offer", counts.offer || 0, "Offers", "solid"],
-       ["rejected", (counts.rejected || 0) + (counts.withdrawn || 0) + (counts.failed || 0), "Rejected", "plain"]].forEach(([k, n, lbl, cls]) => {
+       ["rejected", (counts.rejected || 0) + (counts.withdrawn || 0) + (counts.failed || 0), "Rejected", "plain"],
+       ["expired", counts.expired || 0, "Expired", "plain"]].forEach(([k, n, lbl, cls]) => {
         const s = el("button", "stat" + (cls ? " " + cls : ""));
         s.style.cursor = "pointer"; s.style.border = "0"; s.style.textAlign = "left"; s.style.font = "inherit";
         if (k === "actionRequired" && n > 0) s.classList.add("alert");
@@ -1102,6 +1103,18 @@
         });
         stats.appendChild(s);
       });
+    }
+    // "in line" explainer while applications are being submitted
+    const applyingActive = APP_FILTER && APP_FILTER.join() === "applying";
+    if ((applyingActive || (counts.applying || 0) > 0) && !APP_FILTER || applyingActive) {
+      if ((counts.applying || 0) > 0) {
+        const b = el("div", "banner ok");
+        b.textContent = "Your applications are in line — we submit them at the right time and let you know. We don't send them all at once; spacing them out (usually within a day) improves your chances.";
+        box.appendChild(b);
+      }
+    }
+    if (APP_FILTER && APP_FILTER.join() === "expired") {
+      box.appendChild(el("div", "banner bad", "These jobs are no longer accepting applications."));
     }
     // red dot on the sidebar when anything needs the user
     const cnt = $("#cntApps");
@@ -1117,42 +1130,6 @@
         if (CURRENT_VIEW === "applications") loadApplications(true);
       }, 5000);
     }
-    // Live "working now" card while the queue prepares/submits. Animated,
-    // shows which job and how far along the resume/cover/form steps are.
-    const working = apps.filter((a) => ["queued", "preparing", "applying"].includes(a.status));
-    if (working.length && !APP_FILTER) {
-      const cur = working.find((a) => a.status !== "queued") || working[0];
-      const total = working.length;
-      const idx = 1;
-      const c = el("article", "card worknow");
-      const head = el("div", "wn-head");
-      const title = el("div", "wn-title");
-      title.appendChild(el("span", "wn-dot"));
-      title.appendChild(document.createTextNode(cur.status === "applying" ? "Submitting now" : "Preparing now"));
-      head.appendChild(title);
-      head.appendChild(el("div", "wn-count", `${idx} of ${total}`));
-      c.appendChild(head);
-      const jb = el("div", "wn-job");
-      jb.innerHTML = `<b>${(cur.job.title || "").replace(/</g, "&lt;")}</b> · ${(cur.job.company || "").replace(/</g, "&lt;")}`;
-      c.appendChild(jb);
-      c.appendChild(el("div", "wn-rail"));
-      const steps = el("div", "wn-steps");
-      // resume + cover are done once documents exist; form is the active step
-      const stepState = [
-        ["Resume", cur.cvUuid ? "done" : "active"],
-        ["Cover letter", cur.coverLetterUuid ? "done" : (cur.cvUuid ? "active" : "wait")],
-        ["Apply form", cur.status === "applying" ? "active" : (cur.coverLetterUuid ? "active" : "wait")],
-      ];
-      stepState.forEach(([lbl, st]) => {
-        const s = el("div", "wn-step " + st);
-        s.appendChild(el("span", "ring"));
-        s.appendChild(document.createTextNode(lbl));
-        steps.appendChild(s);
-      });
-      c.appendChild(steps);
-      box.appendChild(c);
-    }
-
     const shown = APP_FILTER ? apps.filter((a) => APP_FILTER.includes(a.status)) : apps;
     if (!shown.length) {
       const p = el("div", "card placeholder");
@@ -1163,7 +1140,18 @@
       box.appendChild(p);
       return;
     }
-    shown.forEach((a) => {
+    // Order: things that need you / are ready first, then a "Preparing"
+    // divider, then the ones still being worked. A live status line on every
+    // card shows resume / cover letter / apply-form progress.
+    const PREP = new Set(["queued", "preparing", "applying"]);
+    const ordered = APP_FILTER ? shown : [...shown].sort((a, b) => (PREP.has(a.status) ? 1 : 0) - (PREP.has(b.status) ? 1 : 0));
+    let dividerDrawn = false;
+    ordered.forEach((a) => {
+      if (!APP_FILTER && !dividerDrawn && PREP.has(a.status)) {
+        dividerDrawn = true;
+        const div = el("div", "prep-divider"); div.appendChild(el("span", null, "Preparing"));
+        box.appendChild(div);
+      }
       const card = el("article", "card job appcard");
       const top = el("div", "job-top");
       const [bg, fg] = avaFor(a.job.company);
@@ -1239,6 +1227,31 @@
       actions.appendChild(openBtn);
       mid.appendChild(actions);
       card.appendChild(mid);
+
+      // live status line
+      const working = PREP.has(a.status);
+      const line = el("div", "statusline");
+      line.appendChild(el("span", "sl-label", "Status:"));
+      const step = (label, cls) => {
+        const s = el("span", "sl-step" + (cls ? " " + cls : ""));
+        s.appendChild(el("span", "sl-mark"));
+        s.appendChild(document.createTextNode(label));
+        return s;
+      };
+      if (a.status === "applying") {
+        line.appendChild(step("Submitting application", "busy"));
+      } else if (a.status === "expired") {
+        line.appendChild(el("span", null, "Expired"));
+      } else if (a.status === "applied" || a.status === "interview" || a.status === "offer") {
+        line.appendChild(step("Submitted", "done"));
+      } else {
+        const formDone = !working && a.fields.total > 0 && a.fields.needsHuman === 0;
+        line.appendChild(step("Resume", a.cvUuid ? "done" : (working ? "busy" : "")));
+        line.appendChild(step("Cover letter", a.coverLetterUuid ? "done" : (working ? "busy" : "")));
+        line.appendChild(step("Apply form", formDone ? "done" : (working ? "busy" : "")));
+      }
+      card.appendChild(line);
+
       if (a.prepareError) card.appendChild(el("p", "job-snip err", a.prepareError));
       box.appendChild(card);
     });

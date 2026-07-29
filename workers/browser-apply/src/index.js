@@ -84,12 +84,12 @@ async function runApply(env, appUuid, dryRun = false) {
     // through to Apply. The form often lives in an iframe — we search every
     // frame for it, so we never need the "exact" application link.
     const candidates = [canonicalFormUrl(app), applyUrl].filter(Boolean);
-    let frame = null;
+    let frame = null, deadSeen = false;
     for (const url of candidates) {
       await page.goto(url, { waitUntil: "networkidle0", timeout: 45000 }).catch(() => {});
       await sleep(1800);
       const body = (await page.evaluate(() => document.body.innerText || "").catch(() => "")).toLowerCase();
-      if (/page not found|no longer active|position (is )?(closed|filled|no longer)|this job is no longer/.test(body)) { log.push(`skip (dead): ${url}`); continue; }
+      if (/page not found|no longer active|position (is )?(closed|filled|no longer)|this job is no longer|posting (is )?(closed|expired)|applications are closed/.test(body)) { log.push(`skip (dead): ${url}`); deadSeen = true; continue; }
       log.push(`opened ${url}`);
       frame = await findFormFrame(page);
       if (!frame) {
@@ -101,6 +101,12 @@ async function runApply(env, appUuid, dryRun = false) {
       if (frame) break;
     }
     if (!frame) {
+      // The posting is gone — mark it expired so it lands in the Expired stage
+      // and the user can start over on a fresh req if they want.
+      if (deadSeen && !dryRun) {
+        await env.DB.prepare("UPDATE applications_v2 SET status='expired', updated_at=? WHERE uuid=?").bind(now(), appUuid).run().catch(() => {});
+        return { ok: false, expired: true, reason: "this job is no longer accepting applications", log };
+      }
       return dryRun ? { ok: false, reason: "couldn't reach a fillable form from the posting", log, screenshot: await shotData(page) }
                     : fail(env, appUuid, "couldn't reach a fillable application form from the posting", await screenshot(page));
     }
