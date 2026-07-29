@@ -72,10 +72,7 @@ async function runApply(env, appUuid, dryRun = false) {
 
   const browser = await puppeteer.launch(env.BROWSER);
   const page = await browser.newPage();
-  // The bundler (esbuild keepNames) wraps functions with __name(); that helper
-  // exists in the worker but NOT in the page/iframe context where our
-  // evaluate() callbacks run — so shim it into every document before scripts.
-  await page.evaluateOnNewDocument(() => { globalThis.__name = globalThis.__name || ((f) => f); }).catch(() => {});
+  await preparePage(page);
   await page.setViewport({ width: 1280, height: 1600 });
   const log = [];
   try {
@@ -166,10 +163,15 @@ async function runApply(env, appUuid, dryRun = false) {
                screenshot: shot ? `data:image/png;base64,${shot}` : undefined, log };
     }
 
-    // Captcha is a hard human wall — no honest automation solves reCAPTCHA/
-    // hCaptcha. If one is present, stop and route to action-required.
+    // Captcha: solve it ourselves — anti-detection lets most invisible/checkbox
+    // challenges pass, and reCAPTCHA v2 audio is transcribed with Workers AI
+    // Whisper. Only if that genuinely can't clear it do we hand back.
     if (await hasCaptcha(page)) {
-      return fail(env, appUuid, "the employer's form uses a captcha, which only a person can complete — open it from here and finish the last step", await screenshot(page));
+      const solved = await solveCaptcha(env, page, log);
+      if (!solved) {
+        return fail(env, appUuid, "the employer's form uses a captcha the automated solver couldn't clear (likely an hCaptcha image challenge) — open it from here and finish the last step", await screenshot(page));
+      }
+      log.push("captcha solved");
     }
 
     // A verification-code wall before submit (some ATSs verify the email up
@@ -219,7 +221,20 @@ async function runApply(env, appUuid, dryRun = false) {
       ).bind(now(), now(), appUuid).run();
       return { ok: true, placed, log };
     }
-    if (stillForm) return fail(env, appUuid, "the employer requires a captcha, which only a person can pass", await screenshot(page));
+    // A captcha that only appeared on submit: solve it, submit once more.
+    if (stillForm && await solveCaptcha(env, page, log)) {
+      await (clickByText(frame, ["submit application", "submit", "send application", "apply"])
+          || clickByText(page, ["submit application", "submit", "send application", "apply"]));
+      await sleep(4000);
+      const bt2 = norm(await page.evaluate(() => document.body.innerText || ""));
+      if (/(thank you|application (received|submitted)|we(?:'ve| have) received|successfully applied|submission received)/.test(bt2)) {
+        await env.DB.prepare(
+          "UPDATE applications_v2 SET status='applied', submitted_at=?, need_manual_apply=0, updated_at=? WHERE uuid=?"
+        ).bind(now(), now(), appUuid).run();
+        return { ok: true, placed, log };
+      }
+    }
+    if (stillForm) return fail(env, appUuid, "the employer requires a captcha the solver couldn't clear — please finish the last step on the employer site", await screenshot(page));
     return fail(env, appUuid, "submitted the form but the page didn't confirm receipt — please verify on the employer site", await screenshot(page));
   } finally {
     await browser.close().catch(() => {});
@@ -235,7 +250,7 @@ async function probeForm(env, url, userId, label) {
 
   const browser = await puppeteer.launch(env.BROWSER);
   const page = await browser.newPage();
-  await page.evaluateOnNewDocument(() => { globalThis.__name = globalThis.__name || ((f) => f); }).catch(() => {});
+  await preparePage(page);
   await page.setViewport({ width: 1280, height: 1700 });
   const log = [], insights = [];
   try {
@@ -408,6 +423,109 @@ async function findFormFrame(page) {
     if (score > bestScore) { bestScore = score; best = fr; }
   }
   return bestScore >= 3 ? best : null;
+}
+
+// Make the headless browser look like a real one before any page script runs.
+// Most invisible captchas (reCAPTCHA v3, Turnstile managed, the v2 checkbox)
+// only challenge when they smell automation — clearing these tells is the
+// cheapest, most effective captcha defense there is.
+async function preparePage(page) {
+  await page.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+  ).catch(() => {});
+  await page.setExtraHTTPHeaders({ "accept-language": "en-US,en;q=0.9" }).catch(() => {});
+  await page.evaluateOnNewDocument(() => {
+    // esbuild keepNames wraps functions with __name(), absent in page context.
+    globalThis.__name = globalThis.__name || ((f) => f);
+    try { Object.defineProperty(navigator, "webdriver", { get: () => undefined }); } catch {}
+    try { Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] }); } catch {}
+    try { Object.defineProperty(navigator, "platform", { get: () => "Win32" }); } catch {}
+    try { Object.defineProperty(navigator, "hardwareConcurrency", { get: () => 8 }); } catch {}
+    try { window.chrome = window.chrome || { runtime: {} }; } catch {}
+    // headless Chromium reports 0 plugins; give it a plausible non-empty list
+    try { Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3] }); } catch {}
+    // WebGL vendor/renderer are common automation tells
+    try {
+      const gp = WebGLRenderingContext.prototype.getParameter;
+      WebGLRenderingContext.prototype.getParameter = function (p) {
+        if (p === 37445) return "Intel Inc.";
+        if (p === 37446) return "Intel Iris OpenGL Engine";
+        return gp.call(this, p);
+      };
+    } catch {}
+  }).catch(() => {});
+}
+
+// Solve a captcha ourselves. Try the checkbox (often passes with a clean
+// fingerprint), then fall back to the reCAPTCHA v2 audio challenge transcribed
+// by Workers AI Whisper. Returns true only if the captcha is actually cleared.
+async function solveCaptcha(env, page, log) {
+  const anchorFrame = () => page.frames().find((f) => /recaptcha.*anchor|api2\/anchor|\/anchor\?/.test(f.url()));
+  const isChecked = async () => {
+    const a = anchorFrame();
+    return a ? await a.evaluate(() => document.querySelector("#recaptcha-anchor")?.getAttribute("aria-checked") === "true").catch(() => false) : false;
+  };
+  // 1) Click the "I'm not a robot" checkbox and see if it just passes.
+  const a = anchorFrame();
+  if (a) {
+    await a.evaluate(() => { const c = document.querySelector("#recaptcha-anchor"); if (c) c.click(); }).catch(() => {});
+    await sleep(2500);
+    if (await isChecked()) { log?.push("captcha: passed on checkbox"); return true; }
+  }
+  // 2) reCAPTCHA v2 audio challenge → Whisper.
+  if (await solveRecaptchaAudio(env, page, log)) return true;
+  return false;
+}
+
+async function solveRecaptchaAudio(env, page, log) {
+  if (!env.AI) { log?.push("captcha: no Workers AI binding for audio solve"); return false; }
+  const bframe = () => page.frames().find((f) => /api2\/bframe|\/bframe\?/.test(f.url()));
+  const anchorFrame = () => page.frames().find((f) => /api2\/anchor|\/anchor\?/.test(f.url()));
+  let fr = bframe();
+  if (!fr) return false;
+  // switch to the audio challenge
+  await fr.evaluate(() => { const b = document.querySelector("#recaptcha-audio-button"); if (b) b.click(); }).catch(() => {});
+  await sleep(2500);
+  for (let attempt = 0; attempt < 4; attempt++) {
+    fr = bframe();
+    if (!fr) break;
+    const blocked = await fr.evaluate(() =>
+      /automated queries|try again later|your computer or network/i.test(document.body?.innerText || "")
+    ).catch(() => false);
+    if (blocked) { log?.push("captcha: Google blocked the audio challenge"); return false; }
+    const audioUrl = await fr.evaluate(() => {
+      const a = document.querySelector(".rc-audiochallenge-tdownload-link");
+      if (a?.href) return a.href;
+      const src = document.querySelector("#audio-source, audio source, audio");
+      return src ? (src.src || src.getAttribute("src")) : null;
+    }).catch(() => null);
+    if (!audioUrl) return false;
+    let text = "";
+    try {
+      const res = await fetch(audioUrl);
+      const buf = new Uint8Array(await res.arrayBuffer());
+      const out = await env.AI.run("@cf/openai/whisper", { audio: [...buf] });
+      text = String(out?.text || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+    } catch (e) { log?.push("captcha: whisper error " + String(e?.message || e).slice(0, 50)); return false; }
+    if (!text) return false;
+    await fr.evaluate((t) => {
+      const inp = document.querySelector("#audio-response");
+      if (!inp) return;
+      const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+      s.call(inp, t);
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
+    }, text).catch(() => {});
+    await fr.evaluate(() => { const b = document.querySelector("#recaptcha-verify-button"); if (b) b.click(); }).catch(() => {});
+    await sleep(3000);
+    const anchor = anchorFrame();
+    const solved = anchor && await anchor.evaluate(() =>
+      document.querySelector("#recaptcha-anchor")?.getAttribute("aria-checked") === "true"
+    ).catch(() => false);
+    if (solved) { log?.push(`captcha: solved via Whisper audio (attempt ${attempt + 1})`); return true; }
+    // otherwise a fresh audio clip loaded — loop and try again
+    await sleep(1000);
+  }
+  return false;
 }
 
 // reCAPTCHA / hCaptcha detection across the page and its frames.

@@ -15,6 +15,12 @@ binding = "DB"
 database_name = "jobsearch"
 database_id = "b242bc78-7e28-4600-bfde-524ab7842283"
 
+# Workers AI: Whisper transcribes the reCAPTCHA v2 audio challenge so the
+# worker solves captchas itself, on the Cloudflare stack we already pay for —
+# no third-party captcha-solving service.
+[ai]
+binding = "AI"
+
 [vars]
 APP_BASE = "https://jobs.benwhetstone.info"
 # The relay domain candidate accounts + application emails are filed from —
