@@ -82,8 +82,8 @@ export function buildProfileForMatch(
 // Foreign-market markers: country/region names and the German gender-notation
 // suffixes (m/w/d, f/m/x) that flag EU postings. Used to keep non-US roles out
 // of a US-only feed even when they're remote.
-const FOREIGN_MARKERS = /\b(germany|deutschland|munich|münchen|berlin|hamburg|frankfurt|united kingdom|england|london|ireland|dublin|france|paris|spain|madrid|portugal|lisbon|netherlands|amsterdam|poland|warsaw|romania|ukraine|india|bangalore|bengaluru|hyderabad|mumbai|pune|delhi|pakistan|philippines|manila|singapore|australia|sydney|melbourne|canada|toronto|vancouver|ontario|québec|quebec|brazil|brasil|mexico|méxico|argentina|colombia|latam|emea|apac|\(m\/w\/d\)|m\/w\/d|f\/m\/x|f\/m\/d)\b/i;
-const US_MARKERS = /\b(united states|u\.s\.|usa|\bus\b|remote us|remote, us|america|,\s*[a-z]{2}\b)\b/i;
+const FOREIGN_MARKERS = /\b(germany|deutschland|munich|münchen|berlin|hamburg|frankfurt|cologne|united kingdom|england|scotland|wales|london|manchester|edinburgh|ireland|dublin|france|paris|lyon|spain|madrid|barcelona|portugal|lisbon|porto|netherlands|amsterdam|belgium|brussels|italy|milan|rome|switzerland|zurich|zürich|geneva|austria|vienna|sweden|stockholm|denmark|copenhagen|norway|oslo|finland|helsinki|poland|warsaw|kraków|krakow|czech|prague|romania|bucharest|hungary|budapest|ukraine|kyiv|greece|athens|turkey|istanbul|israel|tel aviv|india|bangalore|bengaluru|hyderabad|mumbai|pune|delhi|gurgaon|noida|chennai|pakistan|lahore|karachi|philippines|manila|cebu|vietnam|indonesia|jakarta|malaysia|thailand|bangkok|singapore|hong kong|japan|tokyo|korea|seoul|china|shanghai|beijing|taiwan|australia|sydney|melbourne|brisbane|new zealand|auckland|canada|toronto|vancouver|ottawa|montreal|montréal|calgary|ontario|québec|quebec|british columbia|alberta|brazil|brasil|são paulo|sao paulo|mexico|méxico|guadalajara|argentina|buenos aires|chile|santiago|colombia|bogotá|bogota|peru|lima|uruguay|costa rica|nigeria|lagos|kenya|nairobi|south africa|egypt|cairo|uae|dubai|abu dhabi|latam|emea|apac|anz|\(m\/w\/d\)|m\/w\/d|f\/m\/x|f\/m\/d|w\/m\/d)\b/i;
+const US_MARKERS = /\b(united states|u\.s\.a?\.?|\busa\b|\bus\b|remote us|remote, us|americas?|new york|san francisco|seattle|austin|boston|chicago|denver|atlanta|dallas|los angeles|washington|,\s*(?:al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|dc)\b)/i;
 
 // Is this posting acceptable given where the user will work? US-only users
 // don't see non-US roles even when remote; broader region choices open it up.
@@ -291,19 +291,28 @@ const TITLE_FILLER = new Set([
   "job", "jobs", "new", "with", "in", "at",
 ]);
 
-// Is this role in the same field the user is targeting? True when the job
-// title shares a WORD FAMILY with the user's own desired titles or domains.
-// Family = same word or a shared 5+ char prefix, so analyst/analytics/analysis
-// and operations/operational all count — without hardcoding any field.
+const sameFamily = (a: string, b: string) =>
+  a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5));
+
+// The PROFESSION word in a title is its last meaningful token: "Data Analyst"
+// -> analyst, "Business Analyst" -> analyst. "Data" is a modifier, not the
+// profession — which is exactly why matching on it let Data Scientist and
+// "Human Data" Program Manager through. We match on the profession head.
+function professionHeads(titles: string[]): string[] {
+  return titles.map((t) => {
+    const toks = tokens(t).filter((w) => w.length > 2 && !TITLE_FILLER.has(w));
+    return toks[toks.length - 1];
+  }).filter(Boolean);
+}
+
+// On-field = the job's title carries the user's own profession. A user
+// targeting "Data Analyst / Business Analyst" sees analyst/analytics/analysis
+// roles — NOT Data Scientist, Data Engineer, or Program Manager, however much
+// "data" they share. Fully profile-driven: the heads come from their titles.
 function isOnField(p: ProfileForMatch, job: JobForMatch): boolean {
-  const wanted = [
-    ...p.desiredTitles.flatMap((t) => tokens(t)),
-    ...p.domains.flatMap((d) => tokens(d)),
-  ].filter((w) => w.length > 2 && !TITLE_FILLER.has(w));
-  if (!wanted.length) return true;   // no titles on file: don't over-filter
-  const sameFamily = (a: string, b: string) =>
-    a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5));
-  return tokens(job.title).some((jw) => wanted.some((w) => sameFamily(jw, w)));
+  const heads = professionHeads(p.desiredTitles);
+  if (!heads.length) return true;   // no titles on file: don't over-filter
+  return tokens(job.title).some((jw) => heads.some((h) => sameFamily(jw, h)));
 }
 
 export function scoreJob(p: ProfileForMatch, job: JobForMatch): MatchResult {

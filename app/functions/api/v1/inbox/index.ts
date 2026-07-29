@@ -83,8 +83,10 @@ export const onRequestDelete: PagesFunction<Env, string, { user?: CtxUser }> = a
 
 // ---- ingest (email worker -> here) -------------------------------------------
 export async function ingest(env: Env, msg: { to: string; from: string; subject: string; text: string }) {
-  const slugMatch = (msg.to || "").toLowerCase().match(/apply-([a-z0-9]{6,16})@/);
-  const slug = slugMatch ? slugMatch[1] : null;
+  // The relay local-part IS the slug now (human-looking, e.g. "ben.whetstone3847"),
+  // matched whole against relay_slug. Legacy "apply-<hex>@" still works.
+  const local = (msg.to || "").toLowerCase().split("@")[0].trim();
+  const slug = local.startsWith("apply-") ? local.slice(6) : local || null;
 
   let userId: string | null = null, appUuid: string | null = null;
   if (slug) {

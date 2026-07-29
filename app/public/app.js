@@ -1117,6 +1117,42 @@
         if (CURRENT_VIEW === "applications") loadApplications(true);
       }, 5000);
     }
+    // Live "working now" card while the queue prepares/submits. Animated,
+    // shows which job and how far along the resume/cover/form steps are.
+    const working = apps.filter((a) => ["queued", "preparing", "applying"].includes(a.status));
+    if (working.length && !APP_FILTER) {
+      const cur = working.find((a) => a.status !== "queued") || working[0];
+      const total = working.length;
+      const idx = 1;
+      const c = el("article", "card worknow");
+      const head = el("div", "wn-head");
+      const title = el("div", "wn-title");
+      title.appendChild(el("span", "wn-dot"));
+      title.appendChild(document.createTextNode(cur.status === "applying" ? "Submitting now" : "Preparing now"));
+      head.appendChild(title);
+      head.appendChild(el("div", "wn-count", `${idx} of ${total}`));
+      c.appendChild(head);
+      const jb = el("div", "wn-job");
+      jb.innerHTML = `<b>${(cur.job.title || "").replace(/</g, "&lt;")}</b> · ${(cur.job.company || "").replace(/</g, "&lt;")}`;
+      c.appendChild(jb);
+      c.appendChild(el("div", "wn-rail"));
+      const steps = el("div", "wn-steps");
+      // resume + cover are done once documents exist; form is the active step
+      const stepState = [
+        ["Resume", cur.cvUuid ? "done" : "active"],
+        ["Cover letter", cur.coverLetterUuid ? "done" : (cur.cvUuid ? "active" : "wait")],
+        ["Apply form", cur.status === "applying" ? "active" : (cur.coverLetterUuid ? "active" : "wait")],
+      ];
+      stepState.forEach(([lbl, st]) => {
+        const s = el("div", "wn-step " + st);
+        s.appendChild(el("span", "ring"));
+        s.appendChild(document.createTextNode(lbl));
+        steps.appendChild(s);
+      });
+      c.appendChild(steps);
+      box.appendChild(c);
+    }
+
     const shown = APP_FILTER ? apps.filter((a) => APP_FILTER.includes(a.status)) : apps;
     if (!shown.length) {
       const p = el("div", "card placeholder");

@@ -74,7 +74,9 @@ export async function submitToAts(env: Env, userId: string, appUuid: string): Pr
   // The application is filed from the relay address (globalwork's trick): the
   // résumé PDF keeps the real contact details, but the ATS gets the relay so
   // every reply routes into the platform inbox.
-  const relayEmail = app.relay_slug ? `apply-${app.relay_slug}@benwhetstone.info` : contact.email;
+  const relayEmail = app.relay_slug
+    ? `${app.relay_slug}@${env.RELAY_DOMAIN || "benwhetstone.info"}`
+    : contact.email;
 
   try {
     const res = app.ats === "greenhouse"

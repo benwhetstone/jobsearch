@@ -427,6 +427,32 @@ textarea.autosize { resize: none; overflow: hidden; min-height: 42px; line-heigh
 .statusstrip .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%;
   background: var(--success); animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .35; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes barslide { 0% { left: -35%; } 100% { left: 100%; } }
+/* Live "working now" card — our own look: blue rail, sliding progress bar,
+   spinning step dots. Deliberately not a clone of any other product. */
+.worknow { border: 1px solid var(--accent); border-left: 4px solid var(--accent);
+  background: linear-gradient(180deg, var(--accent-weak) 0%, var(--panel) 60%); overflow: hidden; }
+.worknow .wn-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.worknow .wn-title { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.worknow .wn-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
+  box-shadow: 0 0 0 0 var(--accent); animation: pulse 1.3s ease-in-out infinite; }
+.worknow .wn-count { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.worknow .wn-job { font-size: 13px; color: var(--text); margin: 7px 0 10px; }
+.worknow .wn-job b { font-weight: 600; }
+.worknow .wn-rail { position: relative; height: 4px; border-radius: 3px; background: var(--border); overflow: hidden; margin-bottom: 11px; }
+.worknow .wn-rail::before { content: ""; position: absolute; top: 0; height: 100%; width: 35%;
+  background: var(--accent); border-radius: 3px; animation: barslide 1.25s ease-in-out infinite; }
+.worknow .wn-steps { display: flex; flex-wrap: wrap; gap: 16px; }
+.wn-step { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); }
+.wn-step .ring { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border);
+  border-top-color: var(--accent); animation: spin .8s linear infinite; }
+.wn-step.done { color: var(--success); }
+.wn-step.done .ring { border: 2px solid var(--success); border-top-color: var(--success); animation: none;
+  position: relative; }
+.wn-step.done .ring::after { content: "\2713"; position: absolute; inset: -3px 0 0 1px; font-size: 10px; color: var(--success); }
+.wn-step.wait { color: var(--muted); opacity: .55; }
+.wn-step.wait .ring { animation: none; border-color: var(--border); }
 .statusstrip .warn { color: var(--caution); font-weight: 600; }
 .movesel { width: auto !important; padding: 5px 8px !important; font-size: 12.5px !important; }
 .navblockhead { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;

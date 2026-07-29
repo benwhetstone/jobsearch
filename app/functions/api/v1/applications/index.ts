@@ -116,9 +116,19 @@ export async function prepare(env: Env, user: CtxUser, appUuid: string, job: Job
 
   // globalwork's one architectural trick, adopted: the application is filed
   // FROM the relay address, so every recruiter reply lands in the platform
-  // inbox, gets classified, and advances this application's status.
-  const relaySlug = appUuid.replace(/-/g, "").slice(0, 10);
-  values.email = JSON.stringify(`apply-${relaySlug}@benwhetstone.info`);
+  // inbox, gets classified, and advances this application's status. The relay
+  // lives on a SHARED relay domain (like globalwork's envelopad.com) so it
+  // works for every tenant — NOT the user's personal domain. Human-looking
+  // local part, globalwork-style: "ben_whe41", never "apply-9a8f7e6d5c".
+  const nameOf = (k: string) => { try { const v = JSON.parse(values[k] || '""'); return typeof v === "string" ? v : ""; } catch { return values[k] || ""; } };
+  const clean = (s: string) => s.toLowerCase().replace(/[^a-z]/g, "");
+  const first = clean(nameOf("applicationFirstName") || nameOf("firstName")).slice(0, 8) || "cand";
+  const last3 = clean(nameOf("lastName")).slice(0, 3);
+  const hex6 = appUuid.replace(/-/g, "").slice(0, 6);
+  const num = parseInt(hex6, 16) % 1000;            // stable tag from the app id
+  const relaySlug = last3 ? `${first}_${last3}${num}` : `${first}${num}`;
+  const relayDomain = env.RELAY_DOMAIN || "benwhetstone.info";
+  values.email = JSON.stringify(`${relaySlug}@${relayDomain}`);
 
   // 3. tailor documents + run the gate. In bulk mode the order is sequential
   //    and a gate REJECT stops the spend right there: no cover letter, no form
