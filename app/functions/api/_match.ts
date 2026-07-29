@@ -132,34 +132,68 @@ function skillAppears(skill: string, hay: string): boolean {
   return parts.length > 1 && parts.every((t) => hay.includes(t));
 }
 
+// Words that appear in almost every job title or skills list and therefore
+// carry NO relevance signal — matching on them is how "Sales Compensation
+// Analyst" or "Assistant Account Payable" sneak in looking like data roles.
+const GENERIC_TITLE = new Set([
+  "analyst", "specialist", "manager", "coordinator", "associate", "assistant",
+  "senior", "junior", "lead", "principal", "staff", "sr", "jr", "ii", "iii", "iv",
+  "remote", "hybrid", "onsite", "full", "time", "the", "and", "of", "for", "job",
+  "professional", "consultant", "representative", "officer", "director", "engineer",
+]);
+// Generic tools that appear in postings across every field; a hit on one of
+// these alone is weak evidence, so they're worth a fraction of a distinctive skill.
+const GENERIC_SKILL = new Set([
+  "microsoft office", "microsoft excel", "excel", "google sheets", "data analysis",
+  "data", "reporting", "business reporting", "communication", "office",
+]);
+
+function distinctiveTitleTokens(titles: string[]): Set<string> {
+  const out = new Set<string>();
+  for (const t of titles) for (const w of tokens(t)) if (!GENERIC_TITLE.has(w) && w.length > 2) out.add(w);
+  return out;
+}
+
 function scoreSkills(p: ProfileForMatch, hay: string, missing: string[]): number {
   const skills = [...p.hardSkills, ...p.domains];
   if (!skills.length) { missing.push("skills"); return 0.5; }
-  // A posting names a handful of tools, never your whole toolkit. Scoring hits
-  // against the FULL skill list makes a good match mathematically unreachable,
-  // so measure against how many skills a posting realistically mentions.
-  // Tightened: five expected hits, soft-skill credit capped, so a high skills
-  // number means the posting genuinely names your tools.
-  const expected = Math.min(5, skills.length);
-  const hits = skills.filter((s) => skillAppears(s, hay)).length;
-  const soft = Math.min(2, p.softSkills.filter((s) => skillAppears(s, hay)).length);
-  return clamp01(hits / expected + soft * 0.04);
+  // Weight each hit: a distinctive skill (SQL, Power BI, T-SQL, KPI Definition)
+  // is worth a full point; a ubiquitous one (Excel, "Data") a third. So a
+  // posting that only says "Excel" and "reporting" no longer reads as a strong
+  // skills match — it has to name your real, specific tools.
+  const expected = Math.min(4, skills.filter((s) => !GENERIC_SKILL.has(norm(s))).length || skills.length);
+  let hits = 0;
+  for (const s of skills) if (skillAppears(s, hay)) hits += GENERIC_SKILL.has(norm(s)) ? 0.34 : 1;
+  const soft = Math.min(1.5, p.softSkills.filter((s) => skillAppears(s, hay)).length * 0.5);
+  return clamp01((hits + soft * 0.04) / Math.max(2, expected));
 }
 
 function scoreExperience(p: ProfileForMatch, job: JobForMatch, missing: string[]): number {
   const jt = norm(job.title);
-  // A role whose title shares nothing with the titles you're after starts
-  // from nearly zero — relevance has to be earned, not assumed.
-  let s = 0.18;
   if (!p.desiredTitles.length) missing.push("desired job titles");
-  // strong signal: a desired-title word overlaps the job title
-  const titleWords = new Set(p.desiredTitles.flatMap((t) => tokens(t)));
-  const overlap = tokens(job.title).filter((w) => titleWords.has(w)).length;
-  if (overlap >= 2) s += 0.62; else if (overlap === 1) s += 0.42;
-  // domain relevance in the body
+  // Relevance rides on DISTINCTIVE title words. "Data Analyst" vs "Insider
+  // Threat Analyst" both contain "analyst" — worthless. What matters is
+  // whether the posting shares "data" / "business" / "operations" with the
+  // titles you're actually after.
+  const distinctive = distinctiveTitleTokens(p.desiredTitles);
+  const jobTokens = tokens(job.title);
+  const distinctiveHits = jobTokens.filter((w) => distinctive.has(w)).length;
+  const genericAnalyst = jobTokens.some((w) => /analyst|analytics/.test(w));
+  // A shared distinctive word ("business", "data") only counts as a real match
+  // when the role is actually analytics work. "Business Development
+  // Representative" shares "business" but is sales, not analysis — half credit.
+  const analyticsRole = /analy|data|report|insight|intelligence|dashboard|bi\b/.test(jt);
+
+  let s = 0.12;
+  const w = analyticsRole ? 1 : 0.4;
+  if (distinctiveHits >= 2) s += 0.7 * w;
+  else if (distinctiveHits === 1) s += 0.5 * w;
+  else if (genericAnalyst) s += 0.18;   // an "X Analyst" with no shared domain: weak, not zero
+
+  // domain relevance in the body (real estate / saas / operations)
   const hay = norm(job.title + " " + (job.description || ""));
-  if (p.domains.some((d) => hay.includes(norm(d)))) s += 0.1;
-  // seniority mismatch: senior roles need real tenure
+  if (p.domains.some((d) => hay.includes(norm(d)))) s += 0.08;
+
   const senior = /(senior|sr\.?|lead|principal|staff|manager|director|head of)/.test(jt);
   const junior = /(junior|jr\.?|entry|intern|associate|assistant)/.test(jt);
   if (!p.yearsExperience) missing.push("work history (years of experience)");
@@ -231,11 +265,14 @@ export function scoreJob(p: ProfileForMatch, job: JobForMatch): MatchResult {
   const terms = scoreTerms(p, job);
   const company = 0.8; // neutral until we add employer-reputation data
 
-  // globalwork's EXACT formula, fitted to 16 live samples in the teardown
-  // (README): totalScore = (0.55*skills + 0.45*experience) * (0.91 + 0.09*comp).
-  // Location/terms is a FILTER (runSweep drops geographic impossibilities),
-  // not a multiplier; freshness and company never touch the number.
-  const total = clamp01((0.55 * skills + 0.45 * experience) * (0.91 + 0.09 * comp.score));
+  // globalwork's fitted formula (teardown README, 16 live samples):
+  // (0.55*skills + 0.45*experience) * (0.91 + 0.09*comp). Location/terms is a
+  // keep-filter, not a multiplier; freshness and company never touch it.
+  // ADDED: a title-fit gate so strong skills can't carry a wrong role — a
+  // "Software Developer" that names your tools but isn't an analyst caps out
+  // well below a real data role. Full credit once experience >= 0.6.
+  const titleFit = 0.55 + 0.45 * Math.min(1, experience / 0.6);
+  const total = clamp01((0.55 * skills + 0.45 * experience) * (0.91 + 0.09 * comp.score) * titleFit);
 
   return { total, skills, experience, compensation: comp.score, terms, company, compFlag: comp.flag, missing };
 }

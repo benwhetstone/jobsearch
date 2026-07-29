@@ -98,9 +98,14 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
   // impossibility, not a preference mismatch)
   const keep = scored
     .filter((s) => s.scam < 2 && s.match.compFlag !== "dropped" && s.match.terms > 0.2)
-    // relevance floor: a job with neither a skills connection nor a title
-    // connection is noise, no matter how well it pays
-    .filter((s) => s.match.skills >= 0.25 || s.match.experience >= 0.5)
+    // Relevance floor: the role has to genuinely resemble what you do. A strong
+    // title match (experience >= 0.6 means a distinctive-word overlap) OR a
+    // strong specific-skills match (>= 0.5, which generic tools can't reach
+    // alone). This is what keeps "Assistant Account Payable" and "Software
+    // Developer" out — they clear neither bar.
+    .filter((s) => s.match.experience >= 0.6 || s.match.skills >= 0.5)
+    // and never surface an outright weak total
+    .filter((s) => s.match.total >= 0.30)
     .sort((a, b) => b.match.total - a.match.total)
     .slice(0, MAX_MATCHES);
 
