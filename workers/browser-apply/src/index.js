@@ -649,30 +649,42 @@ async function fillByLabel(page, label, value, type) {
 }
 
 async function fillStandardContact(env, page, appUuid, prof) {
-  let first, last, phone, slug;
+  const dom = env.RELAY_DOMAIN || "benwhetstone.info";
+  let first, last, phone, email, linkedin, website;
   if (prof) {
     first = prof.first; last = prof.last; phone = prof.phone;
+    linkedin = prof.linkedin; website = prof.website;
     // probe uses a demo relay so recruiters never see a raw address
-    slug = `${(first || "candidate").toLowerCase()}.${(last || "").toLowerCase()}`.replace(/[^a-z.]/g, "");
+    const demo = `${(first || "candidate").toLowerCase()}.${(last || "").toLowerCase()}`.replace(/[^a-z.]/g, "");
+    email = `${demo}@${dom}`;
   } else {
     const c = await env.DB.prepare(
       `SELECT
          (SELECT value_json FROM profile_values WHERE user_id=a.user_id AND field_key='firstName') fn,
          (SELECT value_json FROM profile_values WHERE user_id=a.user_id AND field_key='lastName') ln,
          (SELECT value_json FROM profile_values WHERE user_id=a.user_id AND field_key='phone') ph,
+         (SELECT value_json FROM profile_values WHERE user_id=a.user_id AND field_key='linkedinProfile') li,
+         (SELECT value_json FROM profile_values WHERE user_id=a.user_id AND field_key='portfolioLink') pl,
          a.relay_slug slug
        FROM applications_v2 a WHERE a.uuid=?`
     ).bind(appUuid).first();
     const strip = (s) => { try { return JSON.parse(s); } catch { return s; } };
-    first = strip(c?.fn); last = strip(c?.ln); phone = strip(c?.ph); slug = c?.slug;
+    first = strip(c?.fn); last = strip(c?.ln); phone = strip(c?.ph);
+    linkedin = strip(c?.li); website = strip(c?.pl);
+    email = c?.slug ? `${c.slug}@${dom}` : null;
   }
   const full = [first, last].filter(Boolean).join(" ");
-  // Try many label variants so "Legal Name" / "Full name" / "Your name" all hit.
+  // Try many label variants so "Legal Name" / "Full name" / "Your name" all hit,
+  // plus the near-universal optional fields (LinkedIn, portfolio) so more of
+  // every ATS's form fills without a human. Guarded — a miss is a no-op.
   const map = [
-    ["first name", first], ["given name", first], ["last name", last], ["family name", last], ["surname", last],
+    ["first name", first], ["given name", first], ["preferred name", first],
+    ["last name", last], ["family name", last], ["surname", last],
     ["legal name", full], ["full name", full], ["your name", full], ["name", full],
-    ["phone", strip(c?.ph)], ["mobile", strip(c?.ph)],
-    ["email", c?.slug ? `${c.slug}@benwhetstone.info` : null],
+    ["phone", phone], ["mobile", phone], ["telephone", phone],
+    ["email", email],
+    ["linkedin", linkedin], ["linked in", linkedin],
+    ["portfolio", website], ["website", website], ["personal site", website], ["personal website", website],
   ];
   for (const [label, val] of map) if (val) await fillByLabel(page, label, val, "text").catch(() => {});
 }
