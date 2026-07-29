@@ -27,6 +27,7 @@ export interface ProfileForMatch {
   remoteOnly: boolean;
   locationCity: string | null;
   locationState: string | null;
+  workRegions: string[];        // from workingOutside: US, EU, UK, CANADA, LATAM, GLOBAL_REMOTE_ONLY
 }
 
 export interface MatchResult {
@@ -65,6 +66,8 @@ export function buildProfileForMatch(
   // Location lives as two free-text fields (city + state), not one object.
   const profileCity = typeof val(values.city) === "string" ? (val(values.city) as string) : null;
   const profileState = typeof val(values.state) === "string" ? (val(values.state) as string) : null;
+  const wo = val(values.workingOutside);
+  const workRegions = Array.isArray(wo) ? wo.map((x: any) => String(x).toUpperCase()) : ["US"];
   return {
     hardSkills, softSkills, domains, desiredTitles,
     yearsExperience: Math.round((months / 12) * 10) / 10,
@@ -72,7 +75,26 @@ export function buildProfileForMatch(
     remoteOnly: !!prefs?.remoteOnly,
     locationCity: prefs?.locationCity || profileCity || null,
     locationState: profileState,
+    workRegions: workRegions.length ? workRegions : ["US"],
   };
+}
+
+// Foreign-market markers: country/region names and the German gender-notation
+// suffixes (m/w/d, f/m/x) that flag EU postings. Used to keep non-US roles out
+// of a US-only feed even when they're remote.
+const FOREIGN_MARKERS = /\b(germany|deutschland|munich|münchen|berlin|hamburg|frankfurt|united kingdom|england|london|ireland|dublin|france|paris|spain|madrid|portugal|lisbon|netherlands|amsterdam|poland|warsaw|romania|ukraine|india|bangalore|bengaluru|hyderabad|mumbai|pune|delhi|pakistan|philippines|manila|singapore|australia|sydney|melbourne|canada|toronto|vancouver|ontario|québec|quebec|brazil|brasil|mexico|méxico|argentina|colombia|latam|emea|apac|\(m\/w\/d\)|m\/w\/d|f\/m\/x|f\/m\/d)\b/i;
+const US_MARKERS = /\b(united states|u\.s\.|usa|\bus\b|remote us|remote, us|america|,\s*[a-z]{2}\b)\b/i;
+
+// Is this posting acceptable given where the user will work? US-only users
+// don't see non-US roles even when remote; broader region choices open it up.
+export function regionAllowed(p: ProfileForMatch, job: JobForMatch): boolean {
+  if (p.workRegions.includes("GLOBAL_REMOTE_ONLY")) return true;
+  const nonUsRegions = p.workRegions.filter((r) => r !== "US");
+  if (nonUsRegions.length) return true;   // user opted into other regions; don't filter
+  // US-only: reject a posting that carries a foreign marker and no US marker.
+  const text = `${job.title} ${job.location || ""}`;
+  if (FOREIGN_MARKERS.test(text) && !US_MARKERS.test(text)) return false;
+  return true;
 }
 
 // US state abbreviation -> full name, so "FL" also matches "Florida".
@@ -270,13 +292,18 @@ const TITLE_FILLER = new Set([
 ]);
 
 // Is this role in the same field the user is targeting? True when the job
-// title shares any meaningful word with the user's OWN desired titles.
+// title shares a WORD FAMILY with the user's own desired titles or domains.
+// Family = same word or a shared 5+ char prefix, so analyst/analytics/analysis
+// and operations/operational all count — without hardcoding any field.
 function isOnField(p: ProfileForMatch, job: JobForMatch): boolean {
-  const wanted = new Set(
-    p.desiredTitles.flatMap((t) => tokens(t)).filter((w) => w.length > 2 && !TITLE_FILLER.has(w))
-  );
-  if (!wanted.size) return true;   // no titles on file: don't over-filter
-  return tokens(job.title).some((w) => wanted.has(w));
+  const wanted = [
+    ...p.desiredTitles.flatMap((t) => tokens(t)),
+    ...p.domains.flatMap((d) => tokens(d)),
+  ].filter((w) => w.length > 2 && !TITLE_FILLER.has(w));
+  if (!wanted.length) return true;   // no titles on file: don't over-filter
+  const sameFamily = (a: string, b: string) =>
+    a === b || (a.length >= 5 && b.length >= 5 && a.slice(0, 5) === b.slice(0, 5));
+  return tokens(job.title).some((jw) => wanted.some((w) => sameFamily(jw, w)));
 }
 
 export function scoreJob(p: ProfileForMatch, job: JobForMatch): MatchResult {

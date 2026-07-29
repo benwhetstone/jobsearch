@@ -1248,6 +1248,22 @@
       gb.textContent = d.gateNotes.join(" · ");
       head.appendChild(gb);
     }
+    // Regenerate: re-tailor résumé + cover + form from the current profile,
+    // for anything not yet submitted. Sharpen your answers, then refresh here.
+    if (!["applied", "interview", "offer", "rejected", "withdrawn"].includes(d.status)) {
+      const regen = el("button", "btn", "↻ Regenerate resume & cover letter");
+      regen.style.marginTop = "11px";
+      regen.title = "Re-write both documents from your latest profile answers and template";
+      regen.addEventListener("click", async () => {
+        regen.disabled = true; regen.textContent = "Regenerating…";
+        try {
+          await api(`/applications/${uuid}`, { method: "PATCH", body: JSON.stringify({ action: "regenerate" }) });
+          toast("Rewriting from your current profile… this takes a few seconds.", 3200);
+          setTimeout(() => openApplication(uuid), 6000);
+        } catch (e) { regen.disabled = false; regen.textContent = "↻ Regenerate resume & cover letter"; toast(e.message, 3200); }
+      });
+      head.appendChild(regen);
+    }
     box.appendChild(head);
 
     // tabs
@@ -1449,29 +1465,12 @@
     TPL_META.forEach(([key, name, desc]) => {
       const card = el("button", "tplcard" + (TPL_CURRENT === key ? " on" : ""));
       const mini = el("div", "mini");
-      mini.innerHTML = `<img src="/img/tpl-${key}.png" alt="${name} template preview" style="width:100%;height:100%;object-fit:cover;object-position:top" loading="lazy">`;
       mini.style.padding = "0";
-      // a schematic of each layout, not a screenshot
-      if (false && key === "swiss") {
-        mini.innerHTML = '<div class="hd" style="width:44%"></div>' +
-          '<div style="border-top:2px solid #141414;margin:8px 0 6px"></div>' +
-          '<div style="display:grid;grid-template-columns:26% 1fr;gap:6px">' +
-          '<div class="ln" style="background:#bbb;width:80%"></div><div><div class="ln"></div><div class="ln" style="width:88%"></div></div>' +
-          '</div><div style="border-top:1px solid #e2e2e2;margin:6px 0"></div>' +
-          '<div style="display:grid;grid-template-columns:26% 1fr;gap:6px">' +
-          '<div class="ln" style="background:#bbb;width:70%"></div><div><div class="ln" style="width:92%"></div><div class="ln" style="width:60%"></div></div></div>';
-      } else if (key === "classic" || key === "executive") {
-        mini.innerHTML = '<div class="hd" style="width:56%;margin:0 auto 4px"></div><div class="ln" style="width:70%;margin:0 auto 8px"></div>' +
-          '<div class="ln" style="width:34%"></div><div class="ln"></div><div class="ln" style="width:88%"></div><div class="ln" style="width:92%"></div>' +
-          '<div class="ln" style="width:30%;margin-top:9px"></div><div class="ln"></div><div class="ln" style="width:84%"></div>';
-        if (key === "executive") mini.style.borderTop = "3px double #444";
-      } else {
-        const accent = key === "modern" ? "#2563eb" : "#444";
-        mini.innerHTML = `<div class="hd" style="width:48%;background:${accent}"></div><div class="ln" style="width:66%;margin-bottom:8px"></div>` +
-          `<div class="ln" style="width:26%;background:${key === "modern" ? "#b9cdf5" : "#d8dbe2"}"></div><div class="ln"></div><div class="ln" style="width:90%"></div>` +
-          '<div class="ln" style="width:28%;margin-top:9px"></div><div class="ln" style="width:86%"></div><div class="ln"></div>';
-        if (key === "compact") mini.style.fontSize = "70%";
-      }
+      // real rendered screenshot of each template (public/img/tpl-*.png)
+      const img = el("img");
+      img.src = `/img/tpl-${key}.png`; img.alt = `${name} template preview`; img.loading = "lazy";
+      img.style.cssText = "width:100%;height:100%;object-fit:cover;object-position:top";
+      mini.appendChild(img);
       card.appendChild(mini);
       card.appendChild(el("h4", null, name + (TPL_CURRENT === key ? "  ✓" : "")));
       card.appendChild(el("p", null, desc));

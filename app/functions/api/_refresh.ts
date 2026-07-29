@@ -7,7 +7,7 @@
 //     just the refinement control.
 import type { Env } from "./_lib";
 import { fetchAllSources, dedupeKey, scamScore, boardFrom, type RawJob, type SearchQuery } from "./_jobs";
-import { buildProfileForMatch, scoreJob, type JobForMatch } from "./_match";
+import { buildProfileForMatch, scoreJob, regionAllowed, type JobForMatch } from "./_match";
 
 const MAX_MATCHES = 60;   // cap stored matches per refresh so the list stays useful
 
@@ -51,6 +51,21 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
   const profileCity = str("city");
   const profileLoc = [profileCity, str("state")].filter(Boolean).join(", ");
 
+  // Board-fetch terms: the user's whole field signal, so direct-employer
+  // boards surface adjacent titles ("Analytics Engineer", "BI Developer")
+  // for the scorer to judge — not just the literal search keyword.
+  const nameList = (json: string | null | undefined): string[] => {
+    try { const v = JSON.parse(json || "[]"); return Array.isArray(v) ? v.map((x: any) => (typeof x === "string" ? x : x?.name)).filter(Boolean) : []; }
+    catch { return []; }
+  };
+  const wordsOf = (arr: string[]) => arr.flatMap((s) => s.toLowerCase().split(/[^a-z0-9]+/)).filter((w) => w.length > 2);
+  const boardTerms = [...new Set([
+    ...wordsOf(nameList(valueMap.st_jobTitles)),
+    ...wordsOf(nameList(valueMap.st_hardSkills)),
+    ...wordsOf(nameList(valueMap.st_industryDomainKnowledge)),
+    "analyst", "analytics", "insights", "intelligence", "reporting", "bi",
+  ])].filter((w) => !["and", "the", "for"].includes(w));
+
   const q: SearchQuery = {
     keywords,
     location: prefs?.location || profileLoc || undefined,
@@ -58,6 +73,7 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
     salaryMin: prefs?.salary_min ?? null,
     radiusMi: prefs?.radius_mi ?? null,
     country: prefs?.country || "us",
+    boardTerms,
   };
 
   // ---- fan out to every source ----
@@ -98,6 +114,12 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
   // impossibility, not a preference mismatch)
   const keep = scored
     .filter((s) => s.scam < 2 && s.match.compFlag !== "dropped" && s.match.terms > 0.2)
+    // Geographic gate: a US-only user (workingOutside = ["US"]) never sees
+    // non-US roles, even remote ones. Reads straight from their profile.
+    .filter((s) => regionAllowed(profile, {
+      title: s.job.title, company: s.job.company, location: s.job.location, remote: s.job.remote,
+      salaryMin: s.job.salaryMin, salaryMax: s.job.salaryMax, description: s.job.description || null, postedAt: s.job.postedAt || null,
+    }))
     // Hard field gate: the job title must share a real word with the user's OWN
     // desired titles. A Software Developer role shares nothing with "Data
     // Analyst / Business Analyst", so it's dropped outright — however many of
@@ -181,8 +203,10 @@ async function tagAutoApply(
   const updates: D1PreparedStatement[] = [];
 
   for (const j of jobs) {
-    // came straight off a board: already the real application page
-    if (j.source === "greenhouse" || j.source === "lever") {
+    // came straight off a board: already the real application page. Greenhouse
+    // and Lever submit via direct POST; Ashby via the browser-apply worker —
+    // all three are auto-applyable, so tag them 1.
+    if (j.source === "greenhouse" || j.source === "lever" || j.source === "ashby") {
       const ref = refFromUrl(j.url);
       updates.push(env.DB.prepare("UPDATE jobs SET auto_apply = 1, ats = ?, ats_token = ?, ats_job_id = ? WHERE uuid = ?")
         .bind(j.source, ref?.token ?? null, ref?.jobId ?? null, j.uuid));

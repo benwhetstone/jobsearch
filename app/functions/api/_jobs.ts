@@ -27,6 +27,10 @@ export interface SearchQuery {
   salaryMin?: number | null;
   country?: string;
   radiusMi?: number | null;   // search radius around `location`, in miles
+  // Broader terms (title words + skills + domains) used ONLY to widen the
+  // direct-employer board fetch, so roles like "Analytics Engineer" reach the
+  // scorer even though their title isn't the literal search keyword.
+  boardTerms?: string[];
 }
 
 const MI_TO_KM = 1.60934;
@@ -191,12 +195,26 @@ async function jsearch(env: Env, q: SearchQuery): Promise<RawJob[]> {
 // resolve companies, so this source gets richer every day.
 async function atsDirect(env: Env, q: SearchQuery): Promise<RawJob[]> {
   const { boardJobs } = await import("./_ats");
+  // Search EVERY known direct-employer board (Greenhouse/Lever/Ashby) for the
+  // user's titles. These are the auto-applyable jobs — real companies, real
+  // application pages — so we want the widest net, not a 25-board sample.
   const rows = await env.DB.prepare(
-    "SELECT ats, token FROM ats_boards WHERE ats IN ('greenhouse','lever') AND token IS NOT NULL ORDER BY checked_at DESC LIMIT 25"
+    "SELECT ats, token FROM ats_boards WHERE ats IN ('greenhouse','lever','ashby') AND token IS NOT NULL ORDER BY checked_at DESC LIMIT 200"
   ).all<{ ats: string; token: string }>();
-  const lists = await Promise.all((rows.results ?? []).map((r) =>
-    boardJobs({ ats: r.ats as any, token: r.token }, q.keywords).catch(() => [] as RawJob[])));
-  return lists.flat().slice(0, 80);
+  // Bound concurrency so a wide board set doesn't hammer the runtime at once.
+  const boards = rows.results ?? [];
+  // Widen the title filter to the user's whole field signal — desired-title
+  // words, skills, domains — so "Analytics Engineer", "BI Developer" and
+  // "Insights Analyst" all surface for scoring, not just literal "Data Analyst".
+  const terms = (q.boardTerms && q.boardTerms.length ? q.boardTerms.join(" ") : q.keywords);
+  const out: RawJob[] = [];
+  const BATCH = 25;
+  for (let i = 0; i < boards.length; i += BATCH) {
+    const lists = await Promise.all(boards.slice(i, i + BATCH).map((r) =>
+      boardJobs({ ats: r.ats as any, token: r.token }, terms).catch(() => [] as RawJob[])));
+    out.push(...lists.flat());
+  }
+  return out;
 }
 
 // ---- Careerjet: broad public search across the open web (needs affid) --------

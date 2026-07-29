@@ -10,6 +10,7 @@
 import { json, err, currentUser, type Env, type CtxUser } from "../../_lib";
 import { redline, cvToText, type CvContent } from "../../_docs";
 import { submitToAts } from "../../_submit";
+import { prepare } from "./index";
 
 type Ctx = { user?: CtxUser };
 const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
@@ -119,6 +120,23 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
       .bind(to, new Date().toISOString(), uuid).run();
     if (to !== "actionRequired") await resolveActionItems(env, user.id, uuid);
     return json({ uuid, status: to });
+  }
+
+  // ---- regenerate: re-tailor the résumé, cover letter, and form fills from
+  //      the CURRENT profile. For when the user sharpened their answers (or
+  //      changed template) and wants fresh documents before submitting.
+  if (body.action === "regenerate") {
+    const job = await env.DB.prepare(
+      `SELECT j.uuid, j.title, j.company_name, j.description, j.url, j.apply_url, j.source
+         FROM applications_v2 a JOIN jobs j ON j.uuid = a.job_uuid WHERE a.uuid = ? AND a.user_id = ?`
+    ).bind(uuid, user.id).first<any>();
+    if (!job) return err(404, "No such application.");
+    // clear the old mirrored form fields; prepare() re-mirrors and refills
+    await env.DB.prepare("DELETE FROM application_form_fields WHERE application_uuid = ?").bind(uuid).run();
+    await env.DB.prepare("UPDATE applications_v2 SET status = 'preparing', updated_at = ? WHERE uuid = ?")
+      .bind(new Date().toISOString(), uuid).run();
+    waitUntil(prepare(env, user, uuid, job, { skipOnReject: false }));
+    return json({ uuid, status: "preparing", regenerating: true });
   }
 
   // ---- discard: the user said no to this one ----
