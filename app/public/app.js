@@ -1685,6 +1685,45 @@
 
   // ======================= INBOX ============================================
   const CAT_LABEL = { all: "All", info: "Info", interview: "Interviews", offer: "Offers", rejection: "Rejections" };
+  // Gmail connect / status panel — for applications the user files themselves,
+  // off-platform. Reads status; shows a connect form or a "Scan now" control.
+  async function renderGmailPanel(list) {
+    let s;
+    try { s = (await api("/gmail")).data; } catch { return; }
+    const card = el("div", "card");
+    card.style.cssText = "padding:14px 16px;margin-bottom:12px;border:1px solid var(--border,#e5e7eb)";
+    if (s.connected) {
+      card.appendChild(el("div", null, `📥 Gmail connected${s.email ? " — " + s.email : ""}. Your outside applications and their updates sync on each board refresh.`));
+      const scan = el("button", "btn ghost", "Scan now"); scan.style.marginTop = "10px";
+      scan.addEventListener("click", async () => {
+        scan.disabled = true; scan.textContent = "Scanning…";
+        try {
+          const r = (await api("/gmail?scan=1", { method: "POST" })).data;
+          toast(`Scanned ${r.scanned} · filed ${r.filed} · ${r.created} new · ${r.advanced} updated`, 5000);
+          loadInbox(cat); loadApplications(true);
+        } catch (e) { toast(e.message, 3000); scan.disabled = false; scan.textContent = "Scan now"; }
+      });
+      card.appendChild(scan);
+    } else {
+      card.appendChild(el("h4", null, "Connect Gmail — track applications you file yourself"));
+      card.appendChild(el("p", "help", "Paste the Client ID and Secret from your Google Cloud OAuth app (redirect URI: /api/v1/gmail/callback). Read-only — we only detect application confirmations and status updates."));
+      const mk = (ph, type) => { const i = el("input"); i.placeholder = ph; if (type) i.type = type;
+        i.style.cssText = "display:block;width:100%;margin:6px 0;padding:8px 10px;border:1px solid var(--border,#d7dbe3);border-radius:8px;box-sizing:border-box;font:inherit"; card.appendChild(i); return i; };
+      const cid = mk("Google Client ID"); const csec = mk("Google Client Secret", "password");
+      const btn = el("button", "btn primary", s.configured ? "Reconnect Gmail" : "Save & Connect"); btn.style.marginTop = "6px";
+      btn.addEventListener("click", async () => {
+        try {
+          if (cid.value.trim() && csec.value.trim()) {
+            await api("/gmail", { method: "POST", body: JSON.stringify({ clientId: cid.value.trim(), clientSecret: csec.value.trim() }) });
+          } else if (!s.configured) { toast("Enter your Client ID and Secret"); return; }
+          window.location.href = "/api/v1/gmail/connect";
+        } catch (e) { toast(e.message, 3000); }
+      });
+      card.appendChild(btn);
+    }
+    list.prepend(card);
+  }
+
   async function loadInbox(cat) {
     const chipsBox = $("#inboxCats"); const list = $("#inboxList");
     list.innerHTML = ""; list.appendChild(el("div", "muted", "Loading…"));
@@ -1700,6 +1739,7 @@
       chipsBox.appendChild(chip2);
     });
     list.innerHTML = "";
+    await renderGmailPanel(list);
     if (!d.emails.length) {
       const p = el("div", "card placeholder");
       p.innerHTML = '<div class="ph-icon"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>' +

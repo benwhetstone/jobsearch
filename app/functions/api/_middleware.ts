@@ -6,7 +6,7 @@ import { getSessionUser } from "./_auth";
 
 // Public (no session). /notifications/run self-guards with an admin bearer token
 // so a Cron Trigger can call it without a user session.
-const PUBLIC_PREFIXES = ["/api/v1/health", "/api/v1/auth/", "/api/v1/notifications/run", "/api/v1/inbox/ingest", "/api/v1/admin/"];
+const PUBLIC_PREFIXES = ["/api/v1/health", "/api/v1/auth/", "/api/v1/notifications/run", "/api/v1/inbox/ingest", "/api/v1/admin/", "/api/v1/gmail/callback"];
 
 export const onRequest: PagesFunction<Env, string, { user?: unknown }> = async (context) => {
   const { request, env } = context;
