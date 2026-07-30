@@ -130,6 +130,12 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
     .slice(0, MAX_MATCHES);
 
   // ---- persist: upsert jobs, then this user's matches ----
+  // Rebuild the 'matched' set from scratch so each sweep reflects the CURRENT
+  // rules: stale matches that no longer qualify (e.g. off-field roles scored
+  // under older logic) are dropped, not left to linger. Never touch matches
+  // the user has acted on (applied / hidden / skipped).
+  await env.DB.prepare("DELETE FROM matches WHERE user_id = ? AND status = 'matched'").bind(user.id).run();
+
   const stmts: D1PreparedStatement[] = [];
   for (const s of keep) {
     const j = s.job;
