@@ -114,12 +114,10 @@ export async function prepare(env: Env, user: CtxUser, appUuid: string, job: Job
   const values: Record<string, string | null> = {};
   for (const v of vals.results ?? []) values[v.field_key] = v.value_json;
 
-  // globalwork's one architectural trick, adopted: the application is filed
-  // FROM the relay address, so every recruiter reply lands in the platform
-  // inbox, gets classified, and advances this application's status. The relay
-  // lives on a SHARED relay domain (like globalwork's envelopad.com) so it
-  // works for every tenant — NOT the user's personal domain. Human-looking
-  // local part, globalwork-style: "ben_whe41", never "apply-9a8f7e6d5c".
+  // Apply with the user's REAL email (the connected Gmail address, falling back
+  // to their account email). Recruiter replies land in their own inbox and the
+  // Gmail scan advances the tracker — no relay alias, no per-tenant relay
+  // domain to manage. A relay slug is still recorded for legacy/optional use.
   const nameOf = (k: string) => { try { const v = JSON.parse(values[k] || '""'); return typeof v === "string" ? v : ""; } catch { return values[k] || ""; } };
   const clean = (s: string) => s.toLowerCase().replace(/[^a-z]/g, "");
   const first = clean(nameOf("applicationFirstName") || nameOf("firstName")).slice(0, 8) || "cand";
@@ -127,8 +125,9 @@ export async function prepare(env: Env, user: CtxUser, appUuid: string, job: Job
   const hex6 = appUuid.replace(/-/g, "").slice(0, 6);
   const num = parseInt(hex6, 16) % 1000;            // stable tag from the app id
   const relaySlug = last3 ? `${first}_${last3}${num}` : `${first}${num}`;
-  const relayDomain = env.RELAY_DOMAIN || "benwhetstone.info";
-  values.email = JSON.stringify(`${relaySlug}@${relayDomain}`);
+  const gm = await env.DB.prepare("SELECT email FROM oauth_credentials WHERE user_id = ? AND provider = 'gmail'").bind(user.id).first<{ email: string | null }>();
+  const applyEmail = gm?.email && gm.email.includes("@") ? gm.email : user.email;
+  values.email = JSON.stringify(applyEmail);
 
   // 3. tailor documents + run the gate. In bulk mode the order is sequential
   //    and a gate REJECT stops the spend right there: no cover letter, no form

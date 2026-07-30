@@ -71,17 +71,16 @@ export async function submitToAts(env: Env, userId: string, appUuid: string): Pr
     : null;
   const safe = contact.name.replace(/\s+/g, "-");
 
-  // The application is filed from the relay address (globalwork's trick): the
-  // résumé PDF keeps the real contact details, but the ATS gets the relay so
-  // every reply routes into the platform inbox.
-  const relayEmail = app.relay_slug
-    ? `${app.relay_slug}@${env.RELAY_DOMAIN || "benwhetstone.info"}`
-    : contact.email;
+  // Filed with the user's REAL email (connected Gmail, else account email), so
+  // recruiter replies land in their own inbox where the Gmail scan tracks them.
+  const gm = await env.DB.prepare("SELECT email FROM oauth_credentials WHERE user_id = ? AND provider = 'gmail'").bind(userId).first<{ email: string | null }>();
+  const acct = await env.DB.prepare("SELECT email FROM users WHERE id = ?").bind(userId).first<{ email: string | null }>();
+  const applyEmail = (gm?.email && gm.email.includes("@")) ? gm.email : (acct?.email || contact.email);
 
   try {
     const res = app.ats === "greenhouse"
-      ? await postGreenhouse(app, fields, { ...contact, email: relayEmail }, cvPdf, coverPdf, safe)
-      : await postLever(app, fields, { ...contact, email: relayEmail }, cvPdf, coverPdf, safe);
+      ? await postGreenhouse(app, fields, { ...contact, email: applyEmail }, cvPdf, coverPdf, safe)
+      : await postLever(app, fields, { ...contact, email: applyEmail }, cvPdf, coverPdf, safe);
     if (res.ok) {
       await env.DB.prepare(
         "UPDATE applications_v2 SET status = 'applied', submitted_at = ?, need_manual_apply = 0, updated_at = ? WHERE uuid = ?"

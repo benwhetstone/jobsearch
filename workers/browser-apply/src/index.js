@@ -292,9 +292,12 @@ async function loadProfile(env, userId) {
   ).bind(userId).all()).results ?? [];
   const v = {}; for (const r of rows) { try { v[r.field_key] = JSON.parse(r.value_json); } catch { v[r.field_key] = r.value_json; } }
   const cv = await env.DB.prepare("SELECT uuid FROM documents WHERE user_id=? AND kind='cv' AND is_default=1 ORDER BY created_at DESC LIMIT 1").bind(userId).first();
+  const gm = await env.DB.prepare("SELECT email FROM oauth_credentials WHERE user_id=? AND provider='gmail'").bind(userId).first();
+  const acct = await env.DB.prepare("SELECT email FROM users WHERE id=?").bind(userId).first();
+  const email = (gm?.email && String(gm.email).includes("@")) ? gm.email : (acct?.email || null);
   return {
     first: v.applicationFirstName || v.firstName || "", last: v.lastName || "",
-    phone: v.phone || "", city: v.city || "", state: v.state || "",
+    phone: v.phone || "", city: v.city || "", state: v.state || "", email,
     workAuth: v.workAuthorization, sponsorship: v.visaSponsorship,
     linkedin: v.linkedinProfile, website: v.portfolioLink,
     cvUuid: cv?.uuid || null, userId,
@@ -651,14 +654,11 @@ async function fillByLabel(page, label, value, type) {
 }
 
 async function fillStandardContact(env, page, appUuid, prof) {
-  const dom = env.RELAY_DOMAIN || "benwhetstone.info";
   let first, last, phone, email, linkedin, website;
   if (prof) {
     first = prof.first; last = prof.last; phone = prof.phone;
     linkedin = prof.linkedin; website = prof.website;
-    // probe uses a demo relay so recruiters never see a raw address
-    const demo = `${(first || "candidate").toLowerCase()}.${(last || "").toLowerCase()}`.replace(/[^a-z.]/g, "");
-    email = `${demo}@${dom}`;
+    email = prof.email || null;
   } else {
     const c = await env.DB.prepare(
       `SELECT
@@ -667,13 +667,15 @@ async function fillStandardContact(env, page, appUuid, prof) {
          (SELECT value_json FROM profile_values WHERE user_id=a.user_id AND field_key='phone') ph,
          (SELECT value_json FROM profile_values WHERE user_id=a.user_id AND field_key='linkedinProfile') li,
          (SELECT value_json FROM profile_values WHERE user_id=a.user_id AND field_key='portfolioLink') pl,
-         a.relay_slug slug
+         (SELECT email FROM oauth_credentials WHERE user_id=a.user_id AND provider='gmail') gmail_email,
+         (SELECT email FROM users WHERE id=a.user_id) acct_email
        FROM applications_v2 a WHERE a.uuid=?`
     ).bind(appUuid).first();
     const strip = (s) => { try { return JSON.parse(s); } catch { return s; } };
     first = strip(c?.fn); last = strip(c?.ln); phone = strip(c?.ph);
     linkedin = strip(c?.li); website = strip(c?.pl);
-    email = c?.slug ? `${c.slug}@${dom}` : null;
+    // the user's REAL email — connected Gmail, else account email
+    email = (c?.gmail_email && String(c.gmail_email).includes("@")) ? c.gmail_email : (c?.acct_email || null);
   }
   const full = [first, last].filter(Boolean).join(" ");
   // Try many label variants so "Legal Name" / "Full name" / "Your name" all hit,

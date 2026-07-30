@@ -1705,7 +1705,11 @@
       });
       card.appendChild(scan);
     } else {
-      card.appendChild(el("h4", null, "Connect Gmail — track applications you file yourself"));
+      card.appendChild(el("h4", null, "Connect Gmail — required"));
+      const req = el("p", "help");
+      req.innerHTML = "This tool applies to jobs using <strong>your Gmail address</strong> and tracks every recruiter reply for you, so a Gmail account is required. " +
+        'Don\'t have one? <a href="https://accounts.google.com/signup" target="_blank" rel="noopener">Create a free Gmail</a> first, then come back here.';
+      card.appendChild(req);
       card.appendChild(el("p", "help", "Paste the Client ID and Secret from your Google Cloud OAuth app (redirect URI: /api/v1/gmail/callback). Read-only — we only detect application confirmations and status updates."));
       const mk = (ph, type) => { const i = el("input"); i.placeholder = ph; if (type) i.type = type;
         i.style.cssText = "display:block;width:100%;margin:6px 0;padding:8px 10px;border:1px solid var(--border,#d7dbe3);border-radius:8px;box-sizing:border-box;font:inherit"; card.appendChild(i); return i; };
