@@ -1704,6 +1704,20 @@
         } catch (e) { toast(e.message, 3000); scan.disabled = false; scan.textContent = "Scan now"; }
       });
       card.appendChild(scan);
+    } else if (s.configured) {
+      // creds saved, just needs the consent step — don't show blank inputs
+      card.appendChild(el("h4", null, "Finish connecting Gmail"));
+      const ok = el("p", "help"); ok.innerHTML = "✓ Your Google credentials are saved. Click below to authorize access and finish (you'll see Google's approval screen).";
+      card.appendChild(ok);
+      const go = el("a", "btn primary", "Connect Gmail"); go.href = "/api/v1/gmail/connect"; go.style.display = "inline-block";
+      card.appendChild(go);
+      const re = el("button", "btn ghost", "Re-enter credentials"); re.style.marginLeft = "8px";
+      re.addEventListener("click", async () => {
+        try { await api("/gmail", { method: "POST", body: JSON.stringify({ clientId: "", clientSecret: "" }) }); } catch {}
+        loadInbox(cat);
+      });
+      // (only offer re-enter if they think the creds are wrong)
+      card.appendChild(el("p", "help", "Wrong Client ID/Secret? Use the JSON download from Google, or re-create the OAuth client, then reconnect."));
     } else {
       card.appendChild(el("h4", null, "Connect Gmail — required"));
       const req = el("p", "help");
