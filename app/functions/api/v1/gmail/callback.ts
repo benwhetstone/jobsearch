@@ -21,7 +21,12 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
     if (!c?.client_id || !c?.client_secret) return done(origin, "credentials not configured", false);
 
     const tok = await exchangeCode(c.client_id, c.client_secret, code, `${origin}/api/v1/gmail/callback`);
-    if (tok.error || !tok.refresh_token) return done(origin, tok.error || "no refresh token returned (revoke prior access at myaccount.google.com and reconnect)", false);
+    if (tok.error || !tok.refresh_token) {
+      const why = tok.error || "no_refresh_token (revoke prior access at myaccount.google.com/permissions and reconnect)";
+      await env.DB.prepare("UPDATE oauth_credentials SET status=?, updated_at=? WHERE user_id=? AND provider='gmail'")
+        .bind("exchange_failed: " + why, new Date().toISOString(), userId, "gmail").run().catch(() => {});
+      return done(origin, why, false);
+    }
 
     // record which mailbox we connected
     let email: string | null = null;
