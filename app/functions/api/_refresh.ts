@@ -130,11 +130,12 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
     .slice(0, MAX_MATCHES);
 
   // ---- persist: upsert jobs, then this user's matches ----
-  // Rebuild the 'matched' set from scratch so each sweep reflects the CURRENT
-  // rules: stale matches that no longer qualify (e.g. off-field roles scored
-  // under older logic) are dropped, not left to linger. Never touch matches
-  // the user has acted on (applied / hidden / skipped).
-  await env.DB.prepare("DELETE FROM matches WHERE user_id = ? AND status = 'matched'").bind(user.id).run();
+  // Rebuild THIS origin's 'matched' set so each sweep reflects the current
+  // rules: stale matches that no longer qualify are dropped, not left to
+  // linger. Scoped to the origin being refreshed so the Jobs-For-You and
+  // Search tabs don't wipe each other. Never touch matches the user has acted
+  // on (applied / hidden / skipped).
+  await env.DB.prepare("DELETE FROM matches WHERE user_id = ? AND status = 'matched' AND origin = ?").bind(user.id, origin).run();
 
   const stmts: D1PreparedStatement[] = [];
   for (const s of keep) {

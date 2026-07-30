@@ -344,6 +344,20 @@ function isOnField(p: ProfileForMatch, job: JobForMatch): boolean {
   return /analytics|dashboard|reporting|insight|business intelligence|\bsql\b|\bbi\b|kpi|metrics|tableau|power ?bi|looker|data (analy|model|visual|warehous)/.test(hay);
 }
 
+// Quality signals that tank otherwise on-field roles. Clearance-required jobs
+// are effectively unreachable without an active clearance; staffing-agency /
+// body-shop reposts are low-signal churn. Both should sink below real
+// direct-employer postings rather than crowd the top of the feed.
+const CLEARANCE = /\b(ts\/sci|top secret|sci clearance|security clearance|active clearance|polygraph|full[- ]scope poly|ci poly|public trust|dod secret|q clearance|clearance required|must have.*clearance)\b/i;
+const STAFFING = /\b(kforce|robert half|teksystems|insight global|randstad|adecco|aerotek|apex systems|indotronix|ahu technologies|collabera|cybercoders|beacon hill|judge group|experis|artech|mindlance|net2source|diverse lynx|compunnel|axelon|synechron|talentburst|infojini|nam info|mroads|softworld|dexian|russell tobin|planet technology|motion recruitment)\b/i;
+
+export function qualityFactor(job: JobForMatch): number {
+  const hay = norm(job.title + " " + (job.description || ""));
+  if (CLEARANCE.test(hay)) return 0.12;                       // unreachable without a clearance
+  if (STAFFING.test(norm(job.company || "")) || STAFFING.test(hay)) return 0.6; // body-shop repost
+  return 1;
+}
+
 export function scoreJob(p: ProfileForMatch, job: JobForMatch): MatchResult {
   const missing: string[] = [];
   const hay = norm(job.title + " " + (job.description || ""));
@@ -363,7 +377,7 @@ export function scoreJob(p: ProfileForMatch, job: JobForMatch): MatchResult {
   const titleFit = 0.55 + 0.45 * Math.min(1, experience / 0.6);
   // Off-field roles (title shares nothing with the user's own titles) are never
   // a real match no matter how many tools overlap — they're dropped in runSweep.
-  const total = clamp01((0.55 * skills + 0.45 * experience) * (0.91 + 0.09 * comp.score) * titleFit * (onField ? 1 : 0.4));
+  const total = clamp01((0.55 * skills + 0.45 * experience) * (0.91 + 0.09 * comp.score) * titleFit * (onField ? 1 : 0.4) * qualityFactor(job));
 
   return { total, skills, experience, compensation: comp.score, terms, company, compFlag: comp.flag, missing, onField };
 }
