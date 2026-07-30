@@ -350,11 +350,18 @@ function isOnField(p: ProfileForMatch, job: JobForMatch): boolean {
 // direct-employer postings rather than crowd the top of the feed.
 const CLEARANCE = /\b(ts\/sci|top secret|sci clearance|security clearance|active clearance|polygraph|full[- ]scope poly|ci poly|public trust|dod secret|q clearance|clearance required|must have.*clearance)\b/i;
 const STAFFING = /\b(kforce|robert half|teksystems|insight global|randstad|adecco|aerotek|apex systems|indotronix|ahu technologies|collabera|cybercoders|beacon hill|judge group|experis|artech|mindlance|net2source|diverse lynx|compunnel|axelon|synechron|talentburst|infojini|nam info|mroads|softworld|dexian|russell tobin|planet technology|motion recruitment)\b/i;
+// BPO / outsourcing shops — high-volume, low-quality remote "analyst" reqs.
+const BPO = /\b(telus digital|teleperformance|concentrix|foundever|ttec|sitel|alorica|iqor|conduent|majorel|transcom|sutherland|genpact|taskus|\bdcx\b|arise|liveops|working solutions|cloudworkers|appen|telus international)\b/i;
+// Gig / micro-task / data-labeling work dressed up as an "analyst" role.
+const GIG = /\b(data label|data annotat|annotator|labeling specialist|translation quality|localization quality|\bai trainer\b|\bai tutor\b|search (quality )?(evaluator|rater)|\brater\b|transcription|data entry|micro.?task|crowdsourc|survey taker|1099|gig work|independent contractor role)\b/i;
 
 export function qualityFactor(job: JobForMatch): number {
   const hay = norm(job.title + " " + (job.description || ""));
+  const co = norm(job.company || "");
   if (CLEARANCE.test(hay)) return 0.12;                       // unreachable without a clearance
-  if (STAFFING.test(norm(job.company || "")) || STAFFING.test(hay)) return 0.6; // body-shop repost
+  if (GIG.test(hay)) return 0.15;                             // data-labeling / micro-task, not a real analyst job
+  if (BPO.test(co) || BPO.test(hay)) return 0.35;             // outsourcing / call-center shop
+  if (STAFFING.test(co) || STAFFING.test(hay)) return 0.55;   // body-shop repost
   return 1;
 }
 
