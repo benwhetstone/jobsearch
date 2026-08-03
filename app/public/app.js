@@ -70,6 +70,35 @@
     });
   });
 
+  // Generate a long-lived API token for Cowork (or any headless client). The
+  // secret is created and shown here, in Ben's own signed-in browser.
+  $("#btnCoworkToken")?.addEventListener("click", async () => {
+    if (!confirm("Generate a Cowork API token?\n\nThis creates a key that lets Cowork read and update your job search for one year. It's shown once — copy it into your Cowork environment as JOBS_API_TOKEN.")) return;
+    let r; try { r = (await api("/auth/api-token", { method: "POST" })).data; }
+    catch (e) { toast(e.message || "Could not create token", 3500); return; }
+    const ov = el("div", "token-ov");
+    ov.style.cssText = "position:fixed;inset:0;background:rgba(15,20,30,.55);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px";
+    const m = el("div");
+    m.style.cssText = "background:var(--panel,#fff);color:var(--text,#14181d);border-radius:14px;max-width:560px;width:100%;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.35);max-height:90vh;overflow:auto";
+    m.addEventListener("click", (e) => e.stopPropagation());
+    m.appendChild(el("h3", null, "Your Cowork API token"));
+    const p = el("p", null, "Copy this now — it won't be shown again. Set it in your Cowork environment as JOBS_API_TOKEN; Cowork sends it as an Authorization: Bearer header.");
+    p.style.cssText = "margin:4px 0 14px;font-size:13px;color:var(--muted)";
+    m.appendChild(p);
+    const ta = el("textarea"); ta.value = r.token; ta.readOnly = true; ta.rows = 3;
+    ta.style.cssText = "width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;padding:10px;border:1px solid var(--border,#d7dbe3);border-radius:8px;word-break:break-all";
+    m.appendChild(ta);
+    const row = el("div", null); row.style.cssText = "display:flex;gap:10px;margin-top:14px;justify-content:flex-end";
+    const copy = el("button", "btn primary", "Copy");
+    copy.addEventListener("click", () => { ta.select(); try { document.execCommand("copy"); } catch {} navigator.clipboard?.writeText(r.token).catch(() => {}); copy.textContent = "Copied ✓"; });
+    const close = el("button", "btn ghost", "Done");
+    close.addEventListener("click", () => ov.remove());
+    row.appendChild(copy); row.appendChild(close); m.appendChild(row);
+    ov.addEventListener("click", () => ov.remove());
+    ov.appendChild(m); document.body.appendChild(ov);
+    ta.focus(); ta.select();
+  });
+
   // ---- view switching (sidebar + mobile tab bar) --------------------------
   let CURRENT_VIEW = "matches";
   function switchView(view) {

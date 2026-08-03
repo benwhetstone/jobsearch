@@ -52,10 +52,10 @@ export async function verifyPassword(password: string, hashHex: string, saltHex:
 }
 
 // --- sessions ---------------------------------------------------------------
-export async function createSession(env: Env, userId: string): Promise<string> {
+export async function createSession(env: Env, userId: string, ttlDays = SESSION_TTL_DAYS): Promise<string> {
   const token = randomHex(32);
   const now = new Date();
-  const expires = new Date(now.getTime() + SESSION_TTL_DAYS * 86400_000);
+  const expires = new Date(now.getTime() + ttlDays * 86400_000);
   await env.DB.prepare("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)")
     .bind(token, userId, now.toISOString(), expires.toISOString())
     .run();
@@ -72,8 +72,17 @@ export function readSessionCookie(request: Request): string | null {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
+// A session token can arrive two ways: the browser's cookie, or an
+// `Authorization: Bearer <token>` header. The header path lets a headless
+// client (Cowork) act as the signed-in user with a long-lived session token,
+// no browser required. Both resolve through the same sessions table.
+export function readBearerToken(request: Request): string | null {
+  const m = (request.headers.get("Authorization") || "").match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : null;
+}
+
 export async function getSessionUser(env: Env, request: Request): Promise<{ user: User; token: string } | null> {
-  const token = readSessionCookie(request);
+  const token = readSessionCookie(request) || readBearerToken(request);
   if (!token) return null;
   const row = await env.DB.prepare(
     `SELECT u.id, u.email, u.name, u.role, u.notify_email, s.expires_at
