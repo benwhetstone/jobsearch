@@ -1108,6 +1108,7 @@
   let APPS_CACHE = [];
   let APP_FILTER = null;   // null = all; otherwise a list of statuses
   let APP_SORT = "recent"; // recent | oldest | company | match
+  let APP_SEARCH = "";     // free-text filter over company + title
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   function fmtDate(iso) {
     if (!iso) return "";
@@ -1143,6 +1144,18 @@
     logBtn.title = "Record an application you submitted yourself, off-platform";
     logBtn.addEventListener("click", () => openManualApply());
     bar.appendChild(logBtn);
+    // search box — filter applications by company or title
+    const search = el("input", "appsearch");
+    search.id = "appSearchInput"; search.type = "search"; search.placeholder = "Search company or title…";
+    search.value = APP_SEARCH;
+    search.style.cssText = "flex:1;min-width:160px;max-width:340px;padding:8px 12px;border:1px solid var(--border,#d7dbe3);border-radius:8px;font:inherit";
+    search.addEventListener("input", () => {
+      APP_SEARCH = search.value;
+      renderApplications(APPS_CACHE, counts);
+      const ni = document.getElementById("appSearchInput");
+      if (ni) { ni.focus(); const n = ni.value.length; try { ni.setSelectionRange(n, n); } catch {} }
+    });
+    bar.appendChild(search);
     const sortWrap = el("label", "sortwrap");
     sortWrap.style.cssText = "display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)";
     sortWrap.appendChild(el("span", null, "Sort"));
@@ -1214,7 +1227,10 @@
         if (CURRENT_VIEW === "applications") loadApplications(true);
       }, 5000);
     }
-    const shown = APP_FILTER ? apps.filter((a) => APP_FILTER.includes(a.status)) : apps;
+    let shown = APP_FILTER ? apps.filter((a) => APP_FILTER.includes(a.status)) : apps;
+    const sq = APP_SEARCH.trim().toLowerCase();
+    if (sq) shown = shown.filter((a) =>
+      (a.job.company || "").toLowerCase().includes(sq) || (a.job.title || "").toLowerCase().includes(sq));
     if (!shown.length) {
       const p = el("div", "card placeholder");
       p.innerHTML =
