@@ -114,10 +114,24 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
     return { job: j, uuid: `${j.source}:${j.externalId}`, scam: scamScore(j), match: scoreJob(profile, jm) };
   });
 
+  // Anything the user already dismissed or acted on, keyed by the CROSS-SOURCE
+  // dedupe key — not the per-source uuid. A match row is uuid'd `source:id`, so
+  // marking one "Not interested" only skipped that source's copy; the identical
+  // role from another board (a new uuid) sailed back in as a fresh match. Here
+  // we suppress by dedupe_key so a skip sticks no matter which board re-lists it.
+  const acted = await env.DB.prepare(
+    `SELECT DISTINCT j.dedupe_key AS k
+       FROM matches m JOIN jobs j ON j.uuid = m.job_uuid
+      WHERE m.user_id = ? AND m.status IN ('skipped','hidden','applied','queued')
+        AND j.dedupe_key IS NOT NULL AND j.dedupe_key != ''`
+  ).bind(user.id).all<{ k: string }>();
+  const suppressed = new Set((acted.results ?? []).map((r) => r.k));
+
   // keep the strongest, drop obvious scams, hard pay-floor rejects, and
   // on-site roles nowhere near the user (terms <= 0.2 means a geographic
   // impossibility, not a preference mismatch)
   const keep = scored
+    .filter((s) => !suppressed.has(dedupeKey(s.job.company, s.job.title, s.job.location)))
     .filter((s) => s.scam < 2 && s.match.compFlag !== "dropped" && s.match.terms > 0.2)
     // Geographic gate: a US-only user (workingOutside = ["US"]) never sees
     // non-US roles, even remote ones. Reads straight from their profile.
