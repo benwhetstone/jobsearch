@@ -628,7 +628,8 @@
         await api("/apply-queue", { method: "POST", body: JSON.stringify({
           company: m.job.company, title: m.job.title,
           url: m.job.applyUrl || m.job.url, location: m.job.location,
-          source: "jobs-for-you",
+          salaryMin: m.job.salaryMin, salaryMax: m.job.salaryMax,
+          matchScore: m.matchScore, source: "jobs-for-you",
         }) });
         // pull it out of Jobs For You (survives future sweeps)
         await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid: m.jobUuid, status: "queued" }) }).catch(() => {});
@@ -963,7 +964,9 @@
         try {
           await api("/apply-queue", { method: "POST", body: JSON.stringify({
             company: j.company, title: j.title,
-            url: j.applyUrl || j.url, location: j.location, source: "jobs-for-you",
+            url: j.applyUrl || j.url, location: j.location,
+            salaryMin: j.salaryMin, salaryMax: j.salaryMax, matchScore: d.matchScore,
+            source: "jobs-for-you",
           }) });
           await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid, status: "queued" }) }).catch(() => {});
           apply.textContent = "Queued \u2713";
@@ -1082,8 +1085,12 @@
       }
       card.appendChild(top);
       if (q.notes) card.appendChild(el("p", "job-snip", q.notes));
-      // meta line: where it came from + when it was queued
+      // meta line: salary + where it came from + when it was queued
       const metaBits = [];
+      if (q.salary_min || q.salary_max) {
+        const k = (n) => "$" + Math.round(n / 1000) + "k";
+        metaBits.push(q.salary_min && q.salary_max ? k(q.salary_min) + "–" + k(q.salary_max) : k(q.salary_max || q.salary_min));
+      }
       if (q.source) metaBits.push(q.source.replace(/-/g, " "));
       if (q.created_at) metaBits.push("added " + fmtDate(q.created_at));
       if (q.priority) metaBits.push("priority " + q.priority);

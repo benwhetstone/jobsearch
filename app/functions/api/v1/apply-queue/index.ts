@@ -20,7 +20,7 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
   const status = new URL(request.url).searchParams.get("status") || "pending";
   const rows = await env.DB.prepare(
     `SELECT id, company, title, url, location, notes, source, priority, status, application_uuid,
-            match_score, created_at, applied_at
+            match_score, salary_min, salary_max, created_at, applied_at
        FROM apply_queue WHERE user_id = ? AND (? = 'all' OR status = ?)
       ORDER BY priority DESC, match_score DESC, created_at ASC`
   ).bind(user.id, status, status).all<any>();
@@ -47,25 +47,34 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
     const company = String(it?.company || "").trim();
     const title = String(it?.title || "").trim();
     if (!company || !title) continue;
-    const m = scoreJob(profile, {
-      title, company, location: it?.location || null, remote: !!it?.remote,
-      salaryMin: it?.salaryMin ?? null, salaryMax: it?.salaryMax ?? null,
-      description: it?.description || null, postedAt: it?.postedAt || null,
-    });
-    const score = Math.round(m.total * 100);
+    const sMin = it?.salaryMin ?? null, sMax = it?.salaryMax ?? null;
+    const desc = it?.description ? String(it.description).slice(0, 8000) : null;
+    // Use the caller's authoritative match % if provided (e.g. the feed's
+    // already-scored value); otherwise score here — but scoring a bare title
+    // with no posting text is weak, so a passed score always wins.
+    const score = it?.matchScore != null && Number.isFinite(Number(it.matchScore))
+      ? Math.round(Number(it.matchScore))
+      : Math.round(scoreJob(profile, {
+          title, company, location: it?.location || null, remote: !!it?.remote,
+          salaryMin: sMin, salaryMax: sMax, description: desc, postedAt: it?.postedAt || null,
+        }).total * 100);
     stmts.push(env.DB.prepare(
-      `INSERT INTO apply_queue (id, user_id, company, title, url, location, notes, source, priority, match_score, status, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?, 'pending', ?)
+      `INSERT INTO apply_queue (id, user_id, company, title, url, location, notes, source, priority, match_score, salary_min, salary_max, description, status, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 'pending', ?)
        ON CONFLICT(user_id, company, title) DO UPDATE SET
          url=COALESCE(excluded.url, apply_queue.url),
          notes=COALESCE(excluded.notes, apply_queue.notes),
          location=COALESCE(excluded.location, apply_queue.location),
          source=COALESCE(excluded.source, apply_queue.source),
          match_score=excluded.match_score,
+         salary_min=COALESCE(excluded.salary_min, apply_queue.salary_min),
+         salary_max=COALESCE(excluded.salary_max, apply_queue.salary_max),
+         description=COALESCE(excluded.description, apply_queue.description),
          priority=excluded.priority`
     ).bind(uuid(), user.id, company, title, String(it?.url || "").trim() || null,
            String(it?.location || "").trim() || null, String(it?.notes || "").trim() || null,
-           String(it?.source || "").trim() || null, Number(it?.priority) || 0, score, now));
+           String(it?.source || "").trim() || null, Number(it?.priority) || 0, score,
+           sMin, sMax, desc, now));
     added++;
   }
   if (!added) return err(400, "Each item needs at least company and title.");
