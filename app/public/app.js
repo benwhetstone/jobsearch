@@ -1082,8 +1082,15 @@
       }
       card.appendChild(top);
       if (q.notes) card.appendChild(el("p", "job-snip", q.notes));
+      // meta line: where it came from + when it was queued
+      const metaBits = [];
+      if (q.source) metaBits.push(q.source.replace(/-/g, " "));
+      if (q.created_at) metaBits.push("added " + fmtDate(q.created_at));
+      if (q.priority) metaBits.push("priority " + q.priority);
+      if (metaBits.length) { const mrow = el("div", null, metaBits.join(" · ")); mrow.style.cssText = "font-size:12px;color:var(--muted);margin:2px 0 10px"; card.appendChild(mrow); }
       const actions = el("div", "job-actions");
       if (q.url) { const open = el("a", "btn ghost", "Open posting"); open.href = q.url; open.target = "_blank"; open.rel = "noopener"; actions.appendChild(open); }
+      else { const nolink = el("span", "muted", "no link — search it"); nolink.style.cssText = "font-size:12px;align-self:center;margin-right:6px"; actions.appendChild(nolink); }
       const done = el("button", "btn primary", "Mark applied");
       done.addEventListener("click", async () => {
         done.disabled = true;
