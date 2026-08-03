@@ -167,7 +167,7 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
          total_score=excluded.total_score, skills=excluded.skills, experience=excluded.experience,
          compensation=excluded.compensation, terms=excluded.terms, company=excluded.company,
          comp_flag=excluded.comp_flag, missing_json=excluded.missing_json,
-         status=CASE WHEN matches.status IN ('applied','hidden','skipped') THEN matches.status ELSE 'matched' END`
+         status=CASE WHEN matches.status IN ('applied','hidden','skipped','queued') THEN matches.status ELSE 'matched' END`
     ).bind(
       user.id, s.uuid, m.total, m.skills, m.experience, m.compensation, m.terms, m.company,
       m.compFlag, JSON.stringify(m.missing), origin, now

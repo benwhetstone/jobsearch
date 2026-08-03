@@ -5,7 +5,7 @@
 // UI can always say WHY a job scored the way it did.
 import { json, err, currentUser, type Env, type CtxUser } from "../../_lib";
 
-const VALID_STATUS = new Set(["matched", "skipped", "applied", "hidden"]);
+const VALID_STATUS = new Set(["matched", "skipped", "applied", "hidden", "queued"]);
 
 interface Row {
   job_uuid: string; total_score: number; skills: number; experience: number;

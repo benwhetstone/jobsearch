@@ -630,8 +630,12 @@
           url: m.job.applyUrl || m.job.url, location: m.job.location,
           source: "jobs-for-you",
         }) });
-        apply.textContent = "Queued ✓";
+        // pull it out of Jobs For You (survives future sweeps)
+        await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid: m.jobUuid, status: "queued" }) }).catch(() => {});
         toast("Added to your To-Apply list", 2500);
+        card.remove();
+        const cq = $("#cntApply"); // nudge the To-Apply badge if present
+        if (cq && !cq.hidden) cq.textContent = String((parseInt(cq.textContent) || 0) + 1);
       } catch (e) {
         apply.disabled = false; apply.textContent = "Add to To-Apply";
         toast(e.message, 3000);
@@ -961,8 +965,10 @@
             company: j.company, title: j.title,
             url: j.applyUrl || j.url, location: j.location, source: "jobs-for-you",
           }) });
+          await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid, status: "queued" }) }).catch(() => {});
           apply.textContent = "Queued \u2713";
-          toast("Added to your To-Apply list", 2500);
+          toast("Added to your To-Apply list \u2014 removed from Jobs For You", 2800);
+          if (MATCHES_LOADED) loadMatches();
         } catch (e) { apply.disabled = false; apply.textContent = "Add to To-Apply"; toast(e.message, 3200); }
       });
       actions.appendChild(skip); actions.appendChild(apply);
