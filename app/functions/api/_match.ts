@@ -225,6 +225,51 @@ function scoreSkills(p: ProfileForMatch, hay: string, missing: string[]): number
   return clamp01((hits + soft * 0.04) / Math.max(2, expected));
 }
 
+// Skills a role IMPLIES from its title alone. Free aggregators return postings
+// with little or no body text, so the skills ranker has nothing to match and
+// returns ~0 — which drags a squarely on-target "Data Analyst" down to a junk
+// score. But an analyst title inherently demands the analyst skill set the user
+// already has. So when the title is in the user's profession, we floor the
+// skills ranker by how squarely the title lands, independent of description.
+// Text-based skills still WIN when they're higher (a rich posting that names
+// even more of the user's tools), so this only rescues thin postings.
+// How fully a posting's title covers one of the user's OWN target titles, gated
+// by the profession head so "Data Engineer" can't ride the word "data". 1.0 =
+// the job title contains every distinctive word of a target title (it IS that
+// role); 0 = different profession. Shared by the skills floor and experience.
+function targetTitleCover(p: ProfileForMatch, job: JobForMatch): number {
+  const jhead = professionHeads([job.title])[0];
+  const heads = professionHeads(p.desiredTitles);
+  if (!jhead || !heads.some((h) => sameFamily(h, jhead))) return 0;
+  const jset = new Set(tokens(job.title));
+  let best = 0;
+  for (const t of p.desiredTitles) {
+    const th = professionHeads([t])[0];
+    if (!th || !sameFamily(th, jhead)) continue;
+    const dt = tokens(t).filter((x) => x.length > 2 && !GENERIC_TITLE.has(x));
+    best = Math.max(best, dt.length ? dt.filter((x) => jset.has(x)).length / dt.length : 0.6);
+  }
+  return best;
+}
+
+function titleImpliedSkills(p: ProfileForMatch, job: JobForMatch): number {
+  const heads = professionHeads(p.desiredTitles);
+  if (!heads.length) return 0;
+  const jt = tokens(job.title);
+  if (!jt.some((w) => heads.some((h) => sameFamily(w, h)))) return 0;   // not the user's profession
+  // Squarely one of the user's OWN titles: this IS their role, so the skills
+  // it demands are skills they have. Credit it like a real match even with no
+  // JD text — a fuller posting that names even more tools still wins on top.
+  const analyticsTitle = /analy|data|report|insight|intelligence|dashboard|\bbi\b/.test(norm(job.title));
+  const cover = targetTitleCover(p, job);
+  if (cover >= 0.999 && analyticsTitle) return 0.86;      // exact target title
+  const distinctive = distinctiveTitleTokens(p.desiredTitles);
+  const sharesDistinctive = jt.some((w) => distinctive.has(w));         // "data"/"business"/"bi"…
+  if (sharesDistinctive && analyticsTitle) return 0.74;   // strong overlap
+  if (sharesDistinctive || analyticsTitle) return 0.58;   // shares one strong signal
+  return 0.34;                                            // bare broad head ("Analyst")
+}
+
 function scoreExperience(p: ProfileForMatch, job: JobForMatch, missing: string[]): number {
   const jt = norm(job.title);
   if (!p.desiredTitles.length) missing.push("desired job titles");
@@ -246,6 +291,13 @@ function scoreExperience(p: ProfileForMatch, job: JobForMatch, missing: string[]
   if (distinctiveHits >= 2) s += 0.7 * w;
   else if (distinctiveHits === 1) s += 0.5 * w;
   else if (genericAnalyst) s += 0.18;   // an "X Analyst" with no shared domain: weak, not zero
+
+  // Exact-target floor: when the posting's role-noun matches one of the user's
+  // own titles AND covers that title's distinctive words, it IS the role they
+  // want ("Data Analyst" for a Data Analyst). A single shared word shouldn't
+  // read as a lukewarm 0.62 — scale by how fully the job title covers a target
+  // title (the head gate inside targetTitleCover keeps "Data Engineer" out).
+  if (analyticsRole) s = Math.max(s, 0.12 + 0.8 * targetTitleCover(p, job));   // full cover -> 0.92
 
   // domain relevance in the body (real estate / saas / operations)
   const hay = norm(job.title + " " + (job.description || ""));
@@ -402,7 +454,10 @@ export function qualityFactor(job: JobForMatch): number {
 export function scoreJob(p: ProfileForMatch, job: JobForMatch): MatchResult {
   const missing: string[] = [];
   const hay = norm(job.title + " " + (job.description || ""));
-  const skills = scoreSkills(p, hay, missing);
+  // Skills: the higher of what the posting's text names and what the title
+  // implies. Thin aggregator postings (no body) no longer zero out a role
+  // that is squarely in the user's profession.
+  const skills = Math.max(scoreSkills(p, hay, missing), titleImpliedSkills(p, job));
   const experience = scoreExperience(p, job, missing);
   const comp = scoreCompensation(p, job, missing);
   const terms = scoreTerms(p, job);
