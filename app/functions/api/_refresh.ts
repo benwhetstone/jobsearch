@@ -195,6 +195,13 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
   // D1 batch has a statement cap; chunk to be safe.
   for (let i = 0; i < stmts.length; i += 50) await env.DB.batch(stmts.slice(i, i + 50));
 
+  // Keep the STORED snapshots in sync with the engine. The To-Apply queue and
+  // applications freeze a score when the job was added; without this they drift
+  // stale after any scoring change (a role reading 28% in To-Apply while the
+  // feed says 88%). Re-score them here so every surface always agrees. Pure
+  // CPU, no network — cheap to run each sweep.
+  await rescoreStoredSnapshots(env, userId, profile);
+
   // ---- auto-apply capability, resolved now instead of at click time ----
   // globalwork's model: the feed says up front which jobs autopilot can file
   // directly (hasModernAutoApply). Resolve each new company's board against
@@ -212,6 +219,33 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
     matched: keep.length,
     refreshedAt: now,
   };
+}
+
+// Re-score the frozen snapshots on the To-Apply queue and applications with the
+// CURRENT engine + profile, so they never fall out of step with the feed. Uses
+// the same scoreJob the feed does; queue stores 0..100, applications 0..1.
+async function rescoreStoredSnapshots(env: Env, userId: string, profile: Parameters<typeof scoreJob>[0]): Promise<void> {
+  const toJm = (r: any): JobForMatch => ({
+    title: r.title || "", company: r.company ?? null, location: r.location ?? null,
+    remote: !!r.remote, salaryMin: r.salary_min ?? null, salaryMax: r.salary_max ?? null,
+    description: r.description ?? null, postedAt: null,
+  });
+  const upd: D1PreparedStatement[] = [];
+  const q = await env.DB.prepare(
+    "SELECT id, title, company, location, salary_min, salary_max, description FROM apply_queue WHERE user_id = ? AND status = 'pending'"
+  ).bind(userId).all<any>();
+  for (const r of q.results ?? [])
+    upd.push(env.DB.prepare("UPDATE apply_queue SET match_score = ? WHERE id = ?")
+      .bind(Math.round(scoreJob(profile, toJm(r)).total * 100), r.id));
+  const a = await env.DB.prepare(
+    `SELECT a.uuid, j.title, j.company_name AS company, j.location, j.remote, j.salary_min, j.salary_max, j.description
+       FROM applications_v2 a JOIN jobs j ON j.uuid = a.job_uuid
+      WHERE a.user_id = ? AND a.status != 'discarded'`
+  ).bind(userId).all<any>();
+  for (const r of a.results ?? [])
+    upd.push(env.DB.prepare("UPDATE applications_v2 SET match_score = ? WHERE uuid = ?")
+      .bind(scoreJob(profile, toJm(r)).total, r.uuid));
+  for (let i = 0; i < upd.length; i += 50) await env.DB.batch(upd.slice(i, i + 50));
 }
 
 // Resolve which of these jobs autopilot can file directly, and rewrite
