@@ -79,6 +79,40 @@ export function buildProfileForMatch(
   };
 }
 
+// Merge the user's stored résumé into the match profile: its skills (and the
+// distinctive words in its summary/bullets) sharpen the skills ranker, so the
+// score reflects what's actually ON the résumé, not just the profile chips.
+export function augmentProfileWithResume(
+  p: ProfileForMatch,
+  resume: { skills?: string[]; summary?: string; sections?: { heading: string; bullets: string[] }[] } | null
+): ProfileForMatch {
+  if (!resume) return p;
+  const seen = new Set(p.hardSkills.map((s) => s.toLowerCase()));
+  const hardSkills = [...p.hardSkills];
+  for (const s of resume.skills || []) {
+    const v = String(s || "").trim();
+    if (v && !seen.has(v.toLowerCase())) { hardSkills.push(v); seen.add(v.toLowerCase()); }
+  }
+  return { ...p, hardSkills };
+}
+
+// The scoring profile used everywhere a match % is computed (feed, /score,
+// queue): structured profile PLUS the default résumé's content.
+export async function scoringProfile(
+  env: { DB: { prepare: (q: string) => any } },
+  userId: string
+): Promise<ProfileForMatch> {
+  const vals = await env.DB.prepare("SELECT field_key, value_json FROM profile_values WHERE user_id = ?").bind(userId).all();
+  const values: Record<string, string | null> = {};
+  for (const v of (vals.results ?? [])) values[v.field_key] = v.value_json;
+  let p = buildProfileForMatch(values, {});
+  const cv = await env.DB.prepare(
+    "SELECT content_json FROM documents WHERE user_id = ? AND kind = 'cv' AND is_default = 1 ORDER BY created_at DESC LIMIT 1"
+  ).bind(userId).first();
+  if (cv?.content_json) { try { p = augmentProfileWithResume(p, JSON.parse(cv.content_json)); } catch { /* keep base */ } }
+  return p;
+}
+
 // Foreign-market markers: country/region names and the German gender-notation
 // suffixes (m/w/d, f/m/x) that flag EU postings. Used to keep non-US roles out
 // of a US-only feed even when they're remote.

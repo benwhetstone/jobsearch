@@ -1075,6 +1075,11 @@
       id.appendChild(el("div", "co", q.company || ""));
       if (q.location) { const l = el("div", "appdate", q.location); l.style.cssText = "font-size:12px;color:var(--muted);margin-top:3px"; id.appendChild(l); }
       top.appendChild(id);
+      if (q.match_score != null) {
+        const sc = el("div", "job-score score-" + scoreClass(q.match_score));
+        sc.appendChild(el("b", null, q.match_score + "%")); sc.appendChild(el("span", null, "match"));
+        top.appendChild(sc);
+      }
       card.appendChild(top);
       if (q.notes) card.appendChild(el("p", "job-snip", q.notes));
       const actions = el("div", "job-actions");

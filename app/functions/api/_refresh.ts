@@ -7,7 +7,7 @@
 //     just the refinement control.
 import type { Env } from "./_lib";
 import { fetchAllSources, dedupeKey, scamScore, boardFrom, type RawJob, type SearchQuery } from "./_jobs";
-import { buildProfileForMatch, scoreJob, regionAllowed, type JobForMatch } from "./_match";
+import { buildProfileForMatch, augmentProfileWithResume, scoreJob, regionAllowed, type JobForMatch } from "./_match";
 
 const MAX_MATCHES = 60;   // cap stored matches per refresh so the list stays useful
 
@@ -92,12 +92,17 @@ export async function runSweep(env: Env, userId: string, origin: "auto" | "searc
   }
   const deduped = [...canonical.values()];
 
-  // ---- score every job against the profile ----
-  const profile = buildProfileForMatch(valueMap, {
+  // ---- score every job against the profile (+ résumé content) ----
+  let profile = buildProfileForMatch(valueMap, {
     remoteOnly: !!prefs?.remote_only,
     salaryMin: prefs?.salary_min ?? null,
     locationCity: profileCity,
   });
+  // Fold in the stored résumé's skills so the feed score reflects what's on it.
+  const cvDoc = await env.DB.prepare(
+    "SELECT content_json FROM documents WHERE user_id = ? AND kind = 'cv' AND is_default = 1 ORDER BY created_at DESC LIMIT 1"
+  ).bind(userId).first<{ content_json: string }>();
+  if (cvDoc?.content_json) { try { profile = augmentProfileWithResume(profile, JSON.parse(cvDoc.content_json)); } catch { /* keep base */ } }
 
   const now = new Date().toISOString();
   const scored = deduped.map((j) => {

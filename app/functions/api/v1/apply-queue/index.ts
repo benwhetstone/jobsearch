@@ -11,6 +11,7 @@
 //         action "skipped" -> mark the queue row skipped
 //         action "reset"   -> back to pending
 import { json, err, currentUser, type Env, type CtxUser } from "../../_lib";
+import { scoringProfile, scoreJob } from "../../_match";
 
 const uuid = () => crypto.randomUUID();
 
@@ -18,9 +19,10 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
   const user = currentUser(data);
   const status = new URL(request.url).searchParams.get("status") || "pending";
   const rows = await env.DB.prepare(
-    `SELECT id, company, title, url, location, notes, source, priority, status, application_uuid, created_at, applied_at
+    `SELECT id, company, title, url, location, notes, source, priority, status, application_uuid,
+            match_score, created_at, applied_at
        FROM apply_queue WHERE user_id = ? AND (? = 'all' OR status = ?)
-      ORDER BY priority DESC, created_at ASC`
+      ORDER BY priority DESC, match_score DESC, created_at ASC`
   ).bind(user.id, status, status).all<any>();
   const counts = await env.DB.prepare(
     "SELECT status, COUNT(*) n FROM apply_queue WHERE user_id = ? GROUP BY status"
@@ -36,24 +38,34 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
   try { body = await request.json(); } catch { return err(400, "Invalid JSON body."); }
   const items = Array.isArray(body?.items) ? body.items : [body];
   const now = new Date().toISOString();
+  // Score every item with the SAME engine as the feed (profile + résumé), so
+  // the queue carries the authoritative match % no matter who added it.
+  const profile = await scoringProfile(env, user.id);
   let added = 0;
   const stmts = [];
   for (const it of items) {
     const company = String(it?.company || "").trim();
     const title = String(it?.title || "").trim();
     if (!company || !title) continue;
+    const m = scoreJob(profile, {
+      title, company, location: it?.location || null, remote: !!it?.remote,
+      salaryMin: it?.salaryMin ?? null, salaryMax: it?.salaryMax ?? null,
+      description: it?.description || null, postedAt: it?.postedAt || null,
+    });
+    const score = Math.round(m.total * 100);
     stmts.push(env.DB.prepare(
-      `INSERT INTO apply_queue (id, user_id, company, title, url, location, notes, source, priority, status, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?, 'pending', ?)
+      `INSERT INTO apply_queue (id, user_id, company, title, url, location, notes, source, priority, match_score, status, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?, 'pending', ?)
        ON CONFLICT(user_id, company, title) DO UPDATE SET
          url=COALESCE(excluded.url, apply_queue.url),
          notes=COALESCE(excluded.notes, apply_queue.notes),
          location=COALESCE(excluded.location, apply_queue.location),
          source=COALESCE(excluded.source, apply_queue.source),
+         match_score=excluded.match_score,
          priority=excluded.priority`
     ).bind(uuid(), user.id, company, title, String(it?.url || "").trim() || null,
            String(it?.location || "").trim() || null, String(it?.notes || "").trim() || null,
-           String(it?.source || "").trim() || null, Number(it?.priority) || 0, now));
+           String(it?.source || "").trim() || null, Number(it?.priority) || 0, score, now));
     added++;
   }
   if (!added) return err(400, "Each item needs at least company and title.");
