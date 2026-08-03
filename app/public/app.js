@@ -618,22 +618,23 @@
     const view = el("button", "btn ghost", "View posting");
     view.title = "Read the full posting without leaving the page";
     view.addEventListener("click", () => openJobDetail(m.jobUuid));
-    // Apply = start autopilot: tailor the resume and cover letter, run the
-    // hiring-manager gate, mirror the employer's real form and prefill it.
-    // It never opens the posting and it never submits anything.
-    const apply = el("button", "btn primary", "Apply");
+    // Apply = add this job to the To-Apply queue (the worklist). The actual
+    // applying is worked from the queue, one by one — the site is the tracker
+    // and system of record, not the thing that fills employer forms.
+    const apply = el("button", "btn primary", "Add to To-Apply");
     apply.addEventListener("click", async () => {
-      apply.disabled = true; apply.textContent = "Preparing…";
-      toast("Tailoring your documents and mirroring the application…", 4000);
+      apply.disabled = true; apply.textContent = "Adding…";
       try {
-        const r = await api("/applications", { method: "POST", body: JSON.stringify({ jobUuid: m.jobUuid }) });
-        card.remove();
-        switchView("applications");
-        await loadApplications(true);
-        if (r.data.uuid) openApplication(r.data.uuid);
+        await api("/apply-queue", { method: "POST", body: JSON.stringify({
+          company: m.job.company, title: m.job.title,
+          url: m.job.applyUrl || m.job.url, location: m.job.location,
+          source: "jobs-for-you",
+        }) });
+        apply.textContent = "Queued ✓";
+        toast("Added to your To-Apply list", 2500);
       } catch (e) {
-        apply.disabled = false; apply.textContent = "Apply";
-        toast("Could not start: " + e.message, 3600);
+        apply.disabled = false; apply.textContent = "Add to To-Apply";
+        toast(e.message, 3000);
       }
     });
     actions.appendChild(why); actions.appendChild(skip); actions.appendChild(view); actions.appendChild(apply);
@@ -952,14 +953,17 @@
         try { await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid, status: "skipped" }) });
               toast("Hidden"); loadMatches(); } catch (e) { toast(e.message); }
       });
-      const apply = el("button", "btn primary", "Apply");
+      const apply = el("button", "btn primary", "Add to To-Apply");
       apply.addEventListener("click", async () => {
-        apply.disabled = true; apply.textContent = "Preparing\u2026";
+        apply.disabled = true; apply.textContent = "Adding\u2026";
         try {
-          const r = await api("/applications", { method: "POST", body: JSON.stringify({ jobUuid }) });
-          switchView("applications"); await loadApplications(true);
-          if (r.data.uuid) openApplication(r.data.uuid);
-        } catch (e) { apply.disabled = false; apply.textContent = "Apply"; toast(e.message, 3200); }
+          await api("/apply-queue", { method: "POST", body: JSON.stringify({
+            company: j.company, title: j.title,
+            url: j.applyUrl || j.url, location: j.location, source: "jobs-for-you",
+          }) });
+          apply.textContent = "Queued \u2713";
+          toast("Added to your To-Apply list", 2500);
+        } catch (e) { apply.disabled = false; apply.textContent = "Add to To-Apply"; toast(e.message, 3200); }
       });
       actions.appendChild(skip); actions.appendChild(apply);
     }
