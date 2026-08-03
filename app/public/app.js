@@ -79,6 +79,7 @@
       b.classList.toggle("active", b.dataset.view === view);
     });
     if (view === "matches" && !MATCHES_LOADED) loadMatches();
+    if (view === "apply") loadApplyQueue();
     if (view === "applications") loadApplications();
     if (view === "inbox") loadInbox("all");
     if (view === "templates") renderTemplates();
@@ -1037,6 +1038,54 @@
       STRIP_TIMER = setTimeout(refreshStrip, (busy || SWEEP_RUNNING || SEARCHING) ? 4000 : 30000);
     } catch { /* signed out or transient */ }
   }
+
+  // ======================= TO APPLY (queue) ================================
+  async function loadApplyQueue() {
+    const box = $("#applyList"); if (!box) return;
+    box.innerHTML = ""; box.appendChild(el("div", "muted", "Loading…"));
+    let d;
+    try { d = (await api("/apply-queue?status=pending")).data; }
+    catch (e) { box.innerHTML = ""; box.appendChild(el("div", "banner bad", e.message)); return; }
+    box.innerHTML = "";
+    const cnt = $("#cntApply"); if (cnt) { const n = (d.counts && d.counts.pending) || 0; cnt.textContent = n; cnt.hidden = n === 0; }
+    if (!d.queue.length) {
+      const p = el("div", "card placeholder");
+      p.innerHTML = '<div class="ph-icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>' +
+        "<h3>Nothing queued</h3><p>Jobs you decide to apply to land here — the daily search fills it automatically. Then work them one by one and each moves into Applications.</p>";
+      box.appendChild(p); return;
+    }
+    d.queue.forEach((q) => {
+      const card = el("article", "card job appcard");
+      const top = el("div", "job-top");
+      const [bg, fg] = avaFor(q.company);
+      const ava = el("span", "job-ava", (q.company || "?").trim()[0].toUpperCase());
+      ava.style.background = bg; ava.style.color = fg; top.appendChild(ava);
+      const id = el("div", "job-id");
+      id.appendChild(el("h3", null, q.title));
+      id.appendChild(el("div", "co", q.company || ""));
+      if (q.location) { const l = el("div", "appdate", q.location); l.style.cssText = "font-size:12px;color:var(--muted);margin-top:3px"; id.appendChild(l); }
+      top.appendChild(id);
+      card.appendChild(top);
+      if (q.notes) card.appendChild(el("p", "job-snip", q.notes));
+      const actions = el("div", "job-actions");
+      if (q.url) { const open = el("a", "btn ghost", "Open posting"); open.href = q.url; open.target = "_blank"; open.rel = "noopener"; actions.appendChild(open); }
+      const done = el("button", "btn primary", "Mark applied");
+      done.addEventListener("click", async () => {
+        done.disabled = true;
+        try { await api("/apply-queue", { method: "PATCH", body: JSON.stringify({ id: q.id, action: "applied" }) }); toast("Moved to Applications"); loadApplyQueue(); loadApplications(true); }
+        catch (e) { toast(e.message, 3000); done.disabled = false; }
+      });
+      const skip = el("button", "btn ghost", "Skip");
+      skip.addEventListener("click", async () => {
+        try { await api("/apply-queue", { method: "PATCH", body: JSON.stringify({ id: q.id, action: "skipped" }) }); toast("Skipped"); loadApplyQueue(); }
+        catch (e) { toast(e.message, 3000); }
+      });
+      actions.appendChild(done); actions.appendChild(skip);
+      card.appendChild(actions);
+      box.appendChild(card);
+    });
+  }
+  $("#btnApplyRefresh")?.addEventListener("click", () => loadApplyQueue());
 
   // ======================= APPLICATIONS ====================================
   const STATUS_LABEL = {
