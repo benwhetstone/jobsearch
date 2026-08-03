@@ -7,7 +7,7 @@
 //
 // Approve marks the application ready for the browser step on the desktop
 // client. Nothing in this file submits anything to an employer.
-import { json, err, currentUser, type Env, type CtxUser } from "../../_lib";
+import { json, err, currentUser, logActivity, type Env, type CtxUser } from "../../_lib";
 import { redline, cvToText, type CvContent } from "../../_docs";
 import { submitToAts } from "../../_submit";
 import { prepare } from "./index";
@@ -26,12 +26,15 @@ export const onRequestGet: PagesFunction<Env, string, Ctx> = async ({ params, en
   ).bind(uuid, user.id).first<any>();
   if (!app) return err(404, "No such application.");
 
-  const [cv, cover, fields] = await Promise.all([
+  const [cv, cover, fields, activity] = await Promise.all([
     app.cv_uuid ? env.DB.prepare("SELECT * FROM documents WHERE uuid = ?").bind(app.cv_uuid).first<any>() : null,
     app.cover_letter_uuid ? env.DB.prepare("SELECT * FROM documents WHERE uuid = ?").bind(app.cover_letter_uuid).first<any>() : null,
     env.DB.prepare(
       "SELECT uuid, field_key, field_type, label, value, options_json, required, sort_order, fill_source, fill_status FROM application_form_fields WHERE application_uuid = ? ORDER BY sort_order"
     ).bind(uuid).all<any>(),
+    env.DB.prepare(
+      "SELECT id, kind, message, meta_json, created_at FROM activity_log WHERE user_id = ? AND application_uuid = ? ORDER BY created_at DESC LIMIT 200"
+    ).bind(user.id, uuid).all<any>(),
   ]);
 
   // redline: tailored CV against the user's base CV (if one exists)
@@ -54,6 +57,11 @@ export const onRequestGet: PagesFunction<Env, string, Ctx> = async ({ params, en
     gateVerdict: app.gate_verdict, gateNotes: parse(app.gate_report) || [],
     matchScore: app.match_score == null ? null : Math.round(app.match_score * 100),
     prepareError: app.prepare_error, submittedAt: app.submitted_at,
+    resumeUrl: app.resume_url, coverUrl: app.cover_url,
+    activity: (activity?.results ?? []).map((e: any) => ({
+      id: e.id, kind: e.kind, message: e.message,
+      meta: parse(e.meta_json), createdAt: e.created_at,
+    })),
     job: { title: app.title, company: app.company_name, location: app.location,
            url: app.job_url, applyUrl: app.apply_url },
     cv: cv ? { uuid: cv.uuid, content: parse(cv.content_json), verifyPassed: !!cv.verify_passed,
@@ -102,11 +110,26 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     }
   }
 
+  // ---- attach generated document links (Cowork saved them to Drive) ----
+  if (body.action === "attachDocs") {
+    const rUrl = String(body.resumeUrl || "").trim() || null;
+    const cUrl = String(body.coverUrl || "").trim() || null;
+    if (!rUrl && !cUrl) return err(400, "Provide resumeUrl and/or coverUrl.");
+    await env.DB.prepare(
+      "UPDATE applications_v2 SET resume_url = COALESCE(?, resume_url), cover_url = COALESCE(?, cover_url), updated_at = ? WHERE uuid = ?"
+    ).bind(rUrl, cUrl, new Date().toISOString(), uuid).run();
+    await logActivity(env, user.id, { applicationUuid: uuid, kind: "tailored",
+      message: `Attached ${[rUrl && "résumé", cUrl && "cover letter"].filter(Boolean).join(" + ")}.`,
+      meta: { resumeUrl: rUrl, coverUrl: cUrl } });
+    return json({ uuid, resumeUrl: rUrl, coverUrl: cUrl });
+  }
+
   // ---- manual submit done: the user applied on the employer's site ----
   if (body.action === "markApplied") {
     await env.DB.prepare("UPDATE applications_v2 SET status = 'applied', submitted_at = ?, updated_at = ? WHERE uuid = ?")
       .bind(new Date().toISOString(), new Date().toISOString(), uuid).run();
     await resolveActionItems(env, user.id, uuid);
+    await logActivity(env, user.id, { applicationUuid: uuid, kind: "applied", message: "Marked applied." });
     return json({ uuid, status: "applied" });
   }
 
@@ -119,6 +142,7 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     await env.DB.prepare("UPDATE applications_v2 SET status = ?, updated_at = ? WHERE uuid = ?")
       .bind(to, new Date().toISOString(), uuid).run();
     if (to !== "actionRequired") await resolveActionItems(env, user.id, uuid);
+    await logActivity(env, user.id, { applicationUuid: uuid, kind: "status", message: `Status → ${to}.` });
     return json({ uuid, status: to });
   }
 

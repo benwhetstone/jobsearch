@@ -112,6 +112,26 @@ export async function computeCompletion(env: Env, userId: string): Promise<{
   };
 }
 
+// Append one line to a job's activity timeline. Best-effort: a logging failure
+// must never break the action it is recording, so callers can fire-and-forget.
+export async function logActivity(
+  env: Env, userId: string,
+  ev: { applicationUuid?: string | null; queueId?: string | null; company?: string | null; title?: string | null;
+        kind: string; message: string; meta?: unknown },
+): Promise<void> {
+  const jobKey = ev.company && ev.title
+    ? `${String(ev.company).toLowerCase().trim()}|${String(ev.title).toLowerCase().trim()}`
+    : null;
+  await env.DB.prepare(
+    `INSERT INTO activity_log (id, user_id, application_uuid, queue_id, job_key, kind, message, meta_json, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?)`
+  ).bind(
+    crypto.randomUUID(), userId, ev.applicationUuid ?? null, ev.queueId ?? null, jobKey,
+    String(ev.kind || "note").slice(0, 40), String(ev.message || "").slice(0, 1000),
+    ev.meta == null ? null : JSON.stringify(ev.meta).slice(0, 4000), new Date().toISOString(),
+  ).run().catch(() => {});
+}
+
 // Pull the authenticated user attached by the middleware.
 export interface CtxUser { id: string; email: string; name: string | null; role: string; notify_email: number; }
 export function currentUser(data: { user?: CtxUser }): CtxUser {

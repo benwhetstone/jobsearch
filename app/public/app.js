@@ -1095,6 +1095,14 @@
       if (q.created_at) metaBits.push("added " + fmtDate(q.created_at));
       if (q.priority) metaBits.push("priority " + q.priority);
       if (metaBits.length) { const mrow = el("div", null, metaBits.join(" · ")); mrow.style.cssText = "font-size:12px;color:var(--muted);margin:2px 0 10px"; card.appendChild(mrow); }
+      // document links, when Cowork has already tailored + saved them to Drive
+      if (q.resume_url || q.cover_url) {
+        const docs = el("div", null);
+        docs.style.cssText = "display:flex;gap:12px;font-size:12px;margin:0 0 10px";
+        if (q.resume_url) { const a = el("a", "doclink", "📄 Résumé"); a.href = q.resume_url; a.target = "_blank"; a.rel = "noopener"; docs.appendChild(a); }
+        if (q.cover_url) { const a = el("a", "doclink", "✉️ Cover letter"); a.href = q.cover_url; a.target = "_blank"; a.rel = "noopener"; docs.appendChild(a); }
+        card.appendChild(docs);
+      }
       const actions = el("div", "job-actions");
       if (q.url) { const open = el("a", "btn ghost", "Open posting"); open.href = q.url; open.target = "_blank"; open.rel = "noopener"; actions.appendChild(open); }
       else { const nolink = el("span", "muted", "no link — search it"); nolink.style.cssText = "font-size:12px;align-self:center;margin-right:6px"; actions.appendChild(nolink); }
@@ -1135,6 +1143,15 @@
   let APP_SORT = "recent"; // recent | oldest | company | match
   let APP_SEARCH = "";     // free-text filter over company + title
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const ACT_ICON = { queued: "🗂️", tailored: "📄", gate: "🛡️", applied: "✅", status: "↕️",
+    note: "📝", email: "✉️", error: "⚠️", apply: "🚀" };
+  function fmtDateTime(iso) {
+    if (!iso) return "";
+    const d = new Date(String(iso)); if (isNaN(d.getTime())) return "";
+    let h = d.getHours(); const m = String(d.getMinutes()).padStart(2, "0");
+    const ap = h >= 12 ? "pm" : "am"; h = h % 12 || 12;
+    return MON[d.getMonth()] + " " + d.getDate() + ", " + h + ":" + m + ap;
+  }
   function fmtDate(iso) {
     if (!iso) return "";
     const s = String(iso);
@@ -1536,7 +1553,32 @@
       });
       head.appendChild(regen);
     }
+    // document links (Drive) when Cowork has attached them
+    if (d.resumeUrl || d.coverUrl) {
+      const docs = el("div", null); docs.style.cssText = "display:flex;gap:16px;margin-top:11px;font-size:13px";
+      if (d.resumeUrl) { const a = el("a", "doclink", "📄 Résumé"); a.href = d.resumeUrl; a.target = "_blank"; a.rel = "noopener"; docs.appendChild(a); }
+      if (d.coverUrl) { const a = el("a", "doclink", "✉️ Cover letter"); a.href = d.coverUrl; a.target = "_blank"; a.rel = "noopener"; docs.appendChild(a); }
+      head.appendChild(docs);
+    }
     box.appendChild(head);
+
+    // activity timeline — the story of this job, newest first
+    if (d.activity && d.activity.length) {
+      const tl = el("div", "card block-body"); tl.style.marginTop = "12px";
+      tl.appendChild(el("h4", null, "Activity"));
+      const list = el("div", "timeline");
+      d.activity.forEach((e) => {
+        const row = el("div", "tl-row");
+        row.style.cssText = "display:flex;gap:10px;padding:7px 0;border-top:1px solid var(--border,#eceef2);font-size:13px";
+        const when = el("div", "muted", fmtDateTime(e.createdAt));
+        when.style.cssText = "flex:0 0 128px;color:var(--muted);font-size:12px";
+        const msg = el("div", null);
+        msg.appendChild(el("span", "tl-kind", (ACT_ICON[e.kind] || "•") + " "));
+        msg.appendChild(document.createTextNode(e.message));
+        row.appendChild(when); row.appendChild(msg); list.appendChild(row);
+      });
+      tl.appendChild(list); box.appendChild(tl);
+    }
 
     // tabs
     const tabs = el("div", "tabs");

@@ -478,3 +478,9 @@ textarea.autosize { resize: none; overflow: hidden; min-height: 42px; line-heigh
 .navblockhead { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
   color: var(--faint); padding: 12px 10px 4px; }
 .blocklist .navblockhead:first-child { padding-top: 2px; }
+
+/* activity timeline + document links */
+.doclink { color: var(--accent, #2f6df6); text-decoration: none; font-weight: 600; }
+.doclink:hover { text-decoration: underline; }
+.timeline { margin-top: 6px; }
+.tl-kind { opacity: .9; }

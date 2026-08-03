@@ -24,6 +24,7 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
   const rows = await env.DB.prepare(
     `SELECT a.uuid, a.status, a.ats, a.need_manual_apply, a.gate_verdict, a.match_score,
             a.prepare_error, a.created_at, a.submitted_at, a.cv_uuid, a.cover_letter_uuid, a.job_uuid,
+            a.resume_url, a.cover_url,
             j.title, j.company_name, j.location, j.remote, j.salary_min, j.salary_max, j.url, j.apply_url,
             (SELECT COUNT(*) FROM application_form_fields f
               WHERE f.application_uuid = a.uuid AND f.fill_status = 'needs_human') AS needs,
@@ -36,6 +37,7 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
     uuid: r.uuid, status: r.status, ats: r.ats, needManualApply: !!r.need_manual_apply,
     gateVerdict: r.gate_verdict, matchScore: r.match_score == null ? null : Math.round(r.match_score * 100),
     prepareError: r.prepare_error, cvUuid: r.cv_uuid, coverLetterUuid: r.cover_letter_uuid, jobUuid: r.job_uuid,
+    resumeUrl: r.resume_url, coverUrl: r.cover_url,
     fields: { total: r.total, needsHuman: r.needs },
     createdAt: r.created_at, submittedAt: r.submitted_at,
     job: { title: r.title, company: r.company_name, location: r.location, remote: !!r.remote,

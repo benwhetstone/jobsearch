@@ -4,7 +4,7 @@
 // employer's site). Creates a minimal 'manual' job row and an application
 // already in the given stage (default 'applied'), so your own applications
 // live in the same funnel as the autopiloted ones.
-import { json, err, currentUser, type Env, type CtxUser } from "../../_lib";
+import { json, err, currentUser, logActivity, type Env, type CtxUser } from "../../_lib";
 
 const uuid = () => crypto.randomUUID();
 const STAGES = ["applied", "interview", "offer", "rejected"];
@@ -32,10 +32,14 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
      VALUES (?, 'manual', ?, ?, ?, ?, 0, ?, ?, 'Logged manually — applied off-platform.', ?)`
   ).bind(jobUuid, appUuid, title, company, location, url || "", url || null, now).run();
 
+  const resumeUrl = String(body?.resumeUrl || "").trim() || null;
+  const coverUrl = String(body?.coverUrl || "").trim() || null;
   await env.DB.prepare(
-    `INSERT INTO applications_v2 (uuid, user_id, job_uuid, status, need_manual_apply, submitted_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 0, ?, ?, ?)`
-  ).bind(appUuid, user.id, jobUuid, status, appliedAt, appliedAt, now).run();
+    `INSERT INTO applications_v2 (uuid, user_id, job_uuid, status, need_manual_apply, resume_url, cover_url, submitted_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`
+  ).bind(appUuid, user.id, jobUuid, status, resumeUrl, coverUrl, appliedAt, appliedAt, now).run();
 
+  await logActivity(env, user.id, { applicationUuid: appUuid, company, title, kind: "applied",
+    message: `Logged manually as “${status}”${body?.notes ? ` — ${String(body.notes).slice(0, 200)}` : ""}.` });
   return json({ uuid: appUuid, status });
 };
