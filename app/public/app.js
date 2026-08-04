@@ -1120,6 +1120,7 @@
       id.appendChild(el("h3", null, q.title));
       id.appendChild(el("div", "co", q.company || ""));
       if (q.location) { const l = el("div", "appdate", q.location); l.style.cssText = "font-size:12px;color:var(--muted);margin-top:3px"; id.appendChild(l); }
+      if (q.job_id) { const jw = el("div"); jw.style.marginTop = "5px"; jw.appendChild(jobIdChip(q.job_id)); id.appendChild(jw); }
       top.appendChild(id);
       if (q.match_score != null) {
         const sc = el("div", "job-score score-" + scoreClass(q.match_score));
@@ -1138,7 +1139,6 @@
       if (q.created_at) metaBits.push("added " + fmtDate(q.created_at));
       if (q.priority) metaBits.push("priority " + q.priority);
       if (metaBits.length) { const mrow = el("div", null, metaBits.join(" · ")); mrow.style.cssText = "font-size:12px;color:var(--muted);margin:2px 0 6px"; card.appendChild(mrow); }
-      if (q.job_id) card.appendChild(jobIdChip(q.job_id));
       // document links, when Cowork has already tailored + saved them to Drive
       if (q.resume_url || q.cover_url) {
         const docs = el("div", null);
