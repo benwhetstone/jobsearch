@@ -26,34 +26,41 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
   const profile = await scoringProfile(env, user.id);
   const now = new Date().toISOString();
   const stmts: D1PreparedStatement[] = [];
-  const jobIds: string[] = [];
+  const results: { jobId: string | null; company: string; title: string; accepted: boolean; suppressed: boolean; reason: string }[] = [];
   let added = 0;
 
   for (const it of items) {
     const company = String(it?.company || "").trim();
     const title = String(it?.title || "").trim();
-    if (!company || !title) continue;
+    if (!company || !title) { results.push({ jobId: null, company, title, accepted: false, suppressed: false, reason: "missing company or title" }); continue; }
     const url = String(it?.url || it?.applyUrl || "").trim();
     const applyUrl = String(it?.applyUrl || it?.url || "").trim();
     const location = String(it?.location || "").trim() || null;
     const remote = it?.remote ? 1 : 0;
     const sMin = it?.salaryMin ?? null, sMax = it?.salaryMax ?? null;
     const desc = it?.description ? String(it.description).slice(0, 8000) : null;
-    const note = it?.note ? String(it.note).slice(0, 500) : null;
+    const note = it?.note ? String(it.note).trim().slice(0, 500) : "";
     const jobId = String(it?.jobId || "").trim() || canonicalJobId({ company, title, location, remote, url, applyUrl });
-    jobIds.push(jobId);
+
+    // note is REQUIRED — it's the "why it fits" line on the card. A missing or
+    // too-thin note is a defect; reject the job rather than show filler.
+    if (note.split(/\s+/).filter(Boolean).length < 5 || note.length < 12) {
+      results.push({ jobId, company, title, accepted: false, suppressed: false, reason: "note required (a specific 'why it fits', ~12-30 words)" });
+      continue;
+    }
 
     // Skip anything Ben already dismissed / queued / applied — same job_id rule
     // as the sweep, so a suggestion can't resurrect something he killed.
     const acted = await env.DB.prepare(
-      `SELECT 1 FROM matches m JOIN jobs j ON j.uuid = m.job_uuid
+      `SELECT m.status FROM matches m JOIN jobs j ON j.uuid = m.job_uuid
         WHERE m.user_id = ? AND j.job_id = ? AND m.status IN ('skipped','hidden','applied','queued') LIMIT 1`
-    ).bind(user.id, jobId).first();
-    if (acted) continue;
+    ).bind(user.id, jobId).first<{ status: string }>();
+    if (acted) { results.push({ jobId, company, title, accepted: false, suppressed: true, reason: `already ${acted.status}` }); continue; }
 
     const score = it?.score != null && Number.isFinite(Number(it.score))
       ? Math.max(0, Math.min(1, Number(it.score) / 100))
       : scoreJob(profile, { title, company, location, remote: !!remote, salaryMin: sMin, salaryMax: sMax, description: desc, postedAt: it?.postedAt || null }).total;
+    results.push({ jobId, company, title, accepted: true, suppressed: false, reason: jobId.startsWith("jid_sig-") ? "accepted (weak id — pass an employer/ATS url for a stable id)" : "accepted" });
 
     // Stable job uuid per suggestion so re-posting the same pick updates in place.
     const jobUuid = "cowork:" + jobId;
@@ -78,7 +85,8 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
     ).bind(user.id, jobUuid, score, note, now));
     added++;
   }
-  if (!added) return err(400, "Nothing to add (each job needs company + title; already-dismissed jobs are skipped).");
-  for (let i = 0; i < stmts.length; i += 40) await env.DB.batch(stmts.slice(i, i + 40));
-  return json({ ok: true, added, jobIds });
+  if (stmts.length) for (let i = 0; i < stmts.length; i += 40) await env.DB.batch(stmts.slice(i, i + 40));
+  const suppressed = results.filter((r) => r.suppressed).length;
+  const rejected = results.filter((r) => !r.accepted && !r.suppressed).length;
+  return json({ ok: added > 0, added, suppressed, rejected, results });
 };

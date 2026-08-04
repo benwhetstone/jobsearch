@@ -320,7 +320,14 @@ async function tagAutoApply(
 
 // Run the daily sweep at most once per user per day. Returns true if a sweep
 // was started by this call.
+// ARCHIVED: Jobs For You is fed by Cowork's 5-layer sweep (POST /suggestions),
+// not the site's internal board sweep, so the daily auto sweep no longer runs on
+// login. Flip this to re-enable. runSweep() itself stays live for the on-demand
+// Search tab (origin='search').
+const AUTO_SWEEP_ENABLED = false;
+
 export async function ensureDailySweep(env: Env, userId: string): Promise<boolean> {
+  if (!AUTO_SWEEP_ENABLED) return false;
   const day = new Date().toISOString().slice(0, 10);
   const setting = await env.DB.prepare("SELECT auto_sweep FROM user_settings WHERE user_id = ?")
     .bind(userId).first<{ auto_sweep: number }>().catch(() => null);

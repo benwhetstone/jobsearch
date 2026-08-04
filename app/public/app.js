@@ -828,16 +828,15 @@
   $("#tabSearch").addEventListener("click", () => setJobsTab("search"));
 
   // re-run the daily sweep on demand
+  // Jobs For You is fed by Cowork's suggestions now (the internal board sweep is
+  // archived), so Refresh just re-pulls the latest suggestions — it does not run
+  // a site-side sweep.
   const resweep = $("#btnResweep");
   if (resweep) resweep.addEventListener("click", async () => {
-    resweep.disabled = true; resweep.textContent = "Sweeping…";
-    SWEEP_RUNNING = true; refreshStrip();
-    try {
-      const r = await api("/jobs/refresh", { method: "POST", body: JSON.stringify({ origin: "auto" }) });
-      toast(`Swept the boards: ${r.data.matched} matches from ${r.data.fetched} postings.`, 3200);
-      await loadMatches();
-    } catch (e) { toast(e.message, 3600); }
-    finally { SWEEP_RUNNING = false; resweep.disabled = false; resweep.textContent = "Refresh"; refreshStrip(); }
+    resweep.disabled = true; resweep.textContent = "Refreshing…";
+    try { JOBS_TAB = "auto"; await loadMatches(); toast("Latest suggestions loaded", 1800); }
+    catch (e) { toast(e.message, 3600); }
+    finally { resweep.disabled = false; resweep.textContent = "Refresh"; }
   });
 
   function updateBulkBar() {
@@ -882,9 +881,10 @@
     MATCHES_LOADED = true;
     await loadSearchPrefs();
     try {
-      // Jobs For You shows Cowork's post-sweep suggestions AND the site's own
-      // daily sweep, together. The Search tab stays its own origin.
-      const r = await api("/matches?origin=" + (JOBS_TAB === "auto" ? "cowork,auto" : "search"));
+      // Jobs For You shows ONLY Cowork's curated post-sweep suggestions. The
+      // site's internal board sweep is archived (Cowork's 5-layer sweep is the
+      // source now). The Search tab still runs its own on-demand search.
+      const r = await api("/matches?origin=" + (JOBS_TAB === "auto" ? "cowork" : "search"));
       const list = r.data.matches || [];
       if (!list.length && SWEEP_RUNNING) {
         // The daily sweep kicked off at login; matches are on their way.
