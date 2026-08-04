@@ -14,6 +14,11 @@ import { prepare } from "./index";
 
 type Ctx = { user?: CtxUser };
 const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+// Use a caller-supplied timestamp when it's a valid ISO string, stored VERBATIM
+// so an offset (e.g. "2026-08-03T19:30:00-04:00") is preserved and the date
+// doesn't roll forward a day in UTC. Falls back to the server's now.
+const stampFrom = (v: unknown, fallback: string): string =>
+  (typeof v === "string" && v.length <= 40 && !Number.isNaN(Date.parse(v))) ? v : fallback;
 
 export const onRequestGet: PagesFunction<Env, string, Ctx> = async ({ params, env, data }) => {
   const user = currentUser(data);
@@ -85,10 +90,10 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
 
   let body: any;
   try { body = await request.json(); } catch { return err(400, "Invalid JSON body."); }
+  const now = new Date().toISOString();
 
   // ---- answer outstanding fields ----
   if (Array.isArray(body.answers) && body.answers.length) {
-    const now = new Date().toISOString();
     for (const a of body.answers) {
       const f = await env.DB.prepare(
         "SELECT uuid, label FROM application_form_fields WHERE uuid = ? AND application_uuid = ?"
@@ -124,10 +129,31 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     return json({ uuid, resumeUrl: rUrl, coverUrl: cUrl });
   }
 
+  // ---- correct the descriptors on a queued/applied row (title, location, url).
+  //      These live on the jobs row; a placeholder queued before the real title
+  //      was known ("Req R-0011925", "TBD") can be fixed here without creating a
+  //      second row. Company/date/status are not touched.
+  if (body.action === "update") {
+    const title = body.title != null ? String(body.title).trim().slice(0, 300) : null;
+    const location = body.location != null ? String(body.location).trim().slice(0, 200) : null;
+    const url = body.url != null ? String(body.url).trim().slice(0, 1000) : null;
+    if (title == null && location == null && url == null) return err(400, "Provide title, location, and/or url to update.");
+    await env.DB.prepare(
+      `UPDATE jobs SET title = COALESCE(?, title), location = COALESCE(?, location),
+         url = COALESCE(?, url), apply_url = COALESCE(?, apply_url)
+       WHERE uuid = (SELECT job_uuid FROM applications_v2 WHERE uuid = ? AND user_id = ?)`
+    ).bind(title, location, url, url, uuid, user.id).run();
+    await logActivity(env, user.id, { applicationUuid: uuid, kind: "note",
+      message: `Corrected ${[title != null && "title", location != null && "location", url != null && "url"].filter(Boolean).join(", ")}.`,
+      meta: { title, location, url } });
+    return json({ uuid, updated: { title, location, url } });
+  }
+
   // ---- manual submit done: the user applied on the employer's site ----
   if (body.action === "markApplied") {
+    const at = stampFrom(body.submittedAt ?? body.appliedAt ?? body.at, now);
     await env.DB.prepare("UPDATE applications_v2 SET status = 'applied', submitted_at = ?, updated_at = ? WHERE uuid = ?")
-      .bind(new Date().toISOString(), new Date().toISOString(), uuid).run();
+      .bind(at, now, uuid).run();
     await resolveActionItems(env, user.id, uuid);
     await logActivity(env, user.id, { applicationUuid: uuid, kind: "applied", message: "Marked applied." });
     return json({ uuid, status: "applied" });
@@ -139,8 +165,15 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     const allowed = new Set(["applied", "interview", "offer", "rejected", "withdrawn"]);
     const to = String(body.status || "");
     if (!allowed.has(to)) return err(400, `status must be one of: ${[...allowed].join(", ")}`);
-    await env.DB.prepare("UPDATE applications_v2 SET status = ?, updated_at = ? WHERE uuid = ?")
-      .bind(to, new Date().toISOString(), uuid).run();
+    const at = stampFrom(body.submittedAt ?? body.appliedAt ?? body.at, now);
+    // A provided timestamp also back-stamps submitted_at when moving to applied.
+    if (to === "applied") {
+      await env.DB.prepare("UPDATE applications_v2 SET status = ?, submitted_at = COALESCE(submitted_at, ?), updated_at = ? WHERE uuid = ?")
+        .bind(to, at, now, uuid).run();
+    } else {
+      await env.DB.prepare("UPDATE applications_v2 SET status = ?, updated_at = ? WHERE uuid = ?")
+        .bind(to, now, uuid).run();
+    }
     if (to !== "actionRequired") await resolveActionItems(env, user.id, uuid);
     await logActivity(env, user.id, { applicationUuid: uuid, kind: "status", message: `Status → ${to}.` });
     return json({ uuid, status: to });
@@ -230,7 +263,17 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     return json({ uuid, status: "approved", submitting: false });
   }
 
-  // recompute status after answers
+  // An action was named but matched nothing above. NEVER fall through to the
+  // answers-recompute below — that silently rewrites a submitted application to
+  // 'readyToApply' and returns 200, which reads as "unfinished" and invites a
+  // duplicate apply. Reject it loudly and change nothing.
+  if (body.action != null && String(body.action).trim() !== "") {
+    return err(400, `Unknown action "${String(body.action).slice(0, 40)}". No change made. ` +
+      `Valid actions: update, attachDocs, markApplied, setStatus, regenerate, discard, moveBack, approve.`);
+  }
+
+  // No action: this is an answers-only submission. Recompute status from whether
+  // any employer question still needs the user.
   const open = await env.DB.prepare(
     "SELECT COUNT(*) AS n FROM application_form_fields WHERE application_uuid = ? AND fill_status = 'needs_human'"
   ).bind(uuid).first<{ n: number }>();

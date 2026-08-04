@@ -21,7 +21,10 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
   const url = String(body?.url || "").trim();
   const location = String(body?.location || "").trim() || null;
   const status = STAGES.includes(body?.status) ? body.status : "applied";
-  const appliedAt = body?.appliedAt ? new Date(body.appliedAt).toISOString() : new Date().toISOString();
+  // Store the caller's timestamp VERBATIM when it's valid ISO (keeps its offset
+  // so an evening-Eastern submit doesn't roll to the next UTC day); else now.
+  const appliedAt = (typeof body?.appliedAt === "string" && body.appliedAt.length <= 40 && !Number.isNaN(Date.parse(body.appliedAt)))
+    ? body.appliedAt : new Date().toISOString();
   const now = new Date().toISOString();
 
   const jobUuid = "manual:" + uuid();

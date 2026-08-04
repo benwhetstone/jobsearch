@@ -109,9 +109,30 @@ export const onRequestPatch: PagesFunction<Env, string, { user?: CtxUser }> = as
     return json({ ok: true, id, status: action === "reset" ? "pending" : "skipped" });
   }
 
+  // ---- correct a queue row's fields (fix a placeholder title/location/url, add
+  //      notes or docs) without deleting and re-adding. Company + title are the
+  //      identity, but a role queued before its title was known needs fixing.
+  if (action === "update") {
+    const set: string[] = [], vals: any[] = [];
+    const put = (col: string, v: any, max: number) => {
+      if (v !== undefined) { set.push(`${col} = ?`); vals.push(v === null ? null : String(v).trim().slice(0, max) || null); }
+    };
+    put("title", body.title, 300); put("location", body.location, 200); put("url", body.url, 1000);
+    put("notes", body.notes, 2000); put("resume_url", body.resumeUrl, 1000); put("cover_url", body.coverUrl, 1000);
+    if (body.priority !== undefined) { set.push("priority = ?"); vals.push(Number(body.priority) || 0); }
+    if (!set.length) return err(400, "Provide at least one of: title, location, url, notes, resumeUrl, coverUrl, priority.");
+    vals.push(id);
+    await env.DB.prepare(`UPDATE apply_queue SET ${set.join(", ")} WHERE id = ?`).bind(...vals).run();
+    await logActivity(env, user.id, { queueId: id, company: row.company, title: body.title ?? row.title,
+      kind: "note", message: `Updated ${set.map((s) => s.split(" = ")[0]).join(", ")} in To-Apply.` });
+    return json({ ok: true, id, updated: set.map((s) => s.split(" = ")[0]) });
+  }
+
   if (action === "applied") {
     // Promote into the live tracker: create a job + application (status 'applied')
     // exactly like a manually-logged application, and link it back.
+    const at = (typeof body.appliedAt === "string" && body.appliedAt.length <= 40 && !Number.isNaN(Date.parse(body.appliedAt)))
+      ? body.appliedAt : now;   // caller's local timestamp, stored verbatim (keeps offset)
     const jobUuid = "queue:" + uuid();
     const appUuid = uuid();
     await env.DB.prepare(
@@ -123,9 +144,9 @@ export const onRequestPatch: PagesFunction<Env, string, { user?: CtxUser }> = as
       `INSERT INTO applications_v2 (uuid, user_id, job_uuid, status, need_manual_apply, match_score, resume_url, cover_url, submitted_at, created_at, updated_at)
        VALUES (?, ?, ?, 'applied', 0, ?, ?, ?, ?, ?, ?)`
     ).bind(appUuid, user.id, jobUuid, row.match_score == null ? null : row.match_score / 100,
-           row.resume_url || null, row.cover_url || null, now, now, now).run();
+           row.resume_url || null, row.cover_url || null, at, now, now).run();
     await env.DB.prepare("UPDATE apply_queue SET status = 'applied', application_uuid = ?, applied_at = ? WHERE id = ?")
-      .bind(appUuid, now, id).run();
+      .bind(appUuid, at, id).run();
     // Carry the queue's timeline onto the application, then log the promotion.
     await env.DB.prepare("UPDATE activity_log SET application_uuid = ? WHERE queue_id = ? AND user_id = ?")
       .bind(appUuid, id, user.id).run().catch(() => {});
@@ -134,5 +155,5 @@ export const onRequestPatch: PagesFunction<Env, string, { user?: CtxUser }> = as
     return json({ ok: true, id, status: "applied", applicationUuid: appUuid });
   }
 
-  return err(400, "action must be one of: applied, skipped, reset.");
+  return err(400, `Unknown action "${action}". Valid actions: applied, skipped, reset, update.`);
 };
