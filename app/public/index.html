@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Job Search</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <link rel="stylesheet" href="/styles.css?v=2026080303" />
+  <link rel="stylesheet" href="/styles.css?v=2026080401" />
 </head>
 <body>
   <!-- Auth (login / signup) -->
@@ -154,9 +154,12 @@
           <div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
             <div>
               <h1>To Apply</h1>
-              <p>Your worklist — jobs we've decided to apply to. Work them one by one; each one you finish moves into Applications.</p>
+              <p>Your worklist — only jobs you've chosen to apply to. Add one yourself below, or add from Jobs For You. Work them one by one; each finished one moves into Applications.</p>
             </div>
-            <button id="btnApplyRefresh" class="btn">↻ Refresh</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button id="btnAddJob" class="btn primary">+ Add a job</button>
+              <button id="btnApplyRefresh" class="btn">↻ Refresh</button>
+            </div>
           </div>
           <div id="applyList" class="joblist"></div>
         </section>
@@ -242,6 +245,6 @@
     <div id="toast" class="toast" hidden></div>
   </div>
 
-  <script src="/app.js?v=2026080303"></script>
+  <script src="/app.js?v=2026080401"></script>
 </body>
 </html>

@@ -1153,6 +1153,54 @@
   }
   $("#btnApplyRefresh")?.addEventListener("click", () => loadApplyQueue());
 
+  // Manual add — YOU put a job on the worklist. The daily search does not add
+  // to this list on its own; it only surfaces jobs under Jobs For You.
+  $("#btnAddJob")?.addEventListener("click", () => openAddJob());
+  function openAddJob() {
+    const ov = el("div", "addjob-ov");
+    ov.style.cssText = "position:fixed;inset:0;background:rgba(15,20,30,.55);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px";
+    ov.addEventListener("click", () => ov.remove());
+    const card = el("div"); card.addEventListener("click", (e) => e.stopPropagation());
+    card.style.cssText = "background:var(--panel,#fff);color:var(--text,#14181d);border-radius:14px;max-width:460px;width:100%;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.35);max-height:90vh;overflow:auto";
+    card.appendChild(el("h3", null, "Add a job to To-Apply"));
+    const sub = el("p", null, "Paste one you found anywhere. It goes on your worklist only — nothing is submitted.");
+    sub.style.cssText = "margin:4px 0 16px;font-size:13px;color:var(--muted)";
+    card.appendChild(sub);
+    const field = (label, ph, type) => {
+      const w = el("label"); w.style.cssText = "display:block;margin-bottom:12px;font-size:13px;font-weight:600";
+      w.appendChild(el("span", null, label));
+      const i = el(type === "area" ? "textarea" : "input");
+      if (type && type !== "area") i.type = type;
+      i.placeholder = ph || ""; if (type === "area") i.rows = 2;
+      i.style.cssText = "display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--border,#d7dbe3);border-radius:8px;font:inherit;font-weight:400;box-sizing:border-box";
+      w.appendChild(i); card.appendChild(w); return i;
+    };
+    const fCompany = field("Company *", "e.g. Doximity");
+    const fTitle = field("Job title *", "e.g. Data Analyst");
+    const fUrl = field("Posting URL", "https://…", "url");
+    const fLoc = field("Location", "e.g. Remote, or Tampa, FL");
+    const fNotes = field("Why it fits / notes", "optional", "area");
+    const err = el("p", "err"); err.hidden = true; err.style.cssText = "color:var(--danger,#c0392b);font-size:13px;margin:0 0 10px";
+    card.appendChild(err);
+    const btns = el("div"); btns.style.cssText = "display:flex;gap:10px;justify-content:flex-end;margin-top:6px";
+    const cancel = el("button", "btn ghost", "Cancel"); cancel.addEventListener("click", () => ov.remove());
+    const add = el("button", "btn primary", "Add to To-Apply");
+    add.addEventListener("click", async () => {
+      const company = fCompany.value.trim(), title = fTitle.value.trim();
+      if (!company || !title) { err.textContent = "Company and job title are required."; err.hidden = false; return; }
+      add.disabled = true; add.textContent = "Adding…";
+      try {
+        await api("/apply-queue", { method: "POST", body: JSON.stringify({
+          company, title, url: fUrl.value.trim() || undefined, location: fLoc.value.trim() || undefined,
+          notes: fNotes.value.trim() || undefined, source: "manual",
+        }) });
+        ov.remove(); toast("Added to To-Apply"); loadApplyQueue();
+      } catch (e) { err.textContent = e.message || "Could not add."; err.hidden = false; add.disabled = false; add.textContent = "Add to To-Apply"; }
+    });
+    btns.appendChild(cancel); btns.appendChild(add); card.appendChild(btns);
+    ov.appendChild(card); document.body.appendChild(ov); fCompany.focus();
+  }
+
   // ======================= APPLICATIONS ====================================
   const STATUS_LABEL = {
     queued: "Queued", preparing: "Preparing", actionRequired: "Action required",

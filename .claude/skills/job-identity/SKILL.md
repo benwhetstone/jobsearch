@@ -72,10 +72,31 @@ it, since it is the accurate one.
 3. **Log an off-platform apply** — `POST /api/v1/applications/manual`
    with `{ company, title, url, jobId, appliedAt }`.
 
+## Permission rule — NEVER add to To-Apply on your own
+
+The To-Apply queue is **Ben's worklist, not your scratchpad.** Adding a job to it
+is an action you take ONLY when:
+
+1. **Ben explicitly tells you** he wants to apply to a specific role
+   ("add X", "queue this", "let's apply to Y"), OR
+2. **Ben adds it himself** in the site with the **"+ Add a job"** button on the
+   To-Apply tab.
+
+You may **surface, score, and present** candidates freely — that is your job. But
+presenting is not queuing. **Do not auto-populate To-Apply** from a sweep, a
+board scan, an email, or your own judgment about what looks good. If you think
+something belongs there, say so and ask; wait for a yes. One "yes, apply to
+these five" covers those five — it is not standing permission to add more.
+
+Garbage in the queue (off-target roles, guesses, bulk adds) is worse than an
+empty queue: it buries the jobs Ben actually chose. When in doubt, leave it out
+and ask.
+
 ## The workflow, restated
 
-- Surface candidates → for each, **ask the site for its job_id**.
-- Queue the ones worth applying to (the site drops anything already
-  dismissed/applied — you do **not** pre-filter).
+- Surface candidates and **present them with scores** — do not queue them.
+- Ben says which ones to apply to (or adds his own via "+ Add a job").
+- ONLY THEN: for each approved job, **ask the site for its job_id** and queue it
+  (the site drops anything already dismissed/applied — you do **not** pre-filter).
 - Work the queue one at a time; promote each when done.
-- Trust the site's memory. No local exclusion list, ever.
+- Trust the site's memory. No local exclusion list, ever. No unrequested adds, ever.
