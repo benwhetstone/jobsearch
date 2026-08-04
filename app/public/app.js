@@ -589,6 +589,13 @@
     return n >= 70 ? "Strong match" : n >= 55 ? "Good match" : n >= 38 ? "Worth a look" : "Long shot";
   }
 
+  // Nudge a sidebar count badge by delta and hide it at zero.
+  function bumpCount(sel, delta) {
+    const c = $(sel); if (!c) return;
+    const n = Math.max(0, (parseInt(c.textContent) || 0) + delta);
+    c.textContent = String(n); c.hidden = n === 0;
+  }
+
   function matchCard(m) {
     const j = m.job;
     const card = el("article", "card job");
@@ -674,8 +681,9 @@
         await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid: m.jobUuid, status: "queued" }) }).catch(() => {});
         toast("Added to your To-Apply list", 2500);
         card.remove();
-        const cq = $("#cntApply"); // nudge the To-Apply badge if present
-        if (cq && !cq.hidden) cq.textContent = String((parseInt(cq.textContent) || 0) + 1);
+        bumpCount("#cntMatches", -1);   // Jobs For You count down
+        bumpCount("#cntApply", +1);     // To-Apply count up
+        LAST_MATCHES = LAST_MATCHES.filter((x) => x.jobUuid !== m.jobUuid);
       } catch (e) {
         apply.disabled = false; apply.textContent = "Add to To-Apply";
         toast(e.message, 3000);
@@ -725,6 +733,8 @@
       try {
         await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid: m.jobUuid, status: "skipped" }) });
         card.remove(); toast("Hidden");
+        bumpCount("#cntMatches", -1);
+        LAST_MATCHES = LAST_MATCHES.filter((x) => x.jobUuid !== m.jobUuid);
       } catch (e) { toast("Could not hide: " + e.message); }
     });
     return card;
