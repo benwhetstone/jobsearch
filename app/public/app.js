@@ -638,15 +638,25 @@
     if (m.compFlag === "negotiation") chips.appendChild(chip("Negotiation candidate", null, "amber"));
     const when = ago(j.postedAt);
     if (when) chips.appendChild(chip(when, ICON.clock, "plain"));
-    chips.appendChild(chip(j.source, null, "plain"));
+    if (m.origin === "cowork") chips.appendChild(chip("Suggested by Cowork", null, "green"));
+    else chips.appendChild(chip(j.source, null, "plain"));
     mid.appendChild(chips);
+    // Cowork's one-line "why it fits", when present
+    if (m.note) {
+      const n = el("div", null, m.note);
+      n.style.cssText = "font-size:13px;color:var(--text,#14181d);background:var(--chip,#eef1f6);border-radius:8px;padding:8px 10px;margin:8px 0 0";
+      mid.appendChild(n);
+    }
+    if (j.jobId) mid.appendChild(jobIdChip(j.jobId));
 
     const actions = el("div", "job-actions");
     const why = el("button", "btn", "Why this score");
     const skip = el("button", "btn ghost", "Not interested");
-    const view = el("button", "btn ghost", "View posting");
-    view.title = "Read the full posting without leaving the page";
-    view.addEventListener("click", () => openJobDetail(m.jobUuid));
+    // Link straight to the employer's original posting (opens in a new tab).
+    const openUrl = j.applyUrl || j.url;
+    const view = openUrl ? el("a", "btn ghost", "Open posting ↗") : el("button", "btn ghost", "View posting");
+    if (openUrl) { view.href = openUrl; view.target = "_blank"; view.rel = "noopener"; view.title = "Open the original posting"; }
+    else { view.title = "Read the full posting without leaving the page"; view.addEventListener("click", () => openJobDetail(m.jobUuid)); }
     // Apply = add this job to the To-Apply queue (the worklist). The actual
     // applying is worked from the queue, one by one — the site is the tracker
     // and system of record, not the thing that fills employer forms.
@@ -656,9 +666,11 @@
       try {
         await api("/apply-queue", { method: "POST", body: JSON.stringify({
           company: m.job.company, title: m.job.title,
-          url: m.job.applyUrl || m.job.url, location: m.job.location,
+          url: m.job.applyUrl || m.job.url, location: m.job.location, remote: m.job.remote,
           salaryMin: m.job.salaryMin, salaryMax: m.job.salaryMax,
-          matchScore: m.matchScore, source: "jobs-for-you",
+          description: m.job.snippet || undefined, jobId: m.job.jobId || undefined,
+          notes: m.note || undefined,
+          matchScore: m.totalScore, source: m.origin === "cowork" ? "cowork" : "jobs-for-you",
         }) });
         // pull it out of Jobs For You (survives future sweeps)
         await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid: m.jobUuid, status: "queued" }) }).catch(() => {});
@@ -870,7 +882,9 @@
     MATCHES_LOADED = true;
     await loadSearchPrefs();
     try {
-      const r = await api("/matches?origin=" + (JOBS_TAB === "auto" ? "auto" : "search"));
+      // Jobs For You shows Cowork's post-sweep suggestions AND the site's own
+      // daily sweep, together. The Search tab stays its own origin.
+      const r = await api("/matches?origin=" + (JOBS_TAB === "auto" ? "cowork,auto" : "search"));
       const list = r.data.matches || [];
       if (!list.length && SWEEP_RUNNING) {
         // The daily sweep kicked off at login; matches are on their way.

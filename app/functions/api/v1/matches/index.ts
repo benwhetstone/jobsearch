@@ -23,19 +23,23 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
   const user = currentUser(data);
   const url = new URL(request.url);
   const status = url.searchParams.get("status") || "matched";
-  const origin = url.searchParams.get("origin") || "all";
-  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit")) || 50));
+  // origin: "all", one origin, or a comma list ("cowork,auto"). A list keeps
+  // Cowork suggestions and the site's own sweep in one Jobs-For-You view.
+  const originParam = url.searchParams.get("origin") || "all";
+  const origins = originParam === "all" ? null : originParam.split(",").map((s) => s.trim()).filter(Boolean);
+  const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit")) || 50));
 
+  const originClause = origins ? `AND m.origin IN (${origins.map(() => "?").join(",")})` : "";
   const rows = await env.DB.prepare(
     `SELECT m.job_uuid, m.total_score, m.skills, m.experience, m.compensation, m.terms, m.company,
-            m.comp_flag, m.missing_json, m.status, m.created_at,
+            m.comp_flag, m.missing_json, m.status, m.created_at, m.origin, m.note,
             j.title, j.company_name, j.location, j.remote, j.salary_min, j.salary_max, j.salary_currency,
-            j.url, j.apply_url, j.board, j.source, j.posted_at, j.description, j.auto_apply, j.created_at AS job_created_at
+            j.url, j.apply_url, j.board, j.source, j.posted_at, j.description, j.auto_apply, j.job_id, j.created_at AS job_created_at
        FROM matches m JOIN jobs j ON j.uuid = m.job_uuid
-      WHERE m.user_id = ? AND (? = 'all' OR m.status = ?) AND (? = 'all' OR m.origin = ?)
+      WHERE m.user_id = ? AND (? = 'all' OR m.status = ?) ${originClause}
       ORDER BY m.total_score DESC
       LIMIT ?`
-  ).bind(user.id, status, status, origin, origin, limit).all<Row>();
+  ).bind(user.id, status, status, ...(origins ?? []), limit).all<Row>();
 
   const out = (rows.results ?? []).map((r) => ({
     jobUuid: r.job_uuid,
@@ -46,12 +50,14 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
       terms: pct(r.terms), company: pct(r.company),
     },
     compFlag: r.comp_flag,
+    origin: (r as any).origin,
+    note: (r as any).note || null,
     missing: (() => { try { return JSON.parse(r.missing_json || "[]"); } catch { return []; } })(),
     job: {
       title: r.title, company: r.company_name, location: r.location, remote: !!r.remote,
       salaryMin: r.salary_min, salaryMax: r.salary_max, currency: r.salary_currency,
       url: r.url, applyUrl: r.apply_url || r.url, board: r.board, source: r.source,
-      postedAt: r.posted_at,
+      postedAt: r.posted_at, jobId: (r as any).job_id || null,
       snippet: (r.description || "").slice(0, 320),
       // null = capability not resolved yet; true = autopilot can file it directly
       autoApply: (r as any).auto_apply == null ? null : !!(r as any).auto_apply,
