@@ -5,6 +5,7 @@
 // already in the given stage (default 'applied'), so your own applications
 // live in the same funnel as the autopiloted ones.
 import { json, err, currentUser, logActivity, type Env, type CtxUser } from "../../_lib";
+import { canonicalJobId } from "../../_jobid";
 
 const uuid = () => crypto.randomUUID();
 const STAGES = ["applied", "interview", "offer", "rejected"];
@@ -29,18 +30,19 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
 
   const jobUuid = "manual:" + uuid();
   const appUuid = uuid();
+  const jobId = String(body?.jobId || "").trim() || canonicalJobId({ company, title, location, url });
 
   await env.DB.prepare(
-    `INSERT INTO jobs (uuid, source, external_id, title, company_name, location, remote, url, apply_url, description, created_at)
-     VALUES (?, 'manual', ?, ?, ?, ?, 0, ?, ?, 'Logged manually — applied off-platform.', ?)`
-  ).bind(jobUuid, appUuid, title, company, location, url || "", url || null, now).run();
+    `INSERT INTO jobs (uuid, source, external_id, title, company_name, location, remote, url, apply_url, description, job_id, created_at)
+     VALUES (?, 'manual', ?, ?, ?, ?, 0, ?, ?, 'Logged manually — applied off-platform.', ?, ?)`
+  ).bind(jobUuid, appUuid, title, company, location, url || "", url || null, jobId, now).run();
 
   const resumeUrl = String(body?.resumeUrl || "").trim() || null;
   const coverUrl = String(body?.coverUrl || "").trim() || null;
   await env.DB.prepare(
-    `INSERT INTO applications_v2 (uuid, user_id, job_uuid, status, need_manual_apply, resume_url, cover_url, submitted_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`
-  ).bind(appUuid, user.id, jobUuid, status, resumeUrl, coverUrl, appliedAt, appliedAt, now).run();
+    `INSERT INTO applications_v2 (uuid, user_id, job_uuid, status, need_manual_apply, resume_url, cover_url, job_id, submitted_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)`
+  ).bind(appUuid, user.id, jobUuid, status, resumeUrl, coverUrl, jobId, appliedAt, appliedAt, now).run();
 
   await logActivity(env, user.id, { applicationUuid: appUuid, company, title, kind: "applied",
     message: `Logged manually as “${status}”${body?.notes ? ` — ${String(body.notes).slice(0, 200)}` : ""}.` });

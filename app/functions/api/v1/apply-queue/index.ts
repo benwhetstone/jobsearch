@@ -12,6 +12,7 @@
 //         action "reset"   -> back to pending
 import { json, err, currentUser, logActivity, type Env, type CtxUser } from "../../_lib";
 import { scoringProfile, scoreJob } from "../../_match";
+import { canonicalJobId } from "../../_jobid";
 
 const uuid = () => crypto.randomUUID();
 
@@ -51,6 +52,13 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
     const desc = it?.description ? String(it.description).slice(0, 8000) : null;
     const resumeUrl = String(it?.resumeUrl || "").trim() || null;
     const coverUrl = String(it?.coverUrl || "").trim() || null;
+    // Canonical identity so a queued job matches the same posting in the feed
+    // and, later, the application. Caller may pass jobId (from POST /job-id);
+    // otherwise derive it from the same fields the endpoint would.
+    const jobId = String(it?.jobId || "").trim() || canonicalJobId({
+      company, title, location: it?.location || null, remote: it?.remote,
+      url: it?.url || null, applyUrl: it?.applyUrl || null,
+    });
     // Use the caller's authoritative match % if provided (e.g. the feed's
     // already-scored value); otherwise score here — but scoring a bare title
     // with no posting text is weak, so a passed score always wins.
@@ -61,8 +69,8 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
           salaryMin: sMin, salaryMax: sMax, description: desc, postedAt: it?.postedAt || null,
         }).total * 100);
     stmts.push(env.DB.prepare(
-      `INSERT INTO apply_queue (id, user_id, company, title, url, location, notes, source, priority, match_score, salary_min, salary_max, description, resume_url, cover_url, status, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'pending', ?)
+      `INSERT INTO apply_queue (id, user_id, company, title, url, location, notes, source, priority, match_score, salary_min, salary_max, description, resume_url, cover_url, job_id, status, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'pending', ?)
        ON CONFLICT(user_id, company, title) DO UPDATE SET
          url=COALESCE(excluded.url, apply_queue.url),
          notes=COALESCE(excluded.notes, apply_queue.notes),
@@ -74,11 +82,12 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
          description=COALESCE(excluded.description, apply_queue.description),
          resume_url=COALESCE(excluded.resume_url, apply_queue.resume_url),
          cover_url=COALESCE(excluded.cover_url, apply_queue.cover_url),
+         job_id=excluded.job_id,
          priority=excluded.priority`
     ).bind(uuid(), user.id, company, title, String(it?.url || "").trim() || null,
            String(it?.location || "").trim() || null, String(it?.notes || "").trim() || null,
            String(it?.source || "").trim() || null, Number(it?.priority) || 0, score,
-           sMin, sMax, desc, resumeUrl, coverUrl, now));
+           sMin, sMax, desc, resumeUrl, coverUrl, jobId, now));
     added++;
     await logActivity(env, user.id, { company, title, kind: "queued",
       message: `Added to To-Apply (${score}% match)${it?.source ? ` from ${it.source}` : ""}.` });
@@ -135,16 +144,17 @@ export const onRequestPatch: PagesFunction<Env, string, { user?: CtxUser }> = as
       ? body.appliedAt : now;   // caller's local timestamp, stored verbatim (keeps offset)
     const jobUuid = "queue:" + uuid();
     const appUuid = uuid();
+    const jobId = row.job_id || canonicalJobId({ company: row.company, title: row.title, location: row.location, url: row.url });
     await env.DB.prepare(
-      `INSERT INTO jobs (uuid, source, external_id, title, company_name, location, remote, url, apply_url, description, created_at)
-       VALUES (?, 'queue', ?, ?, ?, ?, 0, ?, ?, ?, ?)`
+      `INSERT INTO jobs (uuid, source, external_id, title, company_name, location, remote, url, apply_url, description, job_id, created_at)
+       VALUES (?, 'queue', ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`
     ).bind(jobUuid, id, row.title, row.company, row.location, row.url || "", row.url || null,
-           row.notes ? `From To-Apply queue. ${row.notes}` : "From To-Apply queue.", now).run();
+           row.notes ? `From To-Apply queue. ${row.notes}` : "From To-Apply queue.", jobId, now).run();
     await env.DB.prepare(
-      `INSERT INTO applications_v2 (uuid, user_id, job_uuid, status, need_manual_apply, match_score, resume_url, cover_url, submitted_at, created_at, updated_at)
-       VALUES (?, ?, ?, 'applied', 0, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO applications_v2 (uuid, user_id, job_uuid, status, need_manual_apply, match_score, resume_url, cover_url, job_id, submitted_at, created_at, updated_at)
+       VALUES (?, ?, ?, 'applied', 0, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(appUuid, user.id, jobUuid, row.match_score == null ? null : row.match_score / 100,
-           row.resume_url || null, row.cover_url || null, at, now, now).run();
+           row.resume_url || null, row.cover_url || null, jobId, at, now, now).run();
     await env.DB.prepare("UPDATE apply_queue SET status = 'applied', application_uuid = ?, applied_at = ? WHERE id = ?")
       .bind(appUuid, at, id).run();
     // Carry the queue's timeline onto the application, then log the promotion.

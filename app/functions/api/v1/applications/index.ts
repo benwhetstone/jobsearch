@@ -10,6 +10,7 @@ import { resolveBoard, refFromUrl, fetchForm, boardJobs, type AtsRef } from "../
 import { fillFields } from "../../_fill";
 import { tailorCv, tailorCoverLetter, hiringManagerGate, verify, cvToText } from "../../_docs";
 import { anthropic } from "../../_ai";
+import { canonicalJobId } from "../../_jobid";
 
 const uuid = () => crypto.randomUUID();
 const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
@@ -69,10 +70,14 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
   const match = await env.DB.prepare("SELECT total_score FROM matches WHERE user_id = ? AND job_uuid = ?")
     .bind(user.id, jobUuid).first<{ total_score: number }>();
 
+  const jobId = canonicalJobId({
+    company: job.company_name, title: job.title, url: job.url, applyUrl: job.apply_url,
+  });
   await env.DB.prepare(
-    `INSERT INTO applications_v2 (uuid, user_id, job_uuid, status, match_score, created_at, updated_at)
-     VALUES (?, ?, ?, 'preparing', ?, ?, ?)`
-  ).bind(appUuid, user.id, jobUuid, match?.total_score ?? null, now, now).run();
+    `INSERT INTO applications_v2 (uuid, user_id, job_uuid, status, match_score, job_id, created_at, updated_at)
+     VALUES (?, ?, ?, 'preparing', ?, ?, ?, ?)`
+  ).bind(appUuid, user.id, jobUuid, match?.total_score ?? null, jobId, now, now).run();
+  await env.DB.prepare("UPDATE jobs SET job_id = COALESCE(job_id, ?) WHERE uuid = ?").bind(jobId, jobUuid).run();
 
   await env.DB.prepare("UPDATE matches SET status = 'applied' WHERE user_id = ? AND job_uuid = ?")
     .bind(user.id, jobUuid).run();
