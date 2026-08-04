@@ -628,8 +628,6 @@
     // reposting of an old job never re-badges)
     if (j.firstSeenAt && j.firstSeenAt.slice(0, 10) === new Date().toISOString().slice(0, 10))
       chips.appendChild(chip("New today", null, "green"));
-    if (j.autoApply === true) chips.appendChild(chip("Auto-apply ready", null, "green"));
-    else if (j.autoApply === false) chips.appendChild(chip("Apply on employer site", null, "plain"));
     if (j.location) chips.appendChild(chip(j.location, ICON.pin));
     if (j.remote) chips.appendChild(chip("Remote", ICON.home));
     const pay = payLabel(j);
@@ -749,33 +747,16 @@
   }
   // Jobs For You shows ONLY jobs autopilot can file end-to-end (globalwork's
   // hasModernAutoApply). The toggle widens it to everything we scored.
-  let FORYOU_AUTO_ONLY = true;
 
   function renderMatches(list) {
     LAST_MATCHES = list;
-    const filtered = (JOBS_TAB === "auto" && FORYOU_AUTO_ONLY)
-      ? list.filter((m) => m.job.autoApply === true) : list;
-    const hiddenCount = list.length - filtered.length;
-    list = sortMatches(filtered);
+    list = sortMatches(list);
     const box = $("#matchList"); box.innerHTML = "";
-    if (JOBS_TAB === "auto") {
-      const bar = el("div", "muted");
-      bar.style.cssText = "display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px";
-      const cb = el("input"); cb.type = "checkbox"; cb.checked = FORYOU_AUTO_ONLY; cb.id = "autoOnly";
-      cb.addEventListener("change", () => { FORYOU_AUTO_ONLY = cb.checked; renderMatches(LAST_MATCHES); });
-      const lb = el("label", null, "One-click apply only — jobs we submit for you after your approval");
-      lb.htmlFor = "autoOnly"; lb.style.cursor = "pointer";
-      bar.appendChild(cb); bar.appendChild(lb);
-      if (FORYOU_AUTO_ONLY && hiddenCount > 0)
-        bar.appendChild(el("span", null, `(${hiddenCount} manual-apply match${hiddenCount === 1 ? "" : "es"} hidden)`));
-      box.appendChild(bar);
-    }
     if (!list.length) {
       const p = el("div", "card placeholder");
-      p.innerHTML = (JOBS_TAB === "auto" && FORYOU_AUTO_ONLY)
+      p.innerHTML = (JOBS_TAB === "auto")
         ? '<div class="ph-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>' +
-          '<h3>No one-click jobs right now</h3><p>Every sweep discovers more employers whose systems we can file directly. ' +
-          'Hit <strong>Refresh</strong> to sweep again, or untick the box above to see matches that need a manual submit.</p>'
+          '<h3>No suggestions yet</h3><p>After Cowork runs a sweep, its picks land here for you to review and add to To-Apply.</p>'
         : '<div class="ph-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>' +
           '<h3>No jobs yet</h3><p>Set what you\'re looking for above and hit <strong>Find jobs</strong>. ' +
           'We search several boards at once — local, hybrid and remote together.</p>';
