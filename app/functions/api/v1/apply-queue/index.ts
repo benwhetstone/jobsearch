@@ -21,7 +21,7 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
   const status = new URL(request.url).searchParams.get("status") || "pending";
   const rows = await env.DB.prepare(
     `SELECT id, company, title, url, location, notes, source, priority, status, application_uuid,
-            match_score, salary_min, salary_max, resume_url, cover_url, created_at, applied_at
+            match_score, salary_min, salary_max, resume_url, cover_url, job_id, created_at, applied_at
        FROM apply_queue WHERE user_id = ? AND (? = 'all' OR status = ?)
       ORDER BY priority DESC, match_score DESC, created_at ASC`
   ).bind(user.id, status, status).all<any>();

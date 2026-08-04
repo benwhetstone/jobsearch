@@ -62,7 +62,7 @@ export const onRequestGet: PagesFunction<Env, string, Ctx> = async ({ params, en
     gateVerdict: app.gate_verdict, gateNotes: parse(app.gate_report) || [],
     matchScore: app.match_score == null ? null : Math.round(app.match_score * 100),
     prepareError: app.prepare_error, submittedAt: app.submitted_at,
-    resumeUrl: app.resume_url, coverUrl: app.cover_url,
+    resumeUrl: app.resume_url, coverUrl: app.cover_url, jobId: app.job_id,
     activity: (activity?.results ?? []).map((e: any) => ({
       id: e.id, kind: e.kind, message: e.message,
       meta: parse(e.meta_json), createdAt: e.created_at,

@@ -1123,7 +1123,8 @@
       if (q.source) metaBits.push(q.source.replace(/-/g, " "));
       if (q.created_at) metaBits.push("added " + fmtDate(q.created_at));
       if (q.priority) metaBits.push("priority " + q.priority);
-      if (metaBits.length) { const mrow = el("div", null, metaBits.join(" · ")); mrow.style.cssText = "font-size:12px;color:var(--muted);margin:2px 0 10px"; card.appendChild(mrow); }
+      if (metaBits.length) { const mrow = el("div", null, metaBits.join(" · ")); mrow.style.cssText = "font-size:12px;color:var(--muted);margin:2px 0 6px"; card.appendChild(mrow); }
+      if (q.job_id) card.appendChild(jobIdChip(q.job_id));
       // document links, when Cowork has already tailored + saved them to Drive
       if (q.resume_url || q.cover_url) {
         const docs = el("div", null);
@@ -1228,6 +1229,23 @@
     let h = d.getHours(); const m = String(d.getMinutes()).padStart(2, "0");
     const ap = h >= 12 ? "pm" : "am"; h = h % 12 || 12;
     return MON[d.getMonth()] + " " + d.getDate() + ", " + h + ":" + m + ap;
+  }
+  // The canonical job_id, shown as a small copyable mono chip. Assigned when a
+  // job hits To-Apply and carried through to the application unchanged.
+  function jobIdChip(id) {
+    const w = el("div", "jobid");
+    w.style.cssText = "display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin:0 0 10px;cursor:pointer;font-family:ui-monospace,SFMono-Regular,Menlo,monospace";
+    w.title = "Canonical job ID — click to copy";
+    const tag = el("span", null, "ID"); tag.style.cssText = "font-family:inherit;opacity:.6;font-weight:700";
+    const val = el("span", null, id); val.style.cssText = "font-family:inherit;background:var(--chip,#eef1f6);padding:1px 6px;border-radius:5px";
+    w.appendChild(tag); w.appendChild(val);
+    w.addEventListener("click", (e) => {
+      e.stopPropagation();
+      navigator.clipboard?.writeText(id).catch(() => {});
+      const old = val.textContent; val.textContent = "copied ✓";
+      setTimeout(() => { val.textContent = old; }, 900);
+    });
+    return w;
   }
   function fmtDate(iso) {
     if (!iso) return "";
@@ -1412,6 +1430,7 @@
       if (a.gateVerdict) chips.appendChild(chip("Gate: " + a.gateVerdict, null, a.gateVerdict === "PASS" ? "green" : "amber"));
       if (a.fields.needsHuman > 0) chips.appendChild(chip(`${a.fields.needsHuman} question${a.fields.needsHuman === 1 ? "" : "s"} for you`, null, "amber"));
       mid.appendChild(chips);
+      if (a.jobId) mid.appendChild(jobIdChip(a.jobId));
       const actions = el("div", "job-actions");
       if (a.jobUuid) {
         const vp = el("button", "btn ghost", "View posting");
@@ -1608,6 +1627,7 @@
     else chips.appendChild(chip("No supported ATS found: manual submit", null, "amber"));
     if (d.gateVerdict) chips.appendChild(chip("Hiring-manager gate: " + d.gateVerdict, null, d.gateVerdict === "PASS" ? "green" : "amber"));
     head.appendChild(chips);
+    if (d.jobId) { const jw = el("div"); jw.style.marginTop = "8px"; jw.appendChild(jobIdChip(d.jobId)); head.appendChild(jw); }
     if (d.gateNotes && d.gateNotes.length) {
       const gb = el("div", "banner " + (d.gateVerdict === "PASS" ? "info" : "warn"));
       gb.style.marginTop = "10px"; gb.style.marginBottom = "0";
