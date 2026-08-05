@@ -110,11 +110,22 @@ export const onRequestPatch: PagesFunction<Env, string, { user?: CtxUser }> = as
   const now = new Date().toISOString();
 
   if (action === "skipped" || action === "reset") {
+    // The queue is Ben's worklist: only HE removes things from it. An automated
+    // client once bulk-skipped 13 rows in a minute — including jobs he had
+    // personally queued — and they silently vanished. So a skip must carry
+    // actor:"user" (the UI's Skip button sends it). A machine that finds a dead
+    // posting records that with action:"update" + notes and leaves the row for
+    // Ben to decide. "reset" only restores, so it needs no gate.
+    if (action === "skipped" && String(body?.actor || "") !== "user") {
+      return err(409, "Only the user can skip a To-Apply item. This is Ben's worklist — " +
+        "if the posting is dead or not worth pursuing, record it with " +
+        `{ id, action: "update", notes: "..." } and leave the row for him to decide.`);
+    }
     await env.DB.prepare("UPDATE apply_queue SET status = ? WHERE id = ?")
       .bind(action === "reset" ? "pending" : "skipped", id).run();
     await logActivity(env, user.id, { queueId: id, company: row.company, title: row.title,
       kind: action === "reset" ? "note" : "status",
-      message: action === "reset" ? "Moved back to pending in To-Apply." : "Skipped in To-Apply." });
+      message: action === "reset" ? "Moved back to pending in To-Apply." : "Skipped in To-Apply (by user)." });
     return json({ ok: true, id, status: action === "reset" ? "pending" : "skipped" });
   }
 

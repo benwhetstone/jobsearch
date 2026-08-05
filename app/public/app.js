@@ -589,11 +589,18 @@
     return n >= 70 ? "Strong match" : n >= 55 ? "Good match" : n >= 38 ? "Worth a look" : "Long shot";
   }
 
-  // Nudge a sidebar count badge by delta and hide it at zero.
-  function bumpCount(sel, delta) {
-    const c = $(sel); if (!c) return;
-    const n = Math.max(0, (parseInt(c.textContent) || 0) + delta);
-    c.textContent = String(n); c.hidden = n === 0;
+  // Count badges live in TWO places — the desktop sidebar (#cntX) and the mobile
+  // tab bar (#cntXM). Always set both so the number is right on either device.
+  function setCount(name, n) {
+    const id = String(name).replace("#", "");
+    [id, id + "M"].forEach((x) => {
+      const c = document.getElementById(x); if (!c) return;
+      c.textContent = String(n); c.hidden = n === 0;
+    });
+  }
+  function bumpCount(name, delta) {
+    const c = document.getElementById(String(name).replace("#", ""));
+    setCount(name, Math.max(0, (parseInt(c && c.textContent) || 0) + delta));
   }
 
   function matchCard(m) {
@@ -774,8 +781,7 @@
       return;
     }
     list.forEach((m) => box.appendChild(matchCard(m)));
-    const c = $("#cntMatches");
-    if (c) { c.textContent = list.length; c.hidden = false; }
+    setCount("cntMatches", list.length);
   }
 
   async function loadSearchPrefs() {
@@ -1094,7 +1100,7 @@
     try { d = (await api("/apply-queue?status=pending")).data; }
     catch (e) { box.innerHTML = ""; box.appendChild(el("div", "banner bad", e.message)); return; }
     box.innerHTML = "";
-    const cnt = $("#cntApply"); if (cnt) { const n = (d.counts && d.counts.pending) || 0; cnt.textContent = n; cnt.hidden = n === 0; }
+    setCount("cntApply", (d.counts && d.counts.pending) || 0);
     if (!d.queue.length) {
       const p = el("div", "card placeholder");
       p.innerHTML = '<div class="ph-icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>' +
@@ -1149,7 +1155,7 @@
       });
       const skip = el("button", "btn ghost", "Skip");
       skip.addEventListener("click", async () => {
-        try { await api("/apply-queue", { method: "PATCH", body: JSON.stringify({ id: q.id, action: "skipped" }) }); toast("Skipped"); loadApplyQueue(); }
+        try { await api("/apply-queue", { method: "PATCH", body: JSON.stringify({ id: q.id, action: "skipped", actor: "user" }) }); toast("Skipped"); loadApplyQueue(); }
         catch (e) { toast(e.message, 3000); }
       });
       actions.appendChild(done); actions.appendChild(skip);
@@ -1269,8 +1275,7 @@
     try {
       const r = await api("/applications");
       APPS_CACHE = r.data.applications || [];
-      const c = $("#cntApps");
-      if (c) { c.textContent = APPS_CACHE.length; c.hidden = APPS_CACHE.length === 0; }
+      setCount("cntApps", APPS_CACHE.length);
       renderApplications(APPS_CACHE, r.data.counts || {});
     } catch (e) {
       if (e.message !== "unauthorized") { box.innerHTML = ""; box.appendChild(el("div", "banner bad", e.message)); }
