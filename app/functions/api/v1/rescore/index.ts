@@ -49,13 +49,24 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
       company: r.company, title: r.title, location: r.location, remote: r.remote,
       url: r.url, applyUrl: r.apply_url, ats: r.ats, atsToken: r.ats_token, atsJobId: r.ats_job_id,
     }), r.uuid));
-  // queue + applications inherit from their linked job where possible, else derive
-  const qidStmts = (q.results ?? []).map((r) =>
-    env.DB.prepare("UPDATE apply_queue SET job_id = ? WHERE id = ? AND (job_id IS NULL OR job_id = '')")
+  // job_id backfill must cover EVERY row, not just the ones being rescored.
+  // Scoping this to status='pending' once left skipped rows with no id — and
+  // restoring such a row later surfaced it as "missing job_id". Query the rows
+  // that actually lack an id, whatever their status.
+  const qMissing = await env.DB.prepare(
+    "SELECT id, title, company, location, url FROM apply_queue WHERE user_id = ? AND (job_id IS NULL OR job_id = '')"
+  ).bind(user.id).all<any>();
+  const qidStmts = (qMissing.results ?? []).map((r) =>
+    env.DB.prepare("UPDATE apply_queue SET job_id = ? WHERE id = ?")
       .bind(canonicalJobId({ company: r.company, title: r.title, location: r.location, url: r.url }), r.id));
-  const aidStmts = (a.results ?? []).map((r) =>
-    env.DB.prepare("UPDATE applications_v2 SET job_id = ? WHERE uuid = ? AND (job_id IS NULL OR job_id = '')")
-      .bind(canonicalJobId({ company: r.company, title: r.title, location: r.location, remote: r.remote, url: r.url }), r.uuid));
+  const aMissing = await env.DB.prepare(
+    `SELECT a.uuid, j.title, j.company_name AS company, j.location, j.remote, j.url, j.apply_url
+       FROM applications_v2 a JOIN jobs j ON j.uuid = a.job_uuid
+      WHERE a.user_id = ? AND (a.job_id IS NULL OR a.job_id = '')`
+  ).bind(user.id).all<any>();
+  const aidStmts = (aMissing.results ?? []).map((r) =>
+    env.DB.prepare("UPDATE applications_v2 SET job_id = ? WHERE uuid = ?")
+      .bind(canonicalJobId({ company: r.company, title: r.title, location: r.location, remote: r.remote, url: r.url, applyUrl: r.apply_url }), r.uuid));
 
   const all = [...qStmts, ...aStmts, ...jStmts, ...qidStmts, ...aidStmts];
   for (let i = 0; i < all.length; i += 40) await env.DB.batch(all.slice(i, i + 40));
