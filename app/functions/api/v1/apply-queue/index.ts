@@ -16,21 +16,44 @@ import { canonicalJobId } from "../../_jobid";
 
 const uuid = () => crypto.randomUUID();
 
+// Why a row left the worklist. `gated` is the one worth reviving in bulk: the
+// posting is live and submittable, it just needs Ben signed in first.
+const SKIP_REASONS = new Set([
+  "dead",          // posting removed / 404 / req pulled            -> not revivable
+  "closed",        // exists but no longer accepting applications   -> not revivable
+  "gated",         // blocked on account creation / sign-in / captcha -> REVIVABLE
+  "screened_out",  // conflicts with a stated constraint            -> maybe
+  "off_target",    // outside the stated search targets             -> maybe
+  "duplicate",     // same req already applied to elsewhere         -> not revivable
+]);
+
 export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = async ({ request, env, data }) => {
   const user = currentUser(data);
-  const status = new URL(request.url).searchParams.get("status") || "pending";
+  const q = new URL(request.url).searchParams;
+  const status = q.get("status") || "pending";
+  // ?reason=gated narrows skipped rows to the revivable ones, so a backlog can
+  // be reopened in one pass after a sign-in session.
+  const reason = (q.get("reason") || "all").trim().toLowerCase();
   const rows = await env.DB.prepare(
     `SELECT id, company, title, url, location, notes, source, priority, status, application_uuid,
-            match_score, salary_min, salary_max, resume_url, cover_url, job_id, created_at, applied_at
-       FROM apply_queue WHERE user_id = ? AND (? = 'all' OR status = ?)
+            match_score, salary_min, salary_max, resume_url, cover_url, job_id, created_at, applied_at,
+            skip_reason, skip_detail, skipped_by, skipped_at
+       FROM apply_queue WHERE user_id = ? AND (? = 'all' OR status = ?) AND (? = 'all' OR skip_reason = ?)
       ORDER BY priority DESC, match_score DESC, created_at ASC`
-  ).bind(user.id, status, status).all<any>();
+  ).bind(user.id, status, status, reason, reason).all<any>();
   const counts = await env.DB.prepare(
     "SELECT status, COUNT(*) n FROM apply_queue WHERE user_id = ? GROUP BY status"
   ).bind(user.id).all<any>();
   const byStatus: Record<string, number> = {};
   for (const c of counts.results ?? []) byStatus[c.status] = c.n;
-  return json({ queue: rows.results ?? [], counts: byStatus });
+  // Breakdown of why things were skipped — lets a client see the gated backlog
+  // without fetching every row.
+  const rs = await env.DB.prepare(
+    "SELECT skip_reason, COUNT(*) n FROM apply_queue WHERE user_id = ? AND status = 'skipped' AND skip_reason IS NOT NULL GROUP BY skip_reason"
+  ).bind(user.id).all<any>();
+  const byReason: Record<string, number> = {};
+  for (const c of rs.results ?? []) byReason[c.skip_reason] = c.n;
+  return json({ queue: rows.results ?? [], counts: byStatus, skipReasons: byReason });
 };
 
 export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = async ({ request, env, data }) => {
@@ -109,24 +132,50 @@ export const onRequestPatch: PagesFunction<Env, string, { user?: CtxUser }> = as
   if (!row) return err(404, "No such queue item.");
   const now = new Date().toISOString();
 
-  if (action === "skipped" || action === "reset") {
-    // The queue is Ben's worklist: only HE removes things from it. An automated
-    // client once bulk-skipped 13 rows in a minute — including jobs he had
-    // personally queued — and they silently vanished. So a skip must carry
-    // actor:"user" (the UI's Skip button sends it). A machine that finds a dead
-    // posting records that with action:"update" + notes and leaves the row for
-    // Ben to decide. "reset" only restores, so it needs no gate.
-    if (action === "skipped" && String(body?.actor || "") !== "user") {
-      return err(409, "Only the user can skip a To-Apply item. This is Ben's worklist — " +
-        "if the posting is dead or not worth pursuing, record it with " +
-        `{ id, action: "update", notes: "..." } and leave the row for him to decide.`);
+  if (action === "skipped") {
+    // The queue is Ben's worklist, and an automated client once bulk-skipped 13
+    // rows in a minute with no explanation. So a skip is never silent:
+    //   - the user's own Skip button sends actor:"user" and needs no reason;
+    //   - anyone else MUST name a reason from the enum plus a real detail.
+    // That keeps the audit trail and, more importantly, keeps `gated` rows
+    // (blocked only on a sign-in) distinguishable from genuinely dead ones.
+    const byUser = String(body?.actor || "") === "user";
+    const reason = String(body?.reason || "").trim().toLowerCase();
+    const detail = String(body?.detail || "").trim();
+    if (!byUser) {
+      if (!SKIP_REASONS.has(reason)) {
+        return err(400, `A skip needs reason: one of ${[...SKIP_REASONS].join(", ")}. ` +
+          "Send { id, action:\"skipped\", reason, detail } — a bare skip is refused so nothing " +
+          "leaves the worklist unexplained.");
+      }
+      if (detail.length < 20) {
+        return err(400, "detail is required with a skip (at least 20 characters): say concretely what blocked it.");
+      }
     }
-    await env.DB.prepare("UPDATE apply_queue SET status = ? WHERE id = ?")
-      .bind(action === "reset" ? "pending" : "skipped", id).run();
+    const note = String(body?.notes || "").trim();
+    const merged = note ? (row.notes ? `${row.notes}\n${note}` : note) : row.notes;   // append, never replace
+    await env.DB.prepare(
+      `UPDATE apply_queue SET status = 'skipped', skip_reason = ?, skip_detail = ?,
+         skipped_by = ?, skipped_at = ?, notes = ? WHERE id = ?`
+    ).bind(reason || null, detail || null, byUser ? "user" : "agent", now, merged, id).run();
     await logActivity(env, user.id, { queueId: id, company: row.company, title: row.title,
-      kind: action === "reset" ? "note" : "status",
-      message: action === "reset" ? "Moved back to pending in To-Apply." : "Skipped in To-Apply (by user)." });
-    return json({ ok: true, id, status: action === "reset" ? "pending" : "skipped" });
+      kind: "status",
+      message: byUser ? "Skipped in To-Apply (by user)."
+                      : `Skipped in To-Apply (agent, ${reason}): ${detail.slice(0, 200)}`,
+      meta: { reason: reason || null, by: byUser ? "user" : "agent" } });
+    return json({ ok: true, id, status: "skipped", skipReason: reason || null,
+                  skippedBy: byUser ? "user" : "agent", skippedAt: now });
+  }
+
+  if (action === "reset") {
+    // Restore to the worklist and clear the skip record — a revived row should
+    // carry no stale "why it was dropped" state.
+    await env.DB.prepare(
+      "UPDATE apply_queue SET status = 'pending', skip_reason = NULL, skip_detail = NULL, skipped_by = NULL, skipped_at = NULL WHERE id = ?"
+    ).bind(id).run();
+    await logActivity(env, user.id, { queueId: id, company: row.company, title: row.title,
+      kind: "note", message: "Moved back to pending in To-Apply." });
+    return json({ ok: true, id, status: "pending" });
   }
 
   // ---- correct a queue row's fields (fix a placeholder title/location/url, add
