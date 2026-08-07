@@ -106,7 +106,17 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
          resume_url=COALESCE(excluded.resume_url, apply_queue.resume_url),
          cover_url=COALESCE(excluded.cover_url, apply_queue.cover_url),
          job_id=excluded.job_id,
-         priority=excluded.priority`
+         priority=excluded.priority,
+         -- Re-adding is a deliberate "put this back on my list". Without this,
+         -- an upsert onto a previously-skipped row updated the fields but left
+         -- status='skipped' — so the job silently never appeared in To-Apply
+         -- while its card still left Jobs For You. A row that has already been
+         -- APPLIED is left alone; re-adding must never un-apply anything.
+         status=CASE WHEN apply_queue.status = 'applied' THEN 'applied' ELSE 'pending' END,
+         skip_reason=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.skip_reason ELSE NULL END,
+         skip_detail=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.skip_detail ELSE NULL END,
+         skipped_by=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.skipped_by ELSE NULL END,
+         skipped_at=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.skipped_at ELSE NULL END`
     ).bind(uuid(), user.id, company, title, String(it?.url || "").trim() || null,
            String(it?.location || "").trim() || null, String(it?.notes || "").trim() || null,
            String(it?.source || "").trim() || null, Number(it?.priority) || 0, score,
