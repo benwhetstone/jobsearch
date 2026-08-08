@@ -676,7 +676,7 @@
     apply.addEventListener("click", async () => {
       apply.disabled = true; apply.textContent = "Adding…";
       try {
-        await api("/apply-queue", { method: "POST", body: JSON.stringify({
+        const r = await api("/apply-queue", { method: "POST", body: JSON.stringify({
           company: m.job.company, title: m.job.title,
           url: m.job.applyUrl || m.job.url, location: m.job.location, remote: m.job.remote,
           salaryMin: m.job.salaryMin, salaryMax: m.job.salaryMax,
@@ -684,8 +684,18 @@
           notes: m.note || undefined,
           matchScore: m.totalScore, source: m.origin === "cowork" ? "cowork" : "jobs-for-you",
         }) });
-        // pull it out of Jobs For You (survives future sweeps)
-        await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid: m.jobUuid, status: "queued" }) }).catch(() => {});
+        // Only drop the card once the server confirms the job is actually ON the
+        // worklist. Removing it optimistically is how jobs used to fall through
+        // the gap between the two lists and disappear entirely. The server also
+        // marks the match 'queued' itself, so there's no second call to fail.
+        const res = (r.data.results || [])[0];
+        if (!res || !res.onList) {
+          apply.disabled = false; apply.textContent = "Add to To-Apply";
+          toast(res && res.status === "applied"
+            ? "You've already applied to this one — left it in place."
+            : "Could not add it to To-Apply. The card is still here; try again.", 4000);
+          return;
+        }
         toast("Added to your To-Apply list", 2500);
         card.remove();
         bumpCount("#cntMatches", -1);   // Jobs For You count down

@@ -67,6 +67,7 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
   const profile = await scoringProfile(env, user.id);
   let added = 0;
   const stmts = [];
+  const wanted: { company: string; title: string; jobId: string }[] = [];
   for (const it of items) {
     const company = String(it?.company || "").trim();
     const title = String(it?.title || "").trim();
@@ -122,12 +123,42 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
            String(it?.source || "").trim() || null, Number(it?.priority) || 0, score,
            sMin, sMax, desc, resumeUrl, coverUrl, jobId, now));
     added++;
+    wanted.push({ company, title, jobId });
     await logActivity(env, user.id, { company, title, kind: "queued",
       message: `Added to To-Apply (${score}% match)${it?.source ? ` from ${it.source}` : ""}.` });
   }
   if (!added) return err(400, "Each item needs at least company and title.");
   for (let i = 0; i < stmts.length; i += 30) await env.DB.batch(stmts.slice(i, i + 30));
-  return json({ ok: true, added });
+
+  // Read back what ACTUALLY landed. Previously this returned {ok:true} without
+  // checking, and the client removed the card on that alone — so if a row ended
+  // up in any non-pending state the job vanished from both lists. The caller now
+  // gets each row's real status and can refuse to drop the card unless it is
+  // genuinely on the worklist.
+  const results: { company: string; title: string; jobId: string; status: string; onList: boolean }[] = [];
+  for (const w of wanted) {
+    const row = await env.DB.prepare(
+      "SELECT status FROM apply_queue WHERE user_id = ? AND company = ? AND title = ?"
+    ).bind(user.id, w.company, w.title).first<{ status: string }>();
+    const status = row?.status ?? "missing";
+    results.push({ ...w, status, onList: status === "pending" });
+  }
+
+  // Take the job out of Jobs For You HERE, server-side, and only for rows that
+  // really made it onto the worklist. This used to be a separate client PATCH
+  // whose failure was swallowed, which let the two lists disagree.
+  const onList = results.filter((r) => r.onList).map((r) => r.jobId).filter(Boolean);
+  if (onList.length) {
+    const marks = onList.map(() => "?").join(",");
+    await env.DB.prepare(
+      `UPDATE matches SET status = 'queued'
+        WHERE user_id = ? AND status = 'matched'
+          AND job_uuid IN (SELECT uuid FROM jobs WHERE job_id IN (${marks}))`
+    ).bind(user.id, ...onList).run().catch(() => {});
+  }
+
+  const queued = results.filter((r) => r.onList).length;
+  return json({ ok: queued > 0, added: queued, results });
 };
 
 export const onRequestPatch: PagesFunction<Env, string, { user?: CtxUser }> = async ({ request, env, data }) => {
