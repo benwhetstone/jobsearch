@@ -1329,20 +1329,28 @@
       // inbox classifier, not by hand.
       stats.innerHTML = ""; stats.hidden = false;
       // Each box is a filter: click to see just that stage, click again for all.
+      // Interview and Offer are their own stages, not a footnote inside
+      // "Applied" — they're the ones worth watching, so they get their own
+      // clickable box. Applied now means applied-and-waiting.
       const GROUPS = {
         actionRequired: ["actionRequired"],
         readyToApply: ["readyToApply", "approved", "queued", "preparing"],
         applying: ["applying"],
-        applied: ["applied", "interview", "offer"],
-        rejected: ["rejected", "withdrawn", "failed"],
+        applied: ["applied"],
+        interview: ["interview"],
+        offer: ["offer"],
+        rejected: ["rejected", "failed"],
+        withdrawn: ["withdrawn"],
         expired: ["expired"],
       };
-      const applied = (counts.applied || 0) + (counts.interview || 0) + (counts.offer || 0);
       [["actionRequired", counts.actionRequired || 0, "Action required", "amber"],
        ["readyToApply", (counts.readyToApply || 0) + (counts.approved || 0) + (counts.queued || 0) + (counts.preparing || 0), "Ready to apply", ""],
        ["applying", counts.applying || 0, "Applying", ""],
-       ["applied", applied, "Applied", ""],
-       ["rejected", (counts.rejected || 0) + (counts.withdrawn || 0) + (counts.failed || 0), "Rejected", "plain"],
+       ["applied", counts.applied || 0, "Applied", ""],
+       ["interview", counts.interview || 0, "Interview", "solid"],
+       ["offer", counts.offer || 0, "Offer", "solid"],
+       ["rejected", (counts.rejected || 0) + (counts.failed || 0), "Rejected", "plain"],
+       ["withdrawn", counts.withdrawn || 0, "Withdrawn", "plain"],
        ["expired", counts.expired || 0, "Expired", "plain"]].forEach(([k, n, lbl, cls]) => {
         const s = el("button", "stat" + (cls ? " " + cls : ""));
         s.style.cursor = "pointer"; s.style.border = "0"; s.style.textAlign = "left"; s.style.font = "inherit";
