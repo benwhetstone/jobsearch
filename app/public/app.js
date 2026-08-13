@@ -630,10 +630,6 @@
     id.appendChild(el("div", "co", j.company || "Company not listed"));
     top.appendChild(id);
 
-    const sc = el("div", "job-score " + "score-" + scoreClass(m.totalScore));
-    sc.appendChild(el("b", null, m.totalScore + "%"));
-    sc.appendChild(el("span", null, "match"));
-    top.appendChild(sc);
     card.appendChild(top);
 
     const mid = el("div", "job-mid");
@@ -642,17 +638,13 @@
     // reposting of an old job never re-badges)
     if (j.firstSeenAt && j.firstSeenAt.slice(0, 10) === new Date().toISOString().slice(0, 10))
       chips.appendChild(chip("New today", null, "green"));
-    if (j.location) chips.appendChild(chip(j.location, ICON.pin));
-    if (j.remote) chips.appendChild(chip("Remote", ICON.home));
-    const pay = payLabel(j);
-    if (pay) chips.appendChild(chip(pay, ICON.card));
-    else chips.appendChild(chip("Pay not listed", ICON.card, "plain"));
     if (m.compFlag === "negotiation") chips.appendChild(chip("Negotiation candidate", null, "amber"));
     const when = ago(j.postedAt);
     if (when) chips.appendChild(chip(when, ICON.clock, "plain"));
     if (m.origin === "cowork") chips.appendChild(chip("Suggested by Cowork", null, "green"));
     else chips.appendChild(chip(j.source, null, "plain"));
     mid.appendChild(chips);
+    mid.appendChild(factRow(j));
     // Cowork's one-line "why it fits", when present
     if (m.note) {
       const n = el("div", null, m.note);
@@ -662,7 +654,6 @@
     if (j.jobId) mid.appendChild(jobIdChip(j.jobId));
 
     const actions = el("div", "job-actions");
-    const why = el("button", "btn", "Why this score");
     const skip = el("button", "btn ghost", "Not interested");
     // Link straight to the employer's original posting (opens in a new tab).
     const openUrl = j.applyUrl || j.url;
@@ -682,7 +673,9 @@
           salaryMin: m.job.salaryMin, salaryMax: m.job.salaryMax,
           description: m.job.snippet || undefined, jobId: m.job.jobId || undefined,
           notes: m.note || undefined,
-          matchScore: m.totalScore, source: m.origin === "cowork" ? "cowork" : "jobs-for-you",
+          experience: m.job.experience || undefined, skills: m.job.skills || undefined,
+          arrangement: m.job.arrangement || undefined,
+          source: m.origin === "cowork" ? "cowork" : "jobs-for-you",
         }) });
         // Only drop the card once the server confirms the job is actually ON the
         // worklist. Removing it optimistically is how jobs used to fall through
@@ -706,7 +699,7 @@
         toast(e.message, 3000);
       }
     });
-    actions.appendChild(why); actions.appendChild(skip); actions.appendChild(view); actions.appendChild(apply);
+    actions.appendChild(skip); actions.appendChild(view); actions.appendChild(apply);
     mid.appendChild(actions);
     card.appendChild(mid);
 
@@ -715,37 +708,6 @@
       card.appendChild(s);
     }
 
-    // score breakdown (collapsed)
-    const panel = el("div", "job-why"); panel.hidden = true;
-    const head = el("div", "why-head");
-    const tile = el("div", "why-tile " + scoreClass(m.totalScore), m.totalScore + "%");
-    const ht = el("div");
-    ht.appendChild(el("div", "t", headline(m.totalScore)));
-    ht.appendChild(el("div", "d", `Based on your profile, you have ${m.totalScore}% of what this role is asking for.`));
-    head.appendChild(tile); head.appendChild(ht);
-    panel.appendChild(head);
-    ["skills","experience","compensation","terms","company"].forEach((k) => {
-      const n = m.rankers[k];
-      const r = el("div", "ranker");
-      r.appendChild(el("div", "pct " + scoreClass(n), n + "%"));
-      const t = el("div");
-      t.appendChild(el("div", "nm", LABELS[k]));
-      t.appendChild(el("div", "ds", bandFor(k, n)));
-      r.appendChild(t);
-      panel.appendChild(r);
-    });
-    if (m.missing && m.missing.length) {
-      const b = el("div", "banner warn");
-      b.style.marginTop = "10px"; b.style.marginBottom = "0";
-      b.textContent = "Add these to your profile for a sharper score: " + m.missing.join(", ") + ".";
-      panel.appendChild(b);
-    }
-    card.appendChild(panel);
-
-    why.addEventListener("click", () => {
-      panel.hidden = !panel.hidden;
-      why.textContent = panel.hidden ? "Why this score" : "Hide breakdown";
-    });
     skip.addEventListener("click", async () => {
       try {
         await api("/matches", { method: "PATCH", body: JSON.stringify({ jobUuid: m.jobUuid, status: "skipped" }) });
@@ -769,7 +731,7 @@
     const arr = [...list];
     if (JOBS_SORT === "newest") arr.sort((a, b) => byDate(b) - byDate(a));
     else if (JOBS_SORT === "salary") arr.sort((a, b) => bySalary(b) - bySalary(a));
-    else arr.sort((a, b) => b.totalScore - a.totalScore);
+    else arr.sort((a, b) => byDate(b) - byDate(a));   // scores retired: newest is the sane default
     return arr;
   }
   // Jobs For You shows ONLY jobs autopilot can file end-to-end (globalwork's
@@ -978,11 +940,6 @@
     id.appendChild(el("h3", null, j.title));
     id.appendChild(el("div", "co", j.company || "Company not listed"));
     top.appendChild(id);
-    if (d.match) {
-      const sc = el("div", "job-score score-" + scoreClass(d.match.totalScore));
-      sc.appendChild(el("b", null, d.match.totalScore + "%")); sc.appendChild(el("span", null, "match"));
-      top.appendChild(sc);
-    }
     card.appendChild(top);
 
     const chips = el("div", "chips"); chips.style.marginTop = "11px";
@@ -1030,27 +987,6 @@
     box.appendChild(card);
 
     // score breakdown, open by default
-    if (d.match) {
-      const why = el("div", "card block-body");
-      const head = el("div", "why-head");
-      const tile = el("div", "why-tile " + scoreClass(d.match.totalScore), d.match.totalScore + "%");
-      const ht = el("div");
-      ht.appendChild(el("div", "t", headline(d.match.totalScore)));
-      ht.appendChild(el("div", "d", "How this role scored against your profile."));
-      head.appendChild(tile); head.appendChild(ht);
-      why.appendChild(head);
-      ["skills","experience","compensation","terms","company"].forEach((k) => {
-        const n = d.match.rankers[k];
-        const r = el("div", "ranker");
-        r.appendChild(el("div", "pct " + scoreClass(n), n + "%"));
-        const t = el("div");
-        t.appendChild(el("div", "nm", LABELS[k]));
-        t.appendChild(el("div", "ds", bandFor(k, n)));
-        r.appendChild(t);
-        why.appendChild(r);
-      });
-      box.appendChild(why);
-    }
 
     // the posting itself
     const body = el("div", "card block-body");
@@ -1126,22 +1062,18 @@
       const id = el("div", "job-id");
       id.appendChild(el("h3", null, q.title));
       id.appendChild(el("div", "co", q.company || ""));
-      if (q.location) { const l = el("div", "appdate", q.location); l.style.cssText = "font-size:12px;color:var(--muted);margin-top:3px"; id.appendChild(l); }
       if (q.job_id) { const jw = el("div"); jw.style.marginTop = "5px"; jw.appendChild(jobIdChip(q.job_id)); id.appendChild(jw); }
       top.appendChild(id);
-      if (q.match_score != null) {
-        const sc = el("div", "job-score score-" + scoreClass(q.match_score));
-        sc.appendChild(el("b", null, q.match_score + "%")); sc.appendChild(el("span", null, "match"));
-        top.appendChild(sc);
-      }
       card.appendChild(top);
+      // the SAME four facts, in the same order, as the Jobs For You card
+      card.appendChild(factRow({
+        salaryMin: q.salary_min, salaryMax: q.salary_max, location: q.location,
+        arrangement: q.arrangement, experience: q.experience,
+        skills: (() => { try { return JSON.parse(q.skills_json || "[]"); } catch { return []; } })(),
+      }));
       if (q.notes) card.appendChild(el("p", "job-snip", q.notes));
-      // meta line: salary + where it came from + when it was queued
+      // provenance line: where it came from + when it was queued
       const metaBits = [];
-      if (q.salary_min || q.salary_max) {
-        const k = (n) => "$" + Math.round(n / 1000) + "k";
-        metaBits.push(q.salary_min && q.salary_max ? k(q.salary_min) + "–" + k(q.salary_max) : k(q.salary_max || q.salary_min));
-      }
       if (q.source) metaBits.push(q.source.replace(/-/g, " "));
       if (q.created_at) metaBits.push("added " + fmtDate(q.created_at));
       if (q.priority) metaBits.push("priority " + q.priority);
@@ -1251,6 +1183,40 @@
     const ap = h >= 12 ? "pm" : "am"; h = h % 12 || 12;
     return MON[d.getMonth()] + " " + d.getDate() + ", " + h + ":" + m + ap;
   }
+  // ---- the standard card fact row -----------------------------------------
+  // Every card — Jobs For You, To-Apply, Applications — shows the SAME four
+  // facts in the SAME order: Pay, Location, Experience, Skills. A fact with no
+  // data still renders, saying "Not listed", so the layout never shifts and a
+  // gap is visible rather than silently absent.
+  function payText(f) {
+    const k = (n) => "$" + Math.round(n / 1000) + "k";
+    if (f.salaryMin && f.salaryMax) return k(f.salaryMin) + "–" + k(f.salaryMax);
+    if (f.salaryMax || f.salaryMin) return k(f.salaryMax || f.salaryMin);
+    return null;
+  }
+  function placeText(f) {
+    const arr = f.arrangement ? f.arrangement[0].toUpperCase() + f.arrangement.slice(1) : (f.remote ? "Remote" : null);
+    const loc = (f.location || "").trim();
+    if (arr && loc && !loc.toLowerCase().includes(arr.toLowerCase())) return arr + " · " + loc;
+    return arr || loc || null;
+  }
+  // facts = {salaryMin, salaryMax, location, remote, arrangement, experience, skills[]}
+  function factRow(f) {
+    const wrap = el("div", "factrow");
+    const add = (label, value) => {
+      const c = el("div", "fact");
+      c.appendChild(el("div", "fact-k", label));
+      const v = el("div", "fact-v" + (value ? "" : " empty"), value || "Not listed");
+      c.appendChild(v); wrap.appendChild(c);
+    };
+    add("Pay", payText(f));
+    add("Location", placeText(f));
+    add("Experience", f.experience || null);
+    const sk = Array.isArray(f.skills) ? f.skills.filter(Boolean) : [];
+    add("Skills", sk.length ? sk.slice(0, 6).join(", ") + (sk.length > 6 ? ` +${sk.length - 6}` : "") : null);
+    return wrap;
+  }
+
   // The canonical job_id, shown as a small copyable mono chip. Assigned when a
   // job hits To-Apply and carried through to the application unchanged.
   function jobIdChip(id) {
@@ -1317,7 +1283,7 @@
     sortWrap.style.cssText = "display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)";
     sortWrap.appendChild(el("span", null, "Sort"));
     const sortSel = el("select", "movesel");
-    [["recent", "Newest first"], ["oldest", "Oldest first"], ["company", "Company A–Z"], ["match", "Match %"]]
+    [["recent", "Newest first"], ["oldest", "Oldest first"], ["company", "Company A–Z"]]
       .forEach(([v, l]) => { const o = new Option(l, v); if (v === APP_SORT) o.selected = true; sortSel.appendChild(o); });
     sortSel.addEventListener("change", () => { APP_SORT = sortSel.value; renderApplications(APPS_CACHE, counts); });
     sortWrap.appendChild(sortSel);
@@ -1443,11 +1409,6 @@
         id.appendChild(dEl);
       }
       top.appendChild(id);
-      if (a.matchScore != null) {
-        const sc = el("div", "job-score score-" + scoreClass(a.matchScore));
-        sc.appendChild(el("b", null, a.matchScore + "%")); sc.appendChild(el("span", null, "match"));
-        top.appendChild(sc);
-      }
       card.appendChild(top);
 
       const mid = el("div", "job-mid");
@@ -1643,11 +1604,6 @@
     id.appendChild(el("h3", null, d.job.title));
     id.appendChild(el("div", "co", d.job.company || ""));
     top.appendChild(id);
-    if (d.matchScore != null) {
-      const sc = el("div", "job-score score-" + scoreClass(d.matchScore));
-      sc.appendChild(el("b", null, d.matchScore + "%")); sc.appendChild(el("span", null, "match"));
-      top.appendChild(sc);
-    }
     head.appendChild(top);
     const chips = el("div", "chips"); chips.style.marginTop = "10px";
     chips.appendChild(chip(STATUS_LABEL[d.status] || d.status, null, STATUS_CLASS[d.status] || "plain"));

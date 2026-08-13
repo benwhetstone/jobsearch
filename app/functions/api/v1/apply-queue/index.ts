@@ -11,7 +11,6 @@
 //         action "skipped" -> mark the queue row skipped
 //         action "reset"   -> back to pending
 import { json, err, currentUser, logActivity, type Env, type CtxUser } from "../../_lib";
-import { scoringProfile, scoreJob } from "../../_match";
 import { canonicalJobId } from "../../_jobid";
 
 const uuid = () => crypto.randomUUID();
@@ -36,7 +35,7 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
   const reason = (q.get("reason") || "all").trim().toLowerCase();
   const rows = await env.DB.prepare(
     `SELECT id, company, title, url, location, notes, source, priority, status, application_uuid,
-            match_score, salary_min, salary_max, resume_url, cover_url, job_id, created_at, applied_at,
+            match_score, salary_min, salary_max, resume_url, cover_url, job_id, experience, skills_json, arrangement, created_at, applied_at,
             skip_reason, skip_detail, skipped_by, skipped_at
        FROM apply_queue WHERE user_id = ? AND (? = 'all' OR status = ?) AND (? = 'all' OR skip_reason = ?)
       ORDER BY priority DESC, match_score DESC, created_at ASC`
@@ -62,9 +61,9 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
   try { body = await request.json(); } catch { return err(400, "Invalid JSON body."); }
   const items = Array.isArray(body?.items) ? body.items : [body];
   const now = new Date().toISOString();
-  // Score every item with the SAME engine as the feed (profile + résumé), so
-  // the queue carries the authoritative match % no matter who added it.
-  const profile = await scoringProfile(env, user.id);
+  // Scores are retired — Ben reads the standard card facts and judges for
+  // himself. A caller may still pass matchScore and we'll store it, but we no
+  // longer load the profile/résumé to compute one, which makes this call fast.
   let added = 0;
   const stmts = [];
   const wanted: { company: string; title: string; jobId: string }[] = [];
@@ -76,6 +75,19 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
     const desc = it?.description ? String(it.description).slice(0, 8000) : null;
     const resumeUrl = String(it?.resumeUrl || "").trim() || null;
     const coverUrl = String(it?.coverUrl || "").trim() || null;
+    // Standard card facts, carried from the suggestion so the To-Apply card
+    // shows the same four things the Jobs For You card did.
+    const experience = it?.experience ? String(it.experience).trim().slice(0, 60) : null;
+    const skillsJson = Array.isArray(it?.skills)
+      ? JSON.stringify(it.skills.map((x: any) => String(x).trim()).filter(Boolean).slice(0, 12))
+      : (typeof it?.skills === "string" && it.skills.trim()
+          ? JSON.stringify(it.skills.split(",").map((x: string) => x.trim()).filter(Boolean).slice(0, 12))
+          : null);
+    const arrangement = (() => {
+      const a = String(it?.arrangement || "").trim().toLowerCase().replace("on-site", "onsite");
+      if (["remote", "hybrid", "onsite"].includes(a)) return a;
+      return it?.remote ? "remote" : null;
+    })();
     // Canonical identity so a queued job matches the same posting in the feed
     // and, later, the application. Caller may pass jobId (from POST /job-id);
     // otherwise derive it from the same fields the endpoint would.
@@ -87,14 +99,10 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
     // already-scored value); otherwise score here — but scoring a bare title
     // with no posting text is weak, so a passed score always wins.
     const score = it?.matchScore != null && Number.isFinite(Number(it.matchScore))
-      ? Math.round(Number(it.matchScore))
-      : Math.round(scoreJob(profile, {
-          title, company, location: it?.location || null, remote: !!it?.remote,
-          salaryMin: sMin, salaryMax: sMax, description: desc, postedAt: it?.postedAt || null,
-        }).total * 100);
+      ? Math.round(Number(it.matchScore)) : null;
     stmts.push(env.DB.prepare(
-      `INSERT INTO apply_queue (id, user_id, company, title, url, location, notes, source, priority, match_score, salary_min, salary_max, description, resume_url, cover_url, job_id, status, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'pending', ?)
+      `INSERT INTO apply_queue (id, user_id, company, title, url, location, notes, source, priority, match_score, salary_min, salary_max, description, resume_url, cover_url, job_id, experience, skills_json, arrangement, status, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'pending', ?)
        ON CONFLICT(user_id, company, title) DO UPDATE SET
          url=COALESCE(excluded.url, apply_queue.url),
          notes=COALESCE(excluded.notes, apply_queue.notes),
@@ -107,6 +115,9 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
          resume_url=COALESCE(excluded.resume_url, apply_queue.resume_url),
          cover_url=COALESCE(excluded.cover_url, apply_queue.cover_url),
          job_id=excluded.job_id,
+         experience=COALESCE(excluded.experience, apply_queue.experience),
+         skills_json=COALESCE(excluded.skills_json, apply_queue.skills_json),
+         arrangement=COALESCE(excluded.arrangement, apply_queue.arrangement),
          priority=excluded.priority,
          -- Re-adding is a deliberate "put this back on my list". Without this,
          -- an upsert onto a previously-skipped row updated the fields but left
@@ -121,7 +132,7 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
     ).bind(uuid(), user.id, company, title, String(it?.url || "").trim() || null,
            String(it?.location || "").trim() || null, String(it?.notes || "").trim() || null,
            String(it?.source || "").trim() || null, Number(it?.priority) || 0, score,
-           sMin, sMax, desc, resumeUrl, coverUrl, jobId, now));
+           sMin, sMax, desc, resumeUrl, coverUrl, jobId, experience, skillsJson, arrangement, now));
     added++;
     wanted.push({ company, title, jobId });
     await logActivity(env, user.id, { company, title, kind: "queued",

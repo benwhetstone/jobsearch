@@ -491,3 +491,14 @@ textarea.autosize { resize: none; overflow: hidden; min-height: 42px; line-heigh
   border-radius: 8px; background: var(--accent, #2f6df6); color: #fff;
   font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center; }
 @media (max-width: 900px) { .tabbar button { position: relative; } }
+
+/* standard card fact row — same four facts, same order, on every card */
+.factrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+  margin: 10px 0 4px; padding: 10px 0; border-top: 1px solid var(--border, #eceef2);
+  border-bottom: 1px solid var(--border, #eceef2); }
+.fact { min-width: 0; }
+.fact-k { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--faint, #98a2b3); margin-bottom: 2px; }
+.fact-v { font-size: 13px; font-weight: 600; color: var(--text, #14181d); overflow-wrap: anywhere; }
+.fact-v.empty { font-weight: 400; color: var(--muted, #8a94a6); }
+@media (max-width: 700px) { .factrow { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; } }
