@@ -162,7 +162,7 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
   // ---- manual pipeline movement: a phone call, an email the inbox missed,
   //      or any update from outside the system. Persisted like any other move.
   if (body.action === "setStatus") {
-    const allowed = new Set(["applied", "interview", "offer", "rejected", "withdrawn"]);
+    const allowed = new Set(["applied", "interview", "offer", "hired", "rejected", "withdrawn"]);
     const to = String(body.status || "");
     if (!allowed.has(to)) return err(400, `status must be one of: ${[...allowed].join(", ")}`);
     const at = stampFrom(body.submittedAt ?? body.appliedAt ?? body.at, now);

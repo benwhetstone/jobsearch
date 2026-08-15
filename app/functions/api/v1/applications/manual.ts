@@ -8,7 +8,7 @@ import { json, err, currentUser, logActivity, type Env, type CtxUser } from "../
 import { canonicalJobId } from "../../_jobid";
 
 const uuid = () => crypto.randomUUID();
-const STAGES = ["applied", "interview", "offer", "rejected"];
+const STAGES = ["applied", "interview", "offer", "hired", "rejected"];
 
 export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = async ({ request, env, data }) => {
   const user = currentUser(data);

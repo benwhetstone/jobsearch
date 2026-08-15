@@ -1159,12 +1159,12 @@
   const STATUS_LABEL = {
     queued: "Queued", preparing: "Preparing", actionRequired: "Action required",
     readyToApply: "Ready to apply", approved: "Approved", applying: "Submitting…",
-    applied: "Applied", interview: "Interview", offer: "Offer", rejected: "Rejected",
+    applied: "Applied", interview: "Interview", offer: "Offer", hired: "Hired", rejected: "Rejected",
     withdrawn: "Withdrawn", failed: "Failed", expired: "Expired",
   };
   const STATUS_CLASS = {
     queued: "plain", preparing: "plain", actionRequired: "amber", readyToApply: "green",
-    approved: "green", applying: "green", applied: "green", interview: "green", offer: "green",
+    approved: "green", applying: "green", applied: "green", interview: "green", offer: "green", hired: "green",
     rejected: "plain", withdrawn: "plain", failed: "amber", expired: "plain",
   };
   let QUEUE_TIMER = null;
@@ -1305,6 +1305,7 @@
         applied: ["applied"],
         interview: ["interview"],
         offer: ["offer"],
+        hired: ["hired"],
         rejected: ["rejected", "failed"],
         withdrawn: ["withdrawn"],
         expired: ["expired"],
@@ -1315,6 +1316,7 @@
        ["applied", counts.applied || 0, "Applied", ""],
        ["interview", counts.interview || 0, "Interview", "solid"],
        ["offer", counts.offer || 0, "Offer", "solid"],
+       ["hired", counts.hired || 0, "Hired", "solid"],
        ["rejected", (counts.rejected || 0) + (counts.failed || 0), "Rejected", "plain"],
        ["withdrawn", counts.withdrawn || 0, "Withdrawn", "plain"],
        ["expired", counts.expired || 0, "Expired", "plain"]].forEach(([k, n, lbl, cls]) => {
@@ -1440,10 +1442,10 @@
         actions.appendChild(d2);
       }
       // manual pipeline movement: phone calls and emails the inbox never saw
-      if (["applied", "interview", "offer", "rejected", "withdrawn", "approved", "readyToApply"].includes(a.status)) {
+      if (["applied", "interview", "offer", "hired", "rejected", "withdrawn", "approved", "readyToApply"].includes(a.status)) {
         const mv = el("select", "movesel");
         mv.appendChild(new Option("Move to…", ""));
-        [["applied", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["rejected", "Rejected"], ["withdrawn", "Withdrawn"]]
+        [["applied", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["hired", "Hired"], ["rejected", "Rejected"], ["withdrawn", "Withdrawn"]]
           .forEach(([v, l]) => { if (v !== a.status) mv.appendChild(new Option(l, v)); });
         mv.addEventListener("click", (ev) => ev.stopPropagation());
         mv.addEventListener("change", async () => {
@@ -1499,7 +1501,7 @@
         line.appendChild(step("Submitting application", "busy"));
       } else if (a.status === "expired") {
         line.appendChild(el("span", null, "Expired"));
-      } else if (a.status === "applied" || a.status === "interview" || a.status === "offer") {
+      } else if (a.status === "applied" || a.status === "interview" || a.status === "offer" || a.status === "hired") {
         line.appendChild(step("Submitted", "done"));
       } else {
         const formDone = !working && a.fields.total > 0 && a.fields.needsHuman === 0;
@@ -1544,7 +1546,7 @@
     stW.appendChild(el("span", null, "Stage"));
     const stage = el("select");
     stage.style.cssText = "display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--border,#d7dbe3);border-radius:8px;font:inherit;font-weight:400";
-    [["applied", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["rejected", "Rejected"]].forEach(([v, l]) => stage.appendChild(new Option(l, v)));
+    [["applied", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["hired", "Hired"], ["rejected", "Rejected"]].forEach(([v, l]) => stage.appendChild(new Option(l, v)));
     stW.appendChild(stage); row.appendChild(stW);
     const dtW = el("label"); dtW.style.cssText = "flex:1;font-size:13px;font-weight:600";
     dtW.appendChild(el("span", null, "Date applied"));
@@ -1620,7 +1622,7 @@
     }
     // Regenerate: re-tailor résumé + cover + form from the current profile,
     // for anything not yet submitted. Sharpen your answers, then refresh here.
-    if (!["applied", "interview", "offer", "rejected", "withdrawn"].includes(d.status)) {
+    if (!["applied", "interview", "offer", "hired", "rejected", "withdrawn"].includes(d.status)) {
       const regen = el("button", "btn", "↻ Regenerate resume & cover letter");
       regen.style.marginTop = "11px";
       regen.title = "Re-write both documents from your latest profile answers and template";
