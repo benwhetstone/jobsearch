@@ -161,7 +161,13 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
 
   // ---- manual pipeline movement: a phone call, an email the inbox missed,
   //      or any update from outside the system. Persisted like any other move.
-  if (body.action === "setStatus") {
+  //
+  // A bare { status } with no action counts too. It is the obvious intent, and
+  // the alternative was worse than pedantry: such a body used to fall past every
+  // branch to the answers-recompute below and stamp the row 'readyToApply',
+  // returning 200 — so a caller marking six rejections silently un-applied six
+  // applications instead.
+  if (body.action === "setStatus" || (!body.action && body.status != null)) {
     const allowed = new Set(["applied", "interview", "offer", "hired", "rejected", "withdrawn"]);
     const to = String(body.status || "");
     if (!allowed.has(to)) return err(400, `status must be one of: ${[...allowed].join(", ")}`);
@@ -272,8 +278,18 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
       `Valid actions: update, attachDocs, markApplied, setStatus, regenerate, discard, moveBack, approve.`);
   }
 
-  // No action: this is an answers-only submission. Recompute status from whether
-  // any employer question still needs the user.
+  // Only an ANSWERS submission may reach here. Anything else — an empty body, a
+  // typo'd field, a shape we don't recognise — must not touch the row: this
+  // recompute rewrites status, and reaching it by accident is what silently
+  // turned submitted applications back into 'readyToApply'.
+  if (!Array.isArray(body.answers)) {
+    return err(400, "Nothing to do: no action and no answers[]. No change made. " +
+      "To move an application use { action: \"setStatus\", status: \"applied|interview|offer|hired|rejected|withdrawn\" } " +
+      "(a bare { status } is accepted too). Other actions: update, attachDocs, markApplied, regenerate, discard, moveBack, approve.");
+  }
+
+  // Answers-only submission: recompute status from whether any employer question
+  // still needs the user.
   const open = await env.DB.prepare(
     "SELECT COUNT(*) AS n FROM application_form_fields WHERE application_uuid = ? AND fill_status = 'needs_human'"
   ).bind(uuid).first<{ n: number }>();
