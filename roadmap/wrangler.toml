@@ -1,0 +1,16 @@
+# Ben's Data Analytics Roadmap — roadmap.benwhetstone.info
+#
+# The site was originally deployed from a working directory that no longer
+# exists, so its source now lives here, in the repo, where it belongs.
+#
+# Storage: the SAME KV namespace the original /api/progress used
+# (bens-roadmap-progress). Progress stays under key "state" untouched; the
+# per-stage salary bands are a sibling key "salaries". Keeping the existing
+# store means no migration and no risk to recorded progress.
+name = "bens-roadmap"
+pages_build_output_dir = "public"
+compatibility_date = "2026-01-01"
+
+[[kv_namespaces]]
+binding = "PROGRESS"
+id = "fa914bb7714d4037b9feed15e2bf008e"

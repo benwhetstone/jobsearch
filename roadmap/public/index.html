@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ben's Data Analytics Roadmap</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b7fd4'/%3E%3Crect x='7' y='18' width='4' height='7' rx='1' fill='%23fff'/%3E%3Crect x='14' y='12' width='4' height='13' rx='1' fill='%23fff'/%3E%3Crect x='21' y='7' width='4' height='18' rx='1' fill='%23fff'/%3E%3Cpath d='M7 15 L15 10 L21 6' stroke='%23fff' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round' opacity='.55'/%3E%3C/svg%3E">
+<!--
+  LIVING DOCUMENT - Ben's Data Analytics Roadmap
+  - Self-contained single file. Host on GitHub Pages: keep named index.html.
+  - Cert & tool pills link to official training; job pills open live pre-filtered searches.
+  - Light/dark themes; animated salary trajectory; timeline spine + medallions.
+-->
+<script>
+  (function(){try{var t=localStorage.getItem('rm-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}document.documentElement.classList.add('js');})();
+</script>
+<style>
+  :root{
+    --bg1:#f7fafd;--bg2:#eaf1f8;--glow1:rgba(11,127,212,.10);--glow2:rgba(108,92,231,.08);
+    --card:#ffffff;--card-br:#e7edf3;--text:#182233;--muted:#5c6b7f;--faint:#93a1b2;
+    --accent:#0b7fd4;--spine:#dbe5f0;--hairline:#eef2f7;
+    --tool-bg:#e8f6ee;--tool-fg:#1c7742;--tool-br:#aadcbd;
+    --opt-bg:#ffffff;--opt-fg:#4a5768;--opt-br:#d5dce4;
+    --job-bg:#fff4e4;--job-fg:#9a5b00;--job-br:#f1cc8e;
+    --shadow:0 1px 2px rgba(16,32,64,.05),0 10px 30px rgba(16,32,64,.07);
+    --shadow-h:0 2px 6px rgba(16,32,64,.08),0 20px 44px rgba(16,32,64,.13);
+  }
+  :root[data-theme="dark"]{
+    --bg1:#0a1120;--bg2:#0d1424;--glow1:rgba(58,160,255,.16);--glow2:rgba(108,92,231,.16);
+    --card:rgba(22,32,50,.72);--card-br:rgba(126,156,196,.18);--text:#e9eff8;--muted:#a2b3c9;--faint:#69798f;
+    --accent:#48a7ff;--spine:rgba(126,156,196,.24);--hairline:rgba(126,156,196,.14);
+    --tool-bg:rgba(30,150,90,.16);--tool-fg:#82e3a9;--tool-br:rgba(120,220,160,.30);
+    --opt-bg:rgba(255,255,255,.045);--opt-fg:#c6d2e1;--opt-br:rgba(160,182,208,.24);
+    --job-bg:rgba(240,165,45,.13);--job-fg:#ffce80;--job-br:rgba(240,190,110,.30);
+    --shadow:0 2px 8px rgba(0,0,0,.32),0 18px 44px rgba(0,0,0,.40);
+    --shadow-h:0 4px 14px rgba(0,0,0,.40),0 26px 60px rgba(0,0,0,.52);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text);
+    background:var(--bg2);min-height:100vh;padding:34px 20px 44px;position:relative;
+    -webkit-font-smoothing:antialiased;transition:color .3s ease;
+  }
+  /* fixed background layer (avoids iOS Safari background-attachment:fixed bugs) */
+  body::before{content:"";position:fixed;inset:0;z-index:-1;transition:background .4s ease;
+    background:
+      radial-gradient(1100px 560px at 12% -8%, var(--glow1), transparent 60%),
+      radial-gradient(900px 520px at 104% 2%, var(--glow2), transparent 55%),
+      linear-gradient(180deg,var(--bg1),var(--bg2));}
+  .rm-wrap{max-width:860px;margin:0 auto;line-height:1.45;}
+
+  /* ---- header ---- */
+  .rm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
+  .rm-title{font-size:clamp(24px,5vw,32px);font-weight:800;margin:0;letter-spacing:-.02em;
+    background:linear-gradient(92deg,var(--text) 30%,var(--accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  .rm-sub{font-size:13.5px;color:var(--muted);margin:8px 0 3px;}
+  .rm-sub b{color:var(--text);font-weight:650;}
+  .rm-meta{font-size:11px;color:var(--faint);margin:0 0 4px;}
+  .rm-toggle{flex:0 0 auto;width:38px;height:38px;border-radius:11px;border:1px solid var(--card-br);
+    background:var(--card);color:var(--text);font-size:16px;cursor:pointer;box-shadow:var(--shadow);
+    display:flex;align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s,background .3s;backdrop-filter:blur(8px);}
+  .rm-toggle:hover{transform:translateY(-1px) rotate(-8deg);box-shadow:var(--shadow-h);}
+  .rm-navlink{display:inline-flex;align-items:center;height:38px;padding:0 14px;border-radius:11px;border:1px solid var(--card-br);
+    background:var(--card);color:var(--text);font-size:12.5px;font-weight:600;text-decoration:none;box-shadow:var(--shadow);backdrop-filter:blur(8px);white-space:nowrap;transition:color .15s,border-color .15s;}
+  .rm-navlink:hover{color:var(--accent);border-color:var(--accent);}
+
+  /* ---- trajectory chart ---- */
+  .rm-chart{margin:16px 0 8px;padding:14px 12px 6px;border:1px solid var(--card-br);border-radius:16px;
+    background:var(--card);box-shadow:var(--shadow);backdrop-filter:blur(10px);}
+  .rm-chart svg{display:block;width:100%;height:auto;overflow:visible;}
+  .spark-base{stroke:var(--hairline);stroke-width:1;stroke-dasharray:2 4;}
+  .spark-area{opacity:0;animation:fadeArea .9s ease forwards 1.2s;}
+  .spark-line{stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round;
+    filter:drop-shadow(0 3px 8px rgba(11,127,212,.35));
+    stroke-dasharray:1600;stroke-dashoffset:1600;animation:draw 1.7s cubic-bezier(.6,.02,.2,1) forwards .25s;}
+  .spark-node circle{stroke:var(--card);stroke-width:2.5;opacity:0;transform-origin:center;animation:pop .5s cubic-bezier(.3,1.4,.5,1) forwards;}
+  .spark-node.n0 circle{animation-delay:.75s;} .spark-node.n1 circle{animation-delay:.9s;} .spark-node.n2 circle{animation-delay:1.15s;}
+  .spark-node.n3 circle{animation-delay:1.4s;} .spark-node.n4 circle{animation-delay:1.65s;}
+  .spark-glow{fill:#1f56d8;opacity:0;animation:glow 2.4s ease-in-out 1.8s infinite;}
+  .spark-hering{fill:none;stroke:var(--accent);stroke-width:2;animation:hering 1.8s ease-out infinite;}
+  .spark-hedot{fill:var(--accent);stroke:var(--card);stroke-width:2;}
+  @keyframes hering{0%{r:5;opacity:.9;}100%{r:16;opacity:0;}}
+  .spark-sal{font:700 12px ui-sans-serif,system-ui,sans-serif;fill:var(--text);text-anchor:middle;opacity:0;animation:fadeArea .5s ease forwards;}
+  .spark-sal.n1{animation-delay:1s;}.spark-sal.n2{animation-delay:1.25s;}.spark-sal.n3{animation-delay:1.5s;}.spark-sal.n4{animation-delay:1.75s;}
+  .spark-stg{font:600 10px ui-sans-serif,system-ui,sans-serif;fill:var(--faint);text-anchor:middle;text-transform:uppercase;letter-spacing:.06em;}
+  @keyframes draw{to{stroke-dashoffset:0;}}
+  @keyframes fadeArea{to{opacity:1;}}
+  @keyframes pop{from{opacity:0;transform:scale(0);}to{opacity:1;transform:scale(1);}}
+  @keyframes glow{0%,100%{opacity:0;r:9;}50%{opacity:.5;r:15;}}
+
+  /* ---- legend ---- */
+  .rm-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11px;color:var(--muted);margin:14px 2px 22px;align-items:center;}
+  .rm-legend span{display:inline-flex;align-items:center;gap:6px;}
+  .rm-dot{width:11px;height:11px;border-radius:4px;display:inline-block;}
+  .d-core{background:linear-gradient(135deg,#3aa0ff,#0b7fd4);}
+  .d-opt{background:var(--opt-bg);border:1px solid var(--opt-br);}
+  .d-tool{background:var(--tool-bg);border:1px solid var(--tool-br);}
+  .d-job{background:var(--job-bg);border:1px solid var(--job-br);}
+  /* domain-edge callout */
+  .rm-edge{margin:2px 2px 20px;padding:11px 15px;border-radius:12px;font-size:12.5px;line-height:1.5;color:var(--muted);
+    background:color-mix(in srgb,var(--accent) 8%,var(--card));border:1px solid var(--card-br);border-left:3px solid var(--accent);box-shadow:var(--shadow);backdrop-filter:blur(8px);}
+  .rm-edge b{color:var(--text);}
+  /* existing-assets panel */
+  .rm-assets{margin:2px 2px 20px;padding:12px 15px 13px;border-radius:12px;background:color-mix(in srgb,var(--accent) 9%,var(--card));
+    border:1px solid var(--card-br);border-left:3px solid var(--accent);box-shadow:var(--shadow);backdrop-filter:blur(8px);}
+  .rm-assets-lbl{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+  .rm-assets-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .rm-asset{font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--card-br);border-radius:8px;padding:6px 11px;line-height:1.4;}
+  .rm-asset b{color:var(--text);font-weight:700;}
+  /* explicit build-order line */
+  .rm-order{font-size:10.5px;font-weight:600;color:var(--muted);margin:9px 0 1px;line-height:1.6;}
+  .rm-order b{color:var(--accent);font-weight:800;}
+  /* posting-frequency / income signal */
+  .rm-freq{font-size:10.5px;font-weight:600;color:var(--muted);margin:9px 0 1px;line-height:1.6;}
+  .rm-freq b{color:var(--job-fg);font-weight:800;}
+  /* further-reading book chips (not completable) */
+  .rm-book{background:transparent;color:var(--muted);border:1px solid var(--card-br);font-weight:600;}
+  a.rm-book:hover{color:var(--accent);border-color:var(--accent);}
+
+  /* ---- timeline ---- */
+  .tl-stage[data-stage="0"]{--stg:#64748b;--stg2:#94a3b8;}
+  .tl-badge-now::before{content:"";width:9px;height:9px;border-radius:50%;background:#fff;}
+  .tl-stage[data-stage="1"]{--stg:#0b7fd4;--stg2:#3aa0ff;}
+  .tl-stage[data-stage="2"]{--stg:#1857c8;--stg2:#2f7be6;}
+  .tl-stage[data-stage="3"]{--stg:#123f9e;--stg2:#2f6fe0;}
+  .tl-stage[data-stage="4"]{--stg:#0c2f80;--stg2:#1f56d8;}
+  .tl{position:relative;}
+  .tl::before{content:"";position:absolute;left:23px;top:26px;bottom:26px;width:2px;
+    background:linear-gradient(180deg,#3aa0ff,#2f7be6 34%,#2f6fe0 66%,#1f56d8);opacity:.55;border-radius:2px;}
+  .tl-stage{display:flex;gap:16px;align-items:flex-start;margin:0 0 14px;}
+  .js .tl-stage{opacity:0;transform:translateY(16px);transition:opacity .55s ease,transform .55s cubic-bezier(.2,.7,.3,1);}
+  .js .tl-stage.in{opacity:1;transform:none;}
+  .tl-node{flex:0 0 48px;display:flex;justify-content:center;position:relative;padding-top:16px;z-index:1;}
+  .tl-badge{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:16px;color:#fff;background:linear-gradient(140deg,var(--stg2),var(--stg));
+    box-shadow:0 4px 14px color-mix(in srgb,var(--stg) 45%,transparent),0 0 0 4px var(--bg1);
+    position:relative;}
+  :root[data-theme="dark"] .tl-badge{box-shadow:0 4px 16px color-mix(in srgb,var(--stg) 55%,transparent),0 0 0 4px var(--bg1);}
+  /* you-are-here pulse on stage 1 */
+  .tl-stage.is-current .tl-badge::after{content:"";position:absolute;inset:-4px;border-radius:50%;
+    border:2px solid var(--stg2);animation:pulse 2.2s ease-out infinite;}
+  @keyframes pulse{0%{transform:scale(1);opacity:.7;}70%{transform:scale(1.5);opacity:0;}100%{opacity:0;}}
+
+  .rm-stage{flex:1;min-width:0;position:relative;border:1px solid var(--card-br);border-left:3px solid var(--stg);
+    border-radius:14px;padding:14px 17px 15px;background:var(--card);box-shadow:var(--shadow);
+    backdrop-filter:blur(10px);transition:transform .18s ease,box-shadow .18s ease;}
+  .rm-stage:hover{transform:translateY(-2px);box-shadow:var(--shadow-h);}
+  .rm-stage.goal{background:
+    linear-gradient(135deg,color-mix(in srgb,var(--stg) 10%,var(--card)),var(--card));}
+
+  .rm-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;}
+  .rm-stlabel{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--stg);}
+  .rm-time{font-size:12px;color:var(--muted);}
+  .rm-here{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#fff;white-space:nowrap;
+    background:linear-gradient(135deg,var(--stg2),var(--stg));padding:2px 8px;border-radius:20px;margin-left:8px;
+    box-shadow:0 2px 8px color-mix(in srgb,var(--stg) 40%,transparent);}
+  .rm-sal{font-size:15px;font-weight:800;white-space:nowrap;color:var(--text);}
+  .rm-role{font-size:17.5px;font-weight:700;margin:6px 0 3px;letter-spacing:-.01em;}
+  .rm-alt{font-size:12px;color:var(--muted);margin:0 0 11px;}
+  .rm-group{margin-top:9px;}
+  .rm-glabel{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin-bottom:5px;}
+  .rm-line{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .rm-tag{font-size:11px;font-weight:600;padding:3.5px 11px;border-radius:20px;white-space:nowrap;text-decoration:none;
+    display:inline-block;border:1px solid transparent;line-height:1.5;transition:transform .12s,filter .12s,box-shadow .12s;}
+  a.rm-tag:hover{transform:translateY(-1.5px);filter:brightness(1.05);box-shadow:0 3px 10px rgba(0,0,0,.16);text-decoration:none;}
+  .rm-core{background:linear-gradient(135deg,#3aa0ff,#0b7fd4);color:#fff;box-shadow:0 1px 3px rgba(11,127,212,.35);}
+  .rm-opt{background:var(--opt-bg);color:var(--opt-fg);border:1px solid var(--opt-br);}
+  .rm-tool{background:var(--tool-bg);color:var(--tool-fg);border:1px solid var(--tool-br);}
+  .rm-job{background:var(--job-bg);color:var(--job-fg);border:1px solid var(--job-br);}
+  .rm-task{background:#eef2f7;color:#41506a;border:1px solid #cdd7e3;}
+  :root[data-theme="dark"] .rm-task{background:rgba(148,163,184,.14);color:#c4d0df;border-color:rgba(148,163,184,.30);}
+  /* already-earned badge (not a forward step — no checkbox) */
+  .rm-earned{background:linear-gradient(135deg,#e8f6ee,#d6efe0);color:#1c7742;border:1px solid #aadcbd;box-shadow:0 1px 3px rgba(31,157,85,.2);}
+  :root[data-theme="dark"] .rm-earned{background:rgba(30,150,90,.20);color:#82e3a9;border-color:rgba(120,220,160,.35);}
+  .rm-earned .rm-earned-ck{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;margin-right:6px;border-radius:50%;background:#1f9d55;color:#fff;font-size:8.5px;line-height:1;vertical-align:-1px;}
+  .rm-jgroup{margin-top:11px;padding-top:10px;border-top:1px dashed var(--card-br);}
+  .rm-jloc{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--job-fg);
+    opacity:.85;margin-right:5px;min-width:66px;display:inline-block;}
+  /* collapsible current-jobs panel */
+  .rm-jobs{margin-top:11px;padding-top:10px;border-top:1px dashed var(--card-br);}
+  .rm-jobs summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:2px 0;user-select:none;}
+  .rm-jobs summary::-webkit-details-marker{display:none;}
+  .rm-jobs summary:hover .rm-jbtn{filter:brightness(1.04);box-shadow:0 2px 8px rgba(0,0,0,.14);}
+  .rm-chev{color:var(--job-fg);font-size:11px;transition:transform .2s ease;display:inline-block;line-height:1;}
+  .rm-jobs[open] .rm-chev{transform:rotate(90deg);}
+  .rm-jbtn{font-size:11px;font-weight:700;color:var(--job-fg);background:var(--job-bg);border:1px solid var(--job-br);
+    padding:3.5px 12px;border-radius:20px;transition:filter .12s,box-shadow .12s;}
+  .rm-jrole{font-size:12.5px;font-weight:650;color:var(--text);}
+  .rm-jhint{font-size:10.5px;color:var(--faint);}
+  .rm-jbody{margin-top:10px;display:flex;flex-direction:column;gap:7px;
+    animation:jexpand .22s ease;}
+  @keyframes jexpand{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
+
+  /* completion tracking */
+  .rm-ck{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;margin-right:6px;
+    border:1.5px solid currentColor;border-radius:50%;font-size:8.5px;line-height:1;opacity:.55;cursor:pointer;
+    vertical-align:-1px;flex:0 0 auto;transition:opacity .12s,background .12s;}
+  .rm-ck:hover{opacity:1;}
+  a.rm-tag.done{opacity:.5;}
+  a.rm-tag.done .rm-lbl{text-decoration:line-through;}
+  a.rm-tag.done .rm-ck{opacity:1;}
+  a.rm-tag.done .rm-ck::after{content:"✓";}
+  /* in-progress: half-filled amber check + subtle amber ring */
+  a.rm-tag.doing .rm-ck{opacity:1;border-color:#d98a1f;color:#d98a1f;background:linear-gradient(90deg,#d98a1f 50%,transparent 50%);}
+  a.rm-tag.doing{box-shadow:0 0 0 1.5px #e6b45e;}
+  .rm-prog{display:flex;align-items:center;gap:8px;margin:0 0 11px;font-size:10px;color:var(--muted);flex-wrap:wrap;}
+  .rm-prog .plabel{font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);font-size:9.5px;}
+  .rm-prog .bar{flex:0 0 120px;max-width:40%;height:5px;border-radius:3px;background:var(--card-br);overflow:hidden;}
+  .rm-prog .fill{display:block;height:100%;width:0;border-radius:3px;background:linear-gradient(90deg,var(--stg2),var(--stg));transition:width .3s ease;}
+  .rm-prog .cnt b{color:var(--text);font-weight:700;}
+  .rm-prog.alldone .cnt b{color:var(--stg);}
+  /* current-stage emphasis + stage nav */
+  .tl-stage.is-current .rm-stage{box-shadow:0 0 0 2px var(--stg), var(--shadow-h);}
+  .rm-stagenav{display:none;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 11px;}
+  .tl-stage.is-current .rm-stagenav{display:flex;}
+  .rm-donerow{margin-top:12px;padding-top:11px;border-top:1px dashed var(--card-br);}
+  .rm-donebtn{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--muted);
+    background:transparent;border:none;cursor:pointer;padding:2px 0;letter-spacing:.02em;}
+  .rm-donebtn .box{width:15px;height:15px;border-radius:5px;border:1.5px solid currentColor;display:inline-flex;
+    align-items:center;justify-content:center;font-size:10px;line-height:1;transition:background .12s,border-color .12s;}
+  .rm-donebtn:hover{color:var(--text);}
+  .tl-stage.stage-done .rm-donebtn{color:#1f9d55;}
+  .tl-stage.stage-done .rm-donebtn .box{background:#1f9d55;border-color:#1f9d55;color:#fff;}
+  .tl-check{position:absolute;bottom:-3px;right:-3px;width:17px;height:17px;border-radius:50%;background:#1f9d55;color:#fff;
+    font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--bg1);}
+  .tl-stage.stage-done .tl-check{display:flex;}
+  .rm-next{font-size:11px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--stg2),var(--stg));
+    border:none;border-radius:20px;padding:6px 14px;cursor:pointer;
+    box-shadow:0 2px 10px color-mix(in srgb,var(--stg) 42%,transparent);transition:transform .12s,box-shadow .12s;}
+  .rm-next:hover{transform:translateY(-1px);box-shadow:0 4px 15px color-mix(in srgb,var(--stg) 55%,transparent);}
+  .rm-back{font-size:11px;font-weight:600;color:var(--muted);background:transparent;border:1px solid var(--card-br);
+    border-radius:20px;padding:5px 12px;cursor:pointer;transition:color .12s;}
+  .rm-back:hover{color:var(--text);}
+  .rm-goalmsg{font-size:11.5px;font-weight:700;color:var(--stg);}
+  .rm-overall{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 2px 20px;font-size:11px;color:var(--muted);}
+  .rm-overall .plabel{font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-size:10px;}
+  .rm-overall .bar{flex:0 0 200px;max-width:50%;height:6px;border-radius:4px;background:var(--card-br);overflow:hidden;}
+  .rm-overall .fill{display:block;height:100%;width:0;border-radius:4px;
+    background:linear-gradient(90deg,#3aa0ff,#2f6fe0,#1f56d8);transition:width .35s ease;}
+  .rm-overall .cnt b{color:var(--text);font-weight:800;}
+  .rm-tools{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px;}
+  .rm-tbtn{font-size:10.5px;color:var(--muted);background:var(--card);border:1px solid var(--card-br);border-radius:8px;
+    padding:5px 11px;cursor:pointer;transition:color .12s,box-shadow .12s;backdrop-filter:blur(8px);}
+  .rm-tbtn:hover{color:var(--text);box-shadow:var(--shadow);}
+  .rm-tbtn .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:0;background:#c0392b;}
+  .rm-tbtn.on .dot{background:#1f9d55;}
+  .rm-foot{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:center;font-size:11px;color:var(--muted);
+    border-top:1px solid var(--hairline);margin:18px 4px 0;padding:14px 4px 0;}
+  .rm-foot b{color:var(--text);}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}
+    .js .tl-stage{opacity:1;transform:none;}.spark-line{stroke-dashoffset:0;}.spark-area,.spark-node circle,.spark-sal{opacity:1;}}
+
+    /* editable salary bands */
+    .rm-sal{cursor:pointer;border-bottom:1px dashed rgba(255,255,255,.35);}
+    .rm-sal:hover{opacity:.85;}
+    .rm-sal.saving{opacity:.5;}
+    .sal-edit{display:inline-flex;gap:4px;align-items:center;}
+    .sal-edit input{width:62px;padding:2px 5px;font:inherit;font-size:12px;border:1px solid #888;border-radius:5px;}
+    .sal-edit button{padding:2px 7px;font:inherit;font-size:11px;border-radius:5px;border:1px solid #888;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="rm-wrap">
+  <div class="rm-head">
+    <div>
+      <p class="rm-title">Ben's Data Analytics Roadmap</p>
+      <p class="rm-sub"><b>Tampa Bay</b> · <b>$55K → $250K+</b> · Target: <b>Chief Data Officer / VP Analytics</b> · Skills-first, analytics leadership</p>
+      <p class="rm-meta">Living document · <b>certs + hard skills front-load Transition–Stage 2 (what postings screen on); leadership + MPA + domain carry Stages 3–4</b> · pills open official training · DataCamp tracks are the continuous-learning spine · last updated July 2026</p>
+    </div>
+    <div style="flex:0 0 auto;display:flex;gap:8px;align-items:flex-start;">
+      <a class="rm-navlink" href="/job-search">Job&nbsp;Search</a>
+      <button class="rm-toggle" id="themeBtn" aria-label="Toggle dark mode" title="Toggle theme">☾</button>
+    </div>
+  </div>
+
+  <!-- ===== salary trajectory ===== -->
+  <div class="rm-chart">
+    <svg viewBox="0 0 820 190" role="img" aria-label="Salary trajectory from getting hired as a Data Analyst climbing through four stages to $250K+ analytics leadership">
+      <defs>
+        <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#94a3b8"/><stop offset=".28" stop-color="#3aa0ff"/><stop offset=".62" stop-color="#2f6fe0"/><stop offset="1" stop-color="#1f56d8"/>
+        </linearGradient>
+        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0b7fd4" stop-opacity=".26"/><stop offset="1" stop-color="#0b7fd4" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <line class="spark-base" x1="55" y1="150" x2="765" y2="150"/>
+      <path class="spark-area" d="M55,145 C120,143 175,135 233,132 C300,129 350,116 410,108 C480,99 528,88 588,78 C650,68 705,56 765,48 L765,150 L55,150 Z" fill="url(#areaGrad)"/>
+      <path class="spark-line" d="M55,145 C120,143 175,135 233,132 C300,129 350,116 410,108 C480,99 528,88 588,78 C650,68 705,56 765,48" stroke="url(#lineGrad)"/>
+      <circle class="spark-glow" cx="765" cy="48" r="9"/>
+      <g class="spark-node n0"><circle cx="55" cy="145" r="5.5" fill="#64748b"/></g>
+      <g class="spark-node n1"><circle cx="233" cy="132" r="5.5" fill="#0b7fd4"/></g>
+      <g class="spark-node n2"><circle cx="410" cy="108" r="5.5" fill="#2f7be6"/></g>
+      <g class="spark-node n3"><circle cx="588" cy="78" r="5.5" fill="#2f6fe0"/></g>
+      <g class="spark-node n4"><circle cx="765" cy="48" r="6.5" fill="#1f56d8"/></g>
+      <g id="sparkHere" opacity="0"><circle class="spark-hering" r="6"/><circle class="spark-hedot" r="4.5"/></g>
+      <text class="spark-sal n1" x="233" y="119">~$70K</text>
+      <text class="spark-sal n2" x="410" y="95">~$125K</text>
+      <text class="spark-sal n3" x="588" y="65">~$145K</text>
+      <text class="spark-sal n4" x="765" y="35">$250K+</text>
+      <text class="spark-stg" x="55" y="172">Now</text>
+      <text class="spark-stg" x="233" y="172">Stage 1</text>
+      <text class="spark-stg" x="410" y="172">Stage 2</text>
+      <text class="spark-stg" x="588" y="172">Stage 3</text>
+      <text class="spark-stg" x="765" y="172">The Goal</text>
+    </svg>
+  </div>
+
+  <div class="rm-legend">
+    <span><i class="rm-dot d-core"></i>Credential — proctored exam</span>
+    <span><i class="rm-dot d-tool"></i>Skill course (DataCamp)</span>
+    <span><i class="rm-dot d-opt"></i>Focus — leadership / strategy</span>
+    <span><i class="rm-dot d-job"></i>Current jobs — saved-search + alert (expand per stage)</span>
+  </div>
+
+  <div class="tl">
+
+  <!-- ===================== NOW · FUNDAMENTALS ===================== -->
+  <div class="tl-stage" data-stage="0">
+    <div class="tl-node"><div class="tl-badge tl-badge-now"></div></div>
+    <div class="rm-stage">
+      <div class="rm-row"><span><span class="rm-stlabel">Transition</span> &nbsp;<span class="rm-time">Not yet hired</span></span><span class="rm-sal" data-sal-stage="0" title="Click to edit this band">$55K – $80K</span></div>
+      <div class="rm-role">Get hired as a Data Analyst</div>
+      <div class="rm-alt">Everything needed to land the first Data Analyst role</div>
+      <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/data-analyst-associate/">PL-300 · Power BI Data Analyst</a>
+        <a class="rm-tag rm-earned" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/azure-data-fundamentals/"><span class="rm-earned-ck">✓</span>DP-900 · Azure Data Fundamentals</a>
+      </div></div>
+      <div class="rm-group"><div class="rm-glabel">Skills — DataCamp</div><div class="rm-line">
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/associate-data-analyst-in-sql">SQL · Associate Data Analyst track</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://app.datacamp.com/learn/skill-tracks/power-bi-fundamentals">Power BI Fundamentals</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://app.datacamp.com/learn/career-tracks/data-analyst-in-power-bi">Data Analyst in Power BI</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://app.datacamp.com/learn/skill-tracks/excel-fundamentals">Excel Fundamentals</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/data-analysis-with-excel-power-tools">Excel Power Tools</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/courses/data-communication-concepts">Data Storytelling · Data Communication</a>
+      </div></div>
+      <div class="rm-group"><div class="rm-glabel">Applied project</div><div class="rm-line">
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://app.extern.com/externships/615/projects">Extern · Breaking Games Project</a>
+      </div></div>
+      <div class="rm-freq"><b>Posting signal →</b> SQL ~80% · Excel ~60% · Python ~50% · one BI tool standard</div>
+      <div class="rm-order"><b>Order →</b> ① SQL track + ② Power BI Fundamentals (in tandem) → ③ Data Analyst in Power BI (deeper; unlocks 50% off PL-300) → ④ PL-300 exam · ⑤ Excel Fundamentals → ⑥ Excel Power Tools · ⑦ Data Communication → get hired · then Python (Stage 1). Never run three brand-new tracks at once.</div>
+    </div>
+  </div>
+
+  <!-- ======================= STAGE 1 ======================= -->
+  <div class="tl-stage" data-stage="1">
+    <div class="tl-node"><div class="tl-badge">1</div></div>
+    <div class="rm-stage">
+      <div class="rm-row"><span><span class="rm-stlabel">Stage 1</span> &nbsp;<span class="rm-time">Currently held</span></span><span class="rm-sal" data-sal-stage="1" title="Click to edit this band">$55K – $80K</span></div>
+      <div class="rm-role">Data Analyst</div>
+      <div class="rm-alt">Data Analyst · BI Analyst · Reporting Analyst — employed, climbing to Senior</div>
+      <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.tableau.com/learn/certification/desktop-specialist">Tableau Desktop Specialist</a>
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.datacamp.com/certification/data-analyst">DataCamp Data Analyst Professional</a>
+      </div></div>
+      <div class="rm-group"><div class="rm-glabel">Skills — DataCamp</div><div class="rm-line">
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://app.datacamp.com/learn/skill-tracks/python-data-fundamentals">Python · Data Analyst track</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/tableau-fundamentals">Tableau Fundamentals</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/statistics-fundamentals-with-python">Statistics Fundamentals</a>
+      </div></div>
+      <div class="rm-order"><b>Order →</b> ① Python track · ② Tableau Fundamentals · ③ Tableau Desktop Specialist · ④ Statistics · ⑤ DataCamp Data Analyst Professional (needs SQL + Python)</div>
+      <details class="rm-jobs">
+        <summary><span class="rm-chev">▸</span><span class="rm-jbtn">Current jobs</span><span class="rm-jrole">“Data Analyst”</span><span class="rm-jhint">— open a search, then hit “Save / Create alert” for a daily digest</span></summary>
+        <div class="rm-jbody">
+          <div class="rm-line"><span class="rm-jloc">Tampa Bay</span>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Data+Analyst+jobs+Tampa+Bay&ibp=htl;jobs">Google Jobs</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Data%20Analyst&location=Tampa%2C%20Florida%2C%20United%20States&sortBy=DD">LinkedIn</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Data+Analyst&l=Tampa%2C+FL&sort=date">Indeed</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Data+Analyst&location=Tampa%2C+FL&days=5">ZipRecruiter</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Data%20Analyst&location=Tampa%2C%20FL%2C%20USA&radius=30&radiusUnit=mi&filters.postedDate=SEVEN">Dice</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.usajobs.gov/Search/Results?k=Data%20Analyst&l=Tampa%2C%20Florida">USAJobs</a>
+          </div>
+          <div class="rm-line"><span class="rm-jloc">Remote</span>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Data+Analyst+jobs+remote&ibp=htl;jobs">Google Jobs</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Data%20Analyst&location=United%20States&f_WT=2&sortBy=DD">LinkedIn</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Data+Analyst&l=Remote&sort=date">Indeed</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Data+Analyst&location=Remote&days=5">ZipRecruiter</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Data%20Analyst&filters.workplaceTypes=Remote&filters.postedDate=SEVEN">Dice</a>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ======================= STAGE 2 ======================= -->
+  <div class="tl-stage" data-stage="2">
+    <div class="tl-node"><div class="tl-badge">2</div></div>
+    <div class="rm-stage">
+      <div class="rm-row"><span><span class="rm-stlabel">Stage 2</span> &nbsp;<span class="rm-time">Currently held</span></span><span class="rm-sal" data-sal-stage="2" title="Click to edit this band">$110K – $140K</span></div>
+      <div class="rm-role">Senior Data Analyst</div>
+      <div class="rm-alt">Senior Data Analyst · Lead Analyst — the biggest income jump; climbing to Manager</div>
+      <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.tableau.com/learn/certification/certified-data-analyst">Tableau Certified Data Analyst</a>
+      </div></div>
+      <div class="rm-group"><div class="rm-glabel">Skills — DataCamp</div><div class="rm-line">
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/courses/customer-analytics-and-ab-testing-in-python">A/B Testing · Customer Analytics</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/ai-fundamentals">Applied AI · AI Fundamentals</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/machine-learning-fundamentals-with-python">Machine Learning Fundamentals</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/marketing-analytics-with-python">Marketing Analytics</a>
+      </div></div>
+      <div class="rm-freq"><b>Income lever →</b> 2+ AI skills ≈ 43% pay premium · experimentation is the other Senior lever</div>
+      <div class="rm-order"><b>Order →</b> ① A/B Testing · ② AI Fundamentals · ③ Machine Learning Fundamentals · ④ Marketing Analytics · ⑤ Tableau Certified Data Analyst</div>
+      <details class="rm-jobs">
+        <summary><span class="rm-chev">▸</span><span class="rm-jbtn">Current jobs</span><span class="rm-jrole">“Senior Data Analyst”</span><span class="rm-jhint">— open a search, then hit “Save / Create alert” for a daily digest</span></summary>
+        <div class="rm-jbody">
+          <div class="rm-line"><span class="rm-jloc">Tampa Bay</span>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Senior+Data+Analyst+jobs+Tampa+Bay&ibp=htl;jobs">Google Jobs</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Senior%20Data%20Analyst&location=Tampa%2C%20Florida%2C%20United%20States&sortBy=DD">LinkedIn</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Senior+Data+Analyst&l=Tampa%2C+FL&sort=date">Indeed</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Senior+Data+Analyst&location=Tampa%2C+FL&days=5">ZipRecruiter</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Senior%20Data%20Analyst&location=Tampa%2C%20FL%2C%20USA&radius=30&radiusUnit=mi&filters.postedDate=SEVEN">Dice</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.usajobs.gov/Search/Results?k=Senior%20Data%20Analyst&l=Tampa%2C%20Florida">USAJobs</a>
+          </div>
+          <div class="rm-line"><span class="rm-jloc">Remote</span>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Senior+Data+Analyst+jobs+remote&ibp=htl;jobs">Google Jobs</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Senior%20Data%20Analyst&location=United%20States&f_WT=2&sortBy=DD">LinkedIn</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Senior+Data+Analyst&l=Remote&sort=date">Indeed</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Senior+Data+Analyst&location=Remote&days=5">ZipRecruiter</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Senior%20Data%20Analyst&filters.workplaceTypes=Remote&filters.postedDate=SEVEN">Dice</a>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ======================= STAGE 3 ======================= -->
+  <div class="tl-stage" data-stage="3">
+    <div class="tl-node"><div class="tl-badge">3</div></div>
+    <div class="rm-stage">
+      <div class="rm-row"><span><span class="rm-stlabel">Stage 3</span> &nbsp;<span class="rm-time">Currently held</span></span><span class="rm-sal" data-sal-stage="3" title="Click to edit this band">$130K – $160K</span></div>
+      <div class="rm-role">Analytics Manager / Lead</div>
+      <div class="rm-alt">Analytics Manager · Analytics Lead — postings want leadership + an advanced degree, not more certs</div>
+      <div class="rm-group"><div class="rm-glabel">Advanced degree</div><div class="rm-line">
+        <span class="rm-tag rm-earned" style="cursor:default;"><span class="rm-earned-ck">✓</span>MPA · the advanced degree most analysts lack</span>
+      </div></div>
+      <div class="rm-group"><div class="rm-glabel">Focus — leadership</div><div class="rm-line">
+        <span class="rm-tag rm-opt" style="cursor:default;">People management &amp; hiring</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Analytics strategy &amp; roadmap</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">KPI / OKR frameworks</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Executive communication</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Stakeholder management</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Budget &amp; vendor management</span>
+      </div></div>
+      <div class="rm-group"><div class="rm-glabel">📖 Further reading</div><div class="rm-line">
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=The+Manager%27s+Path+Camille+Fournier+book">The Manager's Path — Fournier</a>
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Measure+What+Matters+John+Doerr+OKR+book">Measure What Matters — Doerr</a>
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Storytelling+with+Data+Cole+Nussbaumer+Knaflic+book">Storytelling with Data — Knaflic</a>
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Creating+a+Data-Driven+Organization+Carl+Anderson+book">Creating a Data-Driven Organization — Anderson</a>
+      </div></div>
+      <details class="rm-jobs">
+        <summary><span class="rm-chev">▸</span><span class="rm-jbtn">Current jobs</span><span class="rm-jrole">“Analytics Manager”</span><span class="rm-jhint">— open a search, then hit “Save / Create alert” for a daily digest</span></summary>
+        <div class="rm-jbody">
+          <div class="rm-line"><span class="rm-jloc">Tampa Bay</span>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Analytics+Manager+jobs+Tampa+Bay&ibp=htl;jobs">Google Jobs</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Analytics%20Manager&location=Tampa%2C%20Florida%2C%20United%20States&sortBy=DD">LinkedIn</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Analytics+Manager&l=Tampa%2C+FL&sort=date">Indeed</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Analytics+Manager&location=Tampa%2C+FL&days=5">ZipRecruiter</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Analytics%20Manager&location=Tampa%2C%20FL%2C%20USA&radius=30&radiusUnit=mi&filters.postedDate=SEVEN">Dice</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.usajobs.gov/Search/Results?k=Analytics%20Manager&l=Tampa%2C%20Florida">USAJobs</a>
+          </div>
+          <div class="rm-line"><span class="rm-jloc">Remote</span>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Analytics+Manager+jobs+remote&ibp=htl;jobs">Google Jobs</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Analytics%20Manager&location=United%20States&f_WT=2&sortBy=DD">LinkedIn</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Analytics+Manager&l=Remote&sort=date">Indeed</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Analytics+Manager&location=Remote&days=5">ZipRecruiter</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Analytics%20Manager&filters.workplaceTypes=Remote&filters.postedDate=SEVEN">Dice</a>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ======================= THE GOAL ======================= -->
+  <div class="tl-stage" data-stage="4">
+    <div class="tl-node"><div class="tl-badge">4</div></div>
+    <div class="rm-stage goal">
+      <div class="rm-row"><span><span class="rm-stlabel">The Goal</span> &nbsp;<span class="rm-time">The ceiling</span></span><span class="rm-sal" data-sal-stage="4" title="Click to edit this band">$180K – $250K+</span></div>
+      <div class="rm-role">Director of Analytics → VP Analytics → Chief Data Officer</div>
+      <div class="rm-alt">Leadership scale + domain depth + MPA are the qualification — not certs</div>
+      <div class="rm-group"><div class="rm-glabel">Focus</div><div class="rm-line">
+        <span class="rm-tag rm-tool" style="cursor:default;">Enterprise data strategy</span>
+        <span class="rm-tag rm-tool" style="cursor:default;">Data governance at scale</span>
+        <span class="rm-tag rm-tool" style="cursor:default;">AI / ML strategy &amp; responsible AI</span>
+        <span class="rm-tag rm-tool" style="cursor:default;">Building data culture</span>
+        <span class="rm-tag rm-tool" style="cursor:default;">Board &amp; executive communication</span>
+        <span class="rm-tag rm-tool" style="cursor:default;">Business &amp; P&amp;L acumen</span>
+      </div></div>
+      <div class="rm-group"><div class="rm-glabel">📖 Further reading</div><div class="rm-line">
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Competing+on+Analytics+Davenport+Harris+book">Competing on Analytics — Davenport &amp; Harris</a>
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Data+Strategy+Bernard+Marr+book">Data Strategy — Marr</a>
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Prediction+Machines+Agrawal+Gans+Goldfarb+book">Prediction Machines — Agrawal et al.</a>
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Infonomics+Doug+Laney+data+asset+book">Infonomics — Laney</a>
+      </div></div>
+      <details class="rm-jobs">
+        <summary><span class="rm-chev">▸</span><span class="rm-jbtn">Current jobs</span><span class="rm-jrole">“Director of Analytics”</span><span class="rm-jhint">— open a search, then hit “Save / Create alert” for a daily digest</span></summary>
+        <div class="rm-jbody">
+          <div class="rm-line"><span class="rm-jloc">Tampa Bay</span>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Director+of+Analytics+jobs+Tampa+Bay&ibp=htl;jobs">Google Jobs</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Director%20of%20Analytics&location=Tampa%2C%20Florida%2C%20United%20States&sortBy=DD">LinkedIn</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Director+of+Analytics&l=Tampa%2C+FL&sort=date">Indeed</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Director+of+Analytics&location=Tampa%2C+FL&days=5">ZipRecruiter</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Director%20of%20Analytics&location=Tampa%2C%20FL%2C%20USA&radius=30&radiusUnit=mi&filters.postedDate=SEVEN">Dice</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.usajobs.gov/Search/Results?k=Director%20of%20Analytics&l=Tampa%2C%20Florida">USAJobs</a>
+          </div>
+          <div class="rm-line"><span class="rm-jloc">Remote</span>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Director+of+Analytics+jobs+remote&ibp=htl;jobs">Google Jobs</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Director%20of%20Analytics&location=United%20States&f_WT=2&sortBy=DD">LinkedIn</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Director+of+Analytics&l=Remote&sort=date">Indeed</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Director+of+Analytics&location=Remote&days=5">ZipRecruiter</a>
+            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Director%20of%20Analytics&filters.workplaceTypes=Remote&filters.postedDate=SEVEN">Dice</a>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  </div><!-- /tl -->
+
+  <div class="rm-foot">
+    <span><b>4</b> stages</span>
+    <span><b>Skills-first</b> · analytics leadership</span>
+    <span><b>Leadership + MPA</b> carry Stages 3–4</span>
+    <span><b>$55K → $250K+</b> climb</span>
+    <span>Analyst → Manager → Director</span>
+  </div>
+</div>
+
+<script>
+  (function(){
+    // theme toggle
+    var btn=document.getElementById('themeBtn'),root=document.documentElement;
+    function icon(){btn.textContent=root.getAttribute('data-theme')==='dark'?'☀':'☾';}
+    icon();
+    btn.addEventListener('click',function(){
+      var t=root.getAttribute('data-theme')==='dark'?'light':'dark';
+      root.setAttribute('data-theme',t);try{localStorage.setItem('rm-theme',t);}catch(e){}icon();
+    });
+    // staggered reveal cascade (reliable everywhere; no viewport dependency)
+    var stages=document.querySelectorAll('.tl-stage');
+    function reveal(){stages.forEach(function(el,i){setTimeout(function(){el.classList.add('in');},110*i);});}
+    if(document.readyState!=='loading')reveal();else document.addEventListener('DOMContentLoaded',reveal);
+    // safety net: never leave a stage hidden
+    setTimeout(function(){stages.forEach(function(el){el.classList.add('in');});},1200);
+  })();
+</script>
+<script>
+  /* ===== completion tracking (localStorage now, Cloudflare-sync ready) ===== */
+  (function(){
+    var STORE='rm-progress-v1', STAGEKEY='rm-stage', STAGESDONE='rm-stages-done', INPROG='rm-inprogress', API='/api/progress', HDR='x-roadmap-key', TOKEN='46444d84816b31186e75551c5bee4a15';
+    var done=new Set(), inProgress=new Set();
+    try{done=new Set(JSON.parse(localStorage.getItem(STORE)||'[]'));}catch(e){}
+    try{inProgress=new Set(JSON.parse(localStorage.getItem(INPROG)||'[]'));}catch(e){}
+    var current=parseInt((function(){try{return localStorage.getItem(STAGEKEY);}catch(e){return null;}})()||'0',10);
+    if(!(current>=0&&current<=4)) current=0;
+    var stagesDone=new Set();
+    try{(JSON.parse(localStorage.getItem(STAGESDONE)||'[]')||[]).forEach(function(n){stagesDone.add(n);});}catch(e){}
+    function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+    function persist(){try{localStorage.setItem(STORE,JSON.stringify([...done]));localStorage.setItem(INPROG,JSON.stringify([...inProgress]));localStorage.setItem(STAGEKEY,String(current));localStorage.setItem(STAGESDONE,JSON.stringify([...stagesDone]));}catch(e){}}
+    function hdr(x){var h=x||{}; h[HDR]=TOKEN; return h;}
+    function setState(a,id){ var d=done.has(id); a.classList.toggle('done',d); a.classList.toggle('doing',!d&&inProgress.has(id)); }
+
+    // build a check toggle inside each completable pill (certs + skills, not jobs)
+    var pills=document.querySelectorAll('.tl-stage a.rm-core, .tl-stage a.rm-opt, .tl-stage a.rm-tool, .tl-stage a.rm-task');
+    pills.forEach(function(a){
+      var stage=a.closest('.tl-stage').dataset.stage;
+      var id='s'+stage+':'+slug(a.textContent);
+      a.dataset.pid=id;
+      var label=a.textContent; a.textContent='';
+      var ck=document.createElement('span'); ck.className='rm-ck'; ck.setAttribute('role','button'); ck.setAttribute('aria-label','Toggle complete');
+      var lbl=document.createElement('span'); lbl.className='rm-lbl'; lbl.textContent=label;
+      a.appendChild(ck); a.appendChild(lbl);
+      setState(a,id);
+      ck.setAttribute('title','not started → in progress → done');
+      ck.addEventListener('click',function(e){
+        e.preventDefault(); e.stopPropagation();
+        if(done.has(id)){ done.delete(id); }                               // done → not started
+        else if(inProgress.has(id)){ inProgress.delete(id); done.add(id); } // in progress → done
+        else { inProgress.add(id); }                                        // not started → in progress
+        setState(a,id); persist(); render(); push();
+      });
+    });
+
+    // per-stage progress rows (insert after the alt-roles line)
+    document.querySelectorAll('.tl-stage').forEach(function(st){
+      var ps=st.querySelectorAll('a.rm-core, a.rm-opt, a.rm-tool, a.rm-task'); if(!ps.length) return;
+      var alt=st.querySelector('.rm-alt');
+      var p=document.createElement('div'); p.className='rm-prog';
+      p.innerHTML='<span class="plabel">Progress</span><span class="bar"><span class="fill"></span></span><span class="cnt"></span>';
+      if(alt) alt.parentNode.insertBefore(p, alt.nextSibling); else st.querySelector('.rm-stage').prepend(p);
+    });
+
+    // overall meter (after the legend)
+    var legend=document.querySelector('.rm-legend');
+    var ov=document.createElement('div'); ov.className='rm-overall'; ov.id='rmOverall';
+    ov.innerHTML='<span class="plabel">Roadmap progress</span><span class="bar"><span class="fill"></span></span><span class="cnt"></span>';
+    if(legend) legend.parentNode.insertBefore(ov, legend.nextSibling);
+
+    function render(){
+      var tAll=0,dAll=0,ipAll=0;
+      document.querySelectorAll('.tl-stage').forEach(function(st){
+        var el=st.querySelector('.rm-prog');
+        var psStage=st.querySelectorAll('a.rm-core, a.rm-opt, a.rm-tool, a.rm-task');
+        if(el && psStage.length){ var t=psStage.length,d=0,ip=0; psStage.forEach(function(p){var pid=p.dataset.pid; if(done.has(pid))d++; else if(inProgress.has(pid))ip++;});
+          el.querySelector('.fill').style.width=(t?Math.round(d/t*100):0)+'%';
+          el.querySelector('.cnt').innerHTML= ip ? ('<b>'+d+'</b> done · '+ip+' in progress / '+t) : ('<b>'+d+'</b> / '+t+' done'); el.classList.toggle('alldone',d===t); }
+        st.querySelectorAll('a.rm-core, a.rm-opt, a.rm-tool').forEach(function(p){ var pid=p.dataset.pid; tAll++; if(done.has(pid)) dAll++; else if(inProgress.has(pid)) ipAll++; });
+      });
+      var o=document.getElementById('rmOverall');
+      if(o){var pct=tAll?Math.round(dAll/tAll*100):0; o.querySelector('.fill').style.width=pct+'%';
+        o.querySelector('.cnt').innerHTML= ipAll ? ('<b>'+dAll+'</b> done · '+ipAll+' in progress / '+tAll) : ('<b>'+dAll+'</b> / '+tAll+' certs &amp; skills · '+pct+'%');}
+    }
+
+    function applyPills(){ document.querySelectorAll('a.rm-tag[data-pid]').forEach(function(a){ setState(a,a.dataset.pid); }); }
+
+    /* ---- automatic cross-device sync (server = source of truth) ---- */
+    var pushTimer;
+    function push(){ clearTimeout(pushTimer); pushTimer=setTimeout(function(){
+      fetch(API,{method:'POST',headers:hdr({'content-type':'application/json'}),body:JSON.stringify({done:[...done],inProgress:[...inProgress],stage:current,stagesDone:[...stagesDone]})}).catch(function(){});
+    },500); }
+    function pull(){
+      fetch(API,{headers:hdr()}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+        if(!d) return;
+        var written=d.updated&&d.updated>0;
+        if(!written){ if(done.size>0||inProgress.size>0||current>0||stagesDone.size>0) push(); return; }  // fresh server: seed from this device
+        if(Array.isArray(d.done)) done=new Set(d.done);
+        if(Array.isArray(d.inProgress)) inProgress=new Set(d.inProgress);
+        if(d.stage>=0&&d.stage<=4) current=d.stage;
+        if(Array.isArray(d.stagesDone)) stagesDone=new Set(d.stagesDone);
+        persist(); applyPills(); render(); renderStage(); renderStageDone();   // server wins
+      }).catch(function(){});
+    }
+
+    /* ---- current stage: "you are here" + move to next ---- */
+    var hereEl=document.createElement('span'); hereEl.className='rm-here'; hereEl.textContent='You are here';
+    var CHART_NODES=[[55,145],[233,132],[410,108],[588,78],[765,48]];
+    function updateChart(){ var g=document.getElementById('sparkHere'); if(!g) return;
+      var p=CHART_NODES[current]||CHART_NODES[0]; g.setAttribute('transform','translate('+p[0]+','+p[1]+')'); g.setAttribute('opacity','1'); }
+    function renderStage(){
+      var cur=null;
+      document.querySelectorAll('.tl-stage').forEach(function(st){
+        var n=parseInt(st.dataset.stage,10); var on=(n===current);
+        st.classList.toggle('is-current',on); if(on) cur=st;
+      });
+      if(cur){ var host=cur.querySelector('.rm-row > span'); if(host && hereEl.parentNode!==host) host.appendChild(hereEl); }
+      updateChart();
+    }
+    function renderStageDone(){
+      document.querySelectorAll('.tl-stage').forEach(function(st){
+        var n=parseInt(st.dataset.stage,10); var d=stagesDone.has(n);
+        st.classList.toggle('stage-done',d);
+        var b=st.querySelector('.rm-donebtn'); if(b){ b.querySelector('.box').textContent=d?'✓':''; b.querySelector('.lbl').textContent=d?'Stage complete':'Mark stage complete'; }
+      });
+    }
+    function setStage(n){ if(n<0)n=0; if(n>4)n=4; if(n===current) return; current=n; persist(); renderStage(); render(); push();
+      var c=document.querySelector('.tl-stage.is-current'); if(c) c.scrollIntoView({behavior:'smooth',block:'center'}); }
+    // per-stage nav (Back / Move to next) — shown only on the current stage via CSS
+    document.querySelectorAll('.tl-stage').forEach(function(st){
+      var n=parseInt(st.dataset.stage,10);
+      var nav=document.createElement('div'); nav.className='rm-stagenav';
+      var html='';
+      if(n>0) html+='<button class="rm-back" type="button" data-go="'+(n-1)+'">← Back</button>';
+      if(n<4) html+='<button class="rm-next" type="button" data-go="'+(n+1)+'">Move to next stage →</button>';
+      else html+='<span class="rm-goalmsg">🎯 You’ve reached the goal</span>';
+      nav.innerHTML=html;
+      var alt=st.querySelector('.rm-alt');
+      if(alt) alt.parentNode.insertBefore(nav, alt.nextSibling); else st.querySelector('.rm-stage').prepend(nav);
+      nav.querySelectorAll('button[data-go]').forEach(function(b){ b.addEventListener('click',function(){ setStage(parseInt(b.dataset.go,10)); }); });
+      // stage-complete toggle at the BOTTOM of the card
+      var card=st.querySelector('.rm-stage');
+      var doneRow=document.createElement('div'); doneRow.className='rm-donerow';
+      doneRow.innerHTML='<button class="rm-donebtn" type="button" data-donestage="'+n+'"><span class="box"></span><span class="lbl">Mark stage complete</span></button>';
+      card.appendChild(doneRow);
+      doneRow.querySelector('.rm-donebtn').addEventListener('click',function(){ if(stagesDone.has(n))stagesDone.delete(n);else stagesDone.add(n); persist(); renderStageDone(); push(); });
+      var badge=st.querySelector('.tl-badge'); if(badge && !badge.querySelector('.tl-check')){ var ck=document.createElement('span'); ck.className='tl-check'; ck.textContent='✓'; badge.appendChild(ck); }
+    });
+    // click any medallion to jump to that stage
+    document.querySelectorAll('.tl-stage .tl-badge').forEach(function(b){
+      var n=parseInt(b.closest('.tl-stage').dataset.stage,10);
+      b.setAttribute('title','Set as current stage'); b.style.cursor='pointer';
+      b.addEventListener('click',function(){ setStage(n); });
+    });
+
+    // footer: a single reset (clears every device)
+    var foot=document.querySelector('.rm-foot');
+    if(foot){ var tools=document.createElement('div'); tools.className='rm-tools';
+      tools.innerHTML='<button class="rm-tbtn" id="rmReset">Reset progress</button>';
+      foot.parentNode.insertBefore(tools, foot.nextSibling);
+      document.getElementById('rmReset').addEventListener('click',function(){
+        if(!confirm('Clear all completion marks? This clears them on every device.')) return;
+        done=new Set(); inProgress=new Set(); stagesDone=new Set(); applyPills(); persist(); render(); renderStageDone(); push();
+      });
+    }
+
+    render();          // instant from local cache
+    renderStage();     // show which stage you're on
+    renderStageDone(); // show completed stages
+    pull();            // adopt server truth, then live-sync on every change
+  })();
+</script>
+<script>
+  /* ===== broaden job-search links to cover related role titles (boolean OR) ===== */
+  (function(){
+    var TERMS={
+      1:['Data Analyst','BI Analyst','Reporting Analyst','Analytics Associate'],
+      2:['Senior Data Analyst','Lead Data Analyst','Senior BI Analyst','Analytics Lead'],
+      3:['Analytics Manager','Data Analytics Manager','Analytics Lead','BI Manager'],
+      4:['Director of Analytics','VP Analytics','Head of Analytics','Chief Data Officer']
+    };
+    function orq(t){ return t.map(function(x){return '"'+x+'"';}).join(' OR '); }
+    function build(board, terms, remote){
+      var q=orq(terms), E=encodeURIComponent(q);
+      if(board==='google') return 'https://www.google.com/search?q='+encodeURIComponent(q+' jobs '+(remote?'remote':'Tampa Bay'))+'&ibp=htl;jobs';
+      if(board==='linkedin') return 'https://www.linkedin.com/jobs/search/?keywords='+E+'&location='+(remote?'United%20States&f_WT=2':'Tampa%2C%20Florida%2C%20United%20States')+'&sortBy=DD';
+      if(board==='indeed') return 'https://www.indeed.com/jobs?q='+E+'&l='+(remote?'Remote':'Tampa%2C%20FL')+'&sort=date';
+      if(board==='ziprecruiter') return 'https://www.ziprecruiter.com/jobs-search?search='+E+'&location='+(remote?'Remote':'Tampa%2C%20FL')+'&days=5';
+      if(board==='dice') return 'https://www.dice.com/jobs?q='+E+(remote?'&filters.workplaceTypes=Remote':'&location=Tampa%2C%20FL%2C%20USA&radius=30&radiusUnit=mi')+'&filters.postedDate=SEVEN';
+      if(board==='usajobs') return 'https://www.usajobs.gov/Search/Results?k=Data&l=Tampa%2C+Florida&sc=0&p=1&r=25&hp=public&hp=vet&hp=disability'; // veteran + disability hiring paths; broad 'Data' keyword works best on USAJobs
+      return null;
+    }
+    var KEY={'google jobs':'google','linkedin':'linkedin','indeed':'indeed','ziprecruiter':'ziprecruiter','dice':'dice','usajobs':'usajobs'};
+    document.querySelectorAll('.tl-stage').forEach(function(st){
+      var terms=TERMS[parseInt(st.dataset.stage,10)]; if(!terms) return;
+      st.querySelectorAll('.rm-jobs .rm-line').forEach(function(line){
+        var lab=(line.querySelector('.rm-jloc')||{}).textContent||'', remote=/remote/i.test(lab);
+        line.querySelectorAll('a.rm-job').forEach(function(a){
+          var b=KEY[(a.textContent||'').trim().toLowerCase()]; if(!b) return;
+          var u=build(b,terms,remote); if(u) a.href=u;
+        });
+      });
+      var role=st.querySelector('.rm-jobs .rm-jrole');
+      if(role && !/related/.test(role.textContent)) role.textContent=role.textContent+' + related roles';
+    });
+  })();
+</script>
+
+<script>
+/* ===== editable per-stage salary bands (stored in KV via /api/salaries) ===== */
+(function(){
+  var API='/api/salaries', HDR='x-roadmap-key', TOKEN='46444d84816b31186e75551c5bee4a15';
+  function hdr(x){var h=x||{}; h[HDR]=TOKEN; return h;}
+  var DATA={};
+  function fmt(v){
+    if(!v) return '';
+    var k=function(n){return '$'+Math.round(n/1000)+'K';};
+    return k(v.min)+' \u2013 '+k(v.max)+(v.plus?'+':'');
+  }
+  function paint(){
+    document.querySelectorAll('.rm-sal[data-sal-stage]').forEach(function(el){
+      var v=DATA[el.getAttribute('data-sal-stage')];
+      if(v) el.textContent=fmt(v);
+    });
+    // the header + progress-strip figures track the stage bands
+    var lo=DATA['0'], hi=DATA['4'];
+    if(lo&&hi){
+      document.querySelectorAll('[data-sal-range]').forEach(function(el){
+        el.textContent='$'+Math.round(lo.min/1000)+'K \u2192 $'+Math.round(hi.max/1000)+'K'+(hi.plus?'+':'');
+      });
+    }
+  }
+  function load(){
+    fetch(API,{headers:hdr()}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(d&&d.salaries){ DATA=d.salaries; paint(); }
+    }).catch(function(){});
+  }
+  function save(stage,min,max,plus,el){
+    el.classList.add('saving');
+    fetch(API,{method:'POST',headers:hdr({'content-type':'application/json'}),
+      body:JSON.stringify({stage:stage,min:min,max:max,plus:plus})})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(d){ if(d&&d.salaries){DATA=d.salaries;} paint(); })
+      .catch(function(){ paint(); })
+      .then(function(){ el.classList.remove('saving'); });
+  }
+  function edit(el){
+    if(el.querySelector('input')) return;             // already editing
+    var stage=el.getAttribute('data-sal-stage');
+    var cur=DATA[stage]||{min:0,max:0,plus:false};
+    var prev=el.textContent;
+    var wrap=document.createElement('span'); wrap.className='sal-edit';
+    var a=document.createElement('input'); a.type='text'; a.value=Math.round(cur.min/1000);
+    var dash=document.createElement('span'); dash.textContent='\u2013';
+    var b=document.createElement('input'); b.type='text'; b.value=Math.round(cur.max/1000);
+    var kk=document.createElement('span'); kk.textContent='K';
+    var ok=document.createElement('button'); ok.textContent='Save';
+    var no=document.createElement('button'); no.textContent='\u00d7';
+    wrap.appendChild(a); wrap.appendChild(dash); wrap.appendChild(b); wrap.appendChild(kk);
+    wrap.appendChild(ok); wrap.appendChild(no);
+    el.textContent=''; el.appendChild(wrap); a.focus(); a.select();
+    function cancel(){ el.textContent=prev; }
+    function commit(){
+      var mn=parseFloat(a.value)*1000, mx=parseFloat(b.value)*1000;
+      if(!isFinite(mn)||!isFinite(mx)||mn<=0||mx<=0){ cancel(); return; }
+      el.textContent='\u2026';
+      save(stage,mn,mx,cur.plus,el);
+    }
+    ok.addEventListener('click',function(e){e.stopPropagation();commit();});
+    no.addEventListener('click',function(e){e.stopPropagation();cancel();});
+    [a,b].forEach(function(inp){
+      inp.addEventListener('keydown',function(e){
+        if(e.key==='Enter'){e.preventDefault();commit();}
+        if(e.key==='Escape'){e.preventDefault();cancel();}
+      });
+      inp.addEventListener('click',function(e){e.stopPropagation();});
+    });
+  }
+  document.querySelectorAll('.rm-sal[data-sal-stage]').forEach(function(el){
+    el.addEventListener('click',function(e){ e.stopPropagation(); e.preventDefault(); edit(el); });
+  });
+  load();
+})();
+</script>
+</body>
+</html>
