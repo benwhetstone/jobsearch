@@ -675,7 +675,7 @@
           notes: m.note || undefined,
           experience: m.job.experience || undefined, skills: m.job.skills || undefined,
           arrangement: m.job.arrangement || undefined,
-          source: m.origin === "cowork" ? "cowork" : "jobs-for-you",
+          source: m.origin === "cowork" ? "cowork" : "jobs-for-you", actor: "user",
         }) });
         // Only drop the card once the server confirms the job is actually ON the
         // worklist. Removing it optimistically is how jobs used to fall through
@@ -1146,7 +1146,7 @@
       try {
         await api("/apply-queue", { method: "POST", body: JSON.stringify({
           company, title, url: fUrl.value.trim() || undefined, location: fLoc.value.trim() || undefined,
-          notes: fNotes.value.trim() || undefined, source: "manual",
+          notes: fNotes.value.trim() || undefined, source: "manual", actor: "user",
         }) });
         ov.remove(); toast("Added to To-Apply"); loadApplyQueue();
       } catch (e) { err.textContent = e.message || "Could not add."; err.hidden = false; add.disabled = false; add.textContent = "Add to To-Apply"; }

@@ -59,6 +59,17 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
   const user = currentUser(data);
   let body: any;
   try { body = await request.json(); } catch { return err(400, "Invalid JSON body."); }
+  // The To-Apply list is Ben's alone. Automated clients kept writing to it
+  // anyway — he would dismiss roles in Jobs For You and find fresh ones from the
+  // same employers sitting on his worklist minutes later. The rule has been
+  // stated repeatedly and not held, so it is enforced here: only a real user
+  // action may add. Machines surface candidates via POST /api/v1/suggestions,
+  // which lands them in Jobs For You for him to accept or dismiss.
+  if (String(body?.actor || "") !== "user") {
+    return err(409, "Only the user can add to To-Apply. This is Ben's worklist — " +
+      "post candidates to /api/v1/suggestions instead and they appear in Jobs For You " +
+      "for him to add himself.");
+  }
   const items = Array.isArray(body?.items) ? body.items : [body];
   const now = new Date().toISOString();
   // Scores are retired — Ben reads the standard card facts and judges for
