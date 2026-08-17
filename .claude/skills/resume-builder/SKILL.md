@@ -40,6 +40,13 @@ When these two files conflict, the design spec wins on layout and voice.md wins 
 5. `references/best-practices-2026.md` - ATS/AI-screening mechanics. Form only.
    **Never source a skill name or a fact from a best-practices file.**
 
+**If the Drive folder is not mounted this run**, do NOT proceed from memory and do
+NOT fall back to an older copy of the standards — that is how a stale skill list
+reaches a live application. Fetch the standards from the site instead:
+`GET https://jobs.benwhetstone.info/api/v1/standards` (session cookie from the
+signed-in tab). If neither Drive nor the API is reachable, STOP and tell Ben
+rather than guessing.
+
 ## The build process
 
 ### 0. Read both source files

@@ -53,7 +53,6 @@ cross-board-stable id; without a URL you get a weaker signature id.
 
 ```
 POST https://jobs.benwhetstone.info/api/v1/job-id
-Authorization: Bearer $JOBS_API_TOKEN
 { "company": "...", "title": "...", "location": "...", "url": "<posting or apply url>" }
 -> { "jobId": "jid_greenhouse-doximity-4012345" }
 ```
@@ -66,11 +65,15 @@ Pass `jobId` on each call so the id is consistent end-to-end. If you omit it the
 site derives one from the same fields — but pass the URL-derived id when you have
 it, since it is the accurate one.
 
-1. **Queue** — `POST /api/v1/apply-queue` with `{ company, title, url, jobId, ... }`.
-2. **Promote** — `PATCH /api/v1/apply-queue { id, action:"applied", appliedAt }`
-   (job_id carries into the application automatically).
+1. **Surface a candidate** — `POST /api/v1/suggestions` with `{ company, title,
+   url, jobId, ... }`. This is your ONLY path into the pipeline. You may not
+   `POST /api/v1/apply-queue`; it returns 409. Ben adds to To-Apply himself.
+2. **Promote once he has applied** — `PATCH /api/v1/apply-queue
+   { id, action:"applied", appliedAt }` (job_id carries into the application).
 3. **Log an off-platform apply** — `POST /api/v1/applications/manual`
    with `{ company, title, url, jobId, appliedAt }`.
+
+Auth and the full endpoint list live in the `jobs-api` skill. Follow that file.
 
 ## Permission rule — NEVER add to To-Apply on your own
 

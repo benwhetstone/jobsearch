@@ -23,6 +23,7 @@ ran out of room mid-run. Let the launcher pull in each skill when its phase star
 | Skill | Role |
 |-------|------|
 | `daily-job-search` | Launcher / entry point. Orchestrates the run; does not do the work itself. |
+| `jobs-api` | THE contract for jobs.benwhetstone.info — auth, endpoints, who may write what. Every other skill defers to it. |
 | `research-analyst` | Market intel (Vance) — current DA hiring trends. |
 | `job-search-sweep` | The engine — full Phase 0–6 flow (email scan, board search, scoring, materials, submit, dashboard). |
 | `resume-builder` | Tailored résumé + cover letter for a specific posting. |

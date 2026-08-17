@@ -71,7 +71,7 @@ hiring-manager gate before any submission.
 
 2. **Run the sweep.** Invoke **`job-search-sweep`** — this is the primary engine and already
    runs Ben's full Phase 0–6 flow (load context, scan email, search boards, read JDs on
-   employer ATSs, score with the 100-point rubric, translate roles, build tailored materials,
+   employer ATSs, surface on-target roles with their standard card facts, build tailored materials,
    submit, update the D1 dashboard, close the loop). In most daily runs this single skill
    carries the bulk of the work.
 
@@ -105,3 +105,10 @@ If Ben asks, hand off to the skills that own those jobs — don't do them here:
 End every run with a short, scannable status: roles found, roles kept, materials built,
 applications submitted, and any items awaiting Ben's approval. Keep it tight — Ben reads this
 to decide what's next, not to relive the run.
+
+
+## The site contract
+
+Before any read or write to jobs.benwhetstone.info, follow the **`jobs-api`** skill.
+It is the single source of truth for auth, endpoints, and who may write what. If any
+other skill contradicts it, `jobs-api` wins and the other skill is stale.

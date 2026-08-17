@@ -3,7 +3,7 @@ name: job-search-sweep
 description: >
   Ben Whetstone's complete job search process, Phase 0 through Phase 6.
   One invocation, one end-to-end flow: load context, scan email, search all boards,
-  read JDs on employer ATSs, score with the 100-point rubric, translate each kept role,
+  read JDs on employer ATSs, surface every on-target role with its standard card facts,
   build tailored resumes and cover letters, submit applications, update the D1 dashboard,
   and close the loop. ALWAYS trigger when Ben says "Run the sweep", "Start the process",
   "search for jobs", "job search", "find me roles", "what's out there", "new sweep",
@@ -129,22 +129,77 @@ Blank is valid. Most rows should have one.
 
 ## Phase 2: Search All Sources
 
-### Source Order (aggregators first, not company-by-company)
+### Where to search — FIVE LAYERS, in this order
 
-**1. Large Permanent Sites (first pass, every run):**
-- Indeed (indeed.com/jobs?q=...&l=Remote&fromage=3&sort=date)
-- LinkedIn Jobs (for company discovery; JD body often won't render in-page)
-- Glassdoor
-- ZipRecruiter
-- Built In (remote + entry/mid filters)
+Layer 1 is the backbone. Leading with aggregators is what produced months of
+slop: BPO reposts, staffing-agency churn, data-labeling gigs and stale
+duplicates. Aggregators are a **discovery** layer that feeds employers INTO
+Layer 1, not a source of truth.
 
-**2. Temp/Staffing Desks (second pass):**
-- Robert Half, Kforce, TEKsystems, Aston Carter, Randstad, Insight Global, Motion,
-  CyberCoders, Beacon Hill
+**Layer 1 — ATS APIs (the backbone; the only layer that sees same-day reqs).**
+Query employers' own systems directly:
+- Workday (`/wday/cxs/<tenant>/<site>/jobs`), Greenhouse, Lever, Ashby,
+  iCIMS, SuccessFactors, Paylocity.
+- Maintain a map of Tampa-Bay + remote-friendly employers per system. Every run,
+  add newly discovered employers to it and report the count added
+  (`newEmployers` on `POST /api/v1/last-run`). That number trending to zero is
+  the honest signal that discovery has saturated.
+- These postings carry a real requisition id, which is what gives a job its
+  stable ATS-anchored `job_id`.
 
-**3. Specialist/Segment Boards:**
-- TSPA, All Tech Is Human, ACFE, IASIU, osintjobs.com, GovernmentJobs.com, ASIS,
-  Merchant Risk Council, NHCAA, IACA
+**Layer 2 — LinkedIn + Indeed, as DISCOVERY ONLY.**
+Use them to find *employers* you don't have in the Layer-1 maps, then go get the
+req from that employer's ATS and post THAT url. Do not treat them as a second
+net, and never post an aggregator link as the posting url — it degrades the
+`job_id` to the weak signature form.
+
+**Layer 3 — rendering aggregators** (Glassdoor, ZipRecruiter, Built In): sweep,
+but expect duplicates of Layer 1. Resolve to the employer link before posting.
+
+**Layer 4 — login-gated boards.** Where a JD won't render, try Glassdoor, a
+LinkedIn embed, or direct URL variants. Note it if the JD can't be verified.
+
+**Layer 5 — small government / court / university boards.** GovernmentJobs.com,
+Florida state and county sites, court systems, USF and other universities. These
+carry real analyst roles the big boards never surface, and they're often
+low-competition. Include them every run.
+
+**Google for Jobs is NOT used.** Tested and rejected: it missed a Raymond James
+req posted the day before, returned a Petersburg VA result for a Tampa query,
+never identified a live Florida bankruptcy-court posting as a job at all, and
+served stale duplicates of a live req.
+
+**Staffing desks are DEMOTED, not a pass of their own.** Robert Half, Kforce,
+TEKsystems, Aston Carter, Randstad, Insight Global, Motion, CyberCoders and
+Beacon Hill repost the same reqs with the employer hidden. Only surface one when
+the role is genuinely strong AND you cannot find the direct employer posting; say
+in the note that it's an agency listing.
+
+**Specialist/segment boards** (worth a pass for domain-edge roles):
+TSPA, All Tech Is Human, ACFE, IASIU, osintjobs.com, ASIS, Merchant Risk
+Council, NHCAA, IACA.
+
+### Never surface these (they are the slop)
+
+Drop outright, don't rank-and-hope:
+- **BPO / outsourcing shops**: TELUS Digital/International, Teleperformance,
+  Concentrix, Foundever, TTEC, Alorica, iQor, Conduent, Majorel, Transcom,
+  Sutherland, Genpact, TaskUs, DCX, Appen, Arise, Liveops.
+- **Data-labeling / micro-task / "AI trainer" gigs** dressed up as analyst work:
+  annotator, labeling specialist, search quality rater, transcription, data
+  entry, crowdsourced, 1099 gig work.
+- **Roles requiring an active security clearance** (TS/SCI, polygraph, DoD
+  Secret, public trust). Unreachable without one.
+- **Off-field titles** that merely share a word: Data Engineer, Data Scientist,
+  Program/Project Manager, Software Engineer, Financial/Credit/Risk Analyst with
+  no analytics content.
+
+### On-target titles
+
+Data Analyst, Business Analyst, Business Intelligence Analyst, Reporting
+Analyst, Analytics Analyst, Data/Business Insights Analyst, Operations Analyst
+with real reporting content. Seniority up to Senior is in scope; Manager and
+above is out unless it is explicitly an IC role.
 
 ### Three Standing Search Forks (sweep ALL three, every run)
 
@@ -316,41 +371,29 @@ team structure, notable details.]
 
 One honest paragraph on what the market looks like at Ben's level right now.
 
-### Scoring Rubric (100 points)
+### RETIRED: the 100-point rubric. Do not score.
 
-| Factor | Max | Guidance |
-|---|---|---|
-| Freshness | 15 | 0-7 days = 13-15. 8-14 = 10-12. 15-30 = 7-9. 31-60 = 4-6. 60+ = 1-3. |
-| Requirements match | 25 | How well approved skills match required quals. Missing required tool = -3 to -5. |
-| Varied work | 20 | Highest weight. Production reporting heavy = 8-12. Mixed = 13-16. Highly varied = 17-20. |
-| Company fit | 15 | Large established = 13-15. Mid-size = 10-12. Startup = 7-10. Unknown = 5-8. |
-| Work arrangement | 10 | Remote = 10. Tampa on-site = 8. Lakeland = 7. Hybrid Tampa = 7. |
-| Pay vs floor | 10 | Above $60K = 8-10. At floor = 5-7. $54K-$60K = 3-5 (flag). Below $54K = DROP. Not posted = 5. |
-| Domain edge | 5 | Strong (LE, veteran, fraud, real estate) = 5. Some = 3. None = 2. Unfamiliar = 1. |
+Match scores are gone. Nothing in the app displays one, and computing one wasted
+time and produced numbers that disagreed with reality (a role whose required tool
+list was verbatim Ben's approved skills once scored 14; roles with real Tableau
+and BigQuery gaps scored 91).
 
----
+Instead: **surface every on-target role with the four standard card facts filled
+in and a specific "why it fits" note.** Ben reads the facts and decides. Your job
+is coverage and honesty, not ranking.
 
-## Phase 2b: Translate the Job
+**Do not filter by a judgment call either.** Rank-don't-filter. There are only
+these hard drops:
+- a genuine seniority mismatch in the title (Manager+ that isn't an IC role),
+- a posted band entirely under $54K,
+- a required active security clearance,
+- anything on the "never surface" list above (BPO, gig/labeling, off-field).
 
-**Mandatory before any resume work. Skipping this is the root cause of every bad resume.**
+Everything else gets surfaced. A regex that discards causes false kills.
 
-Write these four lines for every kept role:
-
-1. **What they wrote.** Title and posting's own phrasing, quoted.
-2. **What the job actually is.** Plain English, day to day. Who asks this person for what,
-   and what do they hand back? If it cannot be said in 2-3 plain sentences, the posting has
-   not been understood yet.
-3. **What Ben actually does that matches.** In his own plain terms. Not resume language.
-   If nothing genuinely matches, say so and DROP the role.
-4. **The translation back.** Convert line 3 into their vocabulary. Because it started from
-   something true, the keywords land in context.
-
-If step 2 and step 3 do not obviously rhyme, the role is a bad fit. That is a screening
-signal, not a writing problem.
-
----
-
-## Phase 3: Materials (Resume and Cover Letter)
+**Pay floor:** $60,000 target, $54,000 hard drop. Judge a posted band on its
+MIDPOINT, not its bottom. An unposted band is unknown, not disqualifying — say
+"Not listed".
 
 ### Source-of-truth order
 

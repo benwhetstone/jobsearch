@@ -30,12 +30,15 @@ disorganized, and he has no way to take them back.
 
 Before opening a posting, before writing a resume, before touching a form:
 
-1. Read `/Job Search/Tracking/job-search.json`.
-2. If the company is already there as `"status": "submitted"` — stop, tell Ben it's done and when, and
-   don't open the application.
-3. If it's `"status": "in_progress"` — **don't treat that as permission to refill it.** An in-progress
-   note is a claim, not evidence. Verify it (Step 0b) first.
-4. Proceed only when the company is absent, or you've confirmed it's genuinely unfinished.
+1. Get the job's canonical id: `POST /api/v1/job-id` with the employer/ATS url.
+2. Check the tracker: `GET /api/v1/applications`. If that `jobId` is already there
+   as `applied` (or beyond) — stop, tell Ben it's done and when, don't reopen it.
+3. If it's mid-flight, **don't treat that as permission to refill it.** A
+   half-finished row is a claim, not evidence. Verify it (Step 0b) first.
+4. Proceed only when the job is absent, or you've confirmed it's genuinely unfinished.
+
+The site's D1 is the tracker of record. Do NOT read or write
+`/Job Search/Tracking/job-search.json` — it is retired and goes stale.
 
 ### Step 0b — A status is only as good as the evidence behind it
 
@@ -229,21 +232,26 @@ careless and can auto-reject before a human ever sees it. Two non-negotiable rul
 Do this before the next application and before reporting back — a status recorded "later" is a status
 that gets recorded wrong.
 
-1. Set `status` to `submitted` with the date in `/Job Search/Tracking/job-search.json`.
-   **Don't write "Submitted" in the notes** — the status field already says that. Notes are for what's
-   unusual: receipt date, corrections made, employer quirks.
-2. Regenerate the `DATA` array in `job-search-dashboard.html` from the JSON.
-3. Copy both files to `/Job Search/Tracking/`.
-4. POST the JSON:
-   ```
-   curl -s -X POST https://roadmap.benwhetstone.info/api/job-search \
-     -H "Authorization: Bearer $ROADMAP_TOKEN" \
-     -H "content-type: application/json" --data @job-search.json
-   ```
-5. Update the Cowork artifact `job-search-dashboard` via `update_artifact`.
-6. Archive the resume and cover letter into `Archive - Submitted/`.
+1. If it came off Ben's To-Apply list, promote it:
+   `PATCH /api/v1/apply-queue { id, action:"applied", appliedAt:"<ISO with offset>" }`
+   Otherwise log it: `POST /api/v1/applications/manual`
+   `{ company, title, url, jobId, status:"applied", appliedAt, notes }`
+   Notes are for what's *unusual* — receipt date, corrections made, employer
+   quirks. The status field already says it was submitted.
+2. Attach the documents so they're reachable from the card:
+   `PATCH /api/v1/applications/<uuid> { action:"attachDocs", resumeUrl, coverUrl }`
+3. Record what happened on the timeline:
+   `POST /api/v1/activity { applicationUuid, kind:"applied", message:"<one line>" }`
+4. Archive the resume and cover letter into `Archive - Submitted/` in Drive.
 
-An application isn't done until the JSON, the dashboard, and the API all say the same thing.
+**Verify the response of every write** — the returned status must equal what you
+sent. Anything else, especially `readyToApply`, is a failure: report it.
+
+RETIRED, do not do: writing `job-search.json`, regenerating
+`job-search-dashboard.html`, POSTing `roadmap.benwhetstone.info/api/job-search`,
+or updating a `job-search-dashboard` artifact. The site is the dashboard.
+
+An application isn't done until the site's tracker shows it applied.
 
 ---
 
