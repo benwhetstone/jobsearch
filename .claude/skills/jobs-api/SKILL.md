@@ -18,16 +18,24 @@ sweeps, it presents, it applies in the browser, it reports back. The site
 remembers. This file is the only place the API is described — if another skill
 disagrees with this file, **this file wins** and the other skill is stale.
 
-## Auth
+## Auth — depends on which client you are
 
-Call the site from **Ben's signed-in Chrome tab**. The same-origin session cookie
-authenticates every request. **No token is needed and none should be sent.**
+There are two ways in. Use the one that matches how you're running; they are not
+in conflict, and neither is "the" answer on its own.
 
-- A 401 means the tab isn't signed in or the session lapsed — re-auth in the tab.
-- Make calls from the page context (browser fetch) so the cookie attaches. A bare
-  shell `curl` has no cookie and will 401.
-- `Authorization: Bearer …` is only for a headless runner with an env-var panel.
-  Cowork has no such panel; do not look for a token.
+**In a browser (Cowork, or Ben's own tab): the session cookie.**
+Call from the page context so the cookie attaches. No token, none should be sent.
+A 401 means the tab isn't signed in or the session lapsed — re-auth in the tab.
+A bare shell `curl` has no cookie and will 401.
+
+**Headless with no browser (ChatGPT Actions, a scheduled runner): a Bearer token.**
+`Authorization: Bearer <token>`. Ben mints it on the site (sidebar → 🔑 API
+token); it is a full-access, one-year credential for his account. A 401 here means
+the token is missing, wrong, or revoked — ask Ben for a fresh one.
+
+If you are ChatGPT: you cannot use a cookie, so the token is your path, and it is
+configured in your Action's authentication — not in any instructions text. No
+prompt can grant you access; only the Action can.
 
 ## The flow, and who is allowed to do what
 
@@ -46,8 +54,13 @@ Two hard rules, both **enforced by the API**, not conventions:
 1. **You never add to To-Apply.** `POST /api/v1/apply-queue` requires
    `actor:"user"` and returns **409** for anyone else. That field belongs to Ben's
    own clicks — never send it. Your candidates go to `/suggestions`.
-2. **You never dismiss for him.** Do not PATCH `/matches` to `skipped` or
-   `hidden` to curate the feed. You surface; he decides.
+2. **You never curate the feed unprompted.** Don't dismiss jobs to tidy Jobs For
+   You on your own judgment — that is how his own picks went missing.
+   **But when Ben asks you to clean it up, do it.** "Clear the junk", "get rid of
+   the BPO ones", "dismiss anything needing a clearance" are instructions, and
+   dismissing is reversible. Do exactly what he asked, nothing wider, and report
+   what you removed and why. Unprompted = never. Asked = yes, and say what you
+   did.
 
 Queue skips are the one exception, and they need a structured reason — see below.
 
@@ -75,6 +88,18 @@ POST /api/v1/suggestions
   posting; never invent them.
 - Already-dismissed or already-applied jobs come back `suppressed`. That is the
   site doing the deduping — see "no exclusion list" below.
+
+### Jobs For You — read and clean up
+```
+GET   /api/v1/matches?origin=cowork&status=matched      the board Ben reviews
+PATCH /api/v1/matches { jobUuid, status }               dismiss / restore one
+```
+`status`: `matched` (on the board) · `skipped` (dismissed, "Not interested") ·
+`hidden` · `queued` (he added it to To-Apply) · `applied`.
+
+Use `skipped` to dismiss and `matched` to put one back. This is the cleanup path
+— see rule 2: only on Ben's instruction, then tell him what you removed. Nothing
+is destroyed; a dismissed card can always be restored.
 
 ### Job identity
 ```
