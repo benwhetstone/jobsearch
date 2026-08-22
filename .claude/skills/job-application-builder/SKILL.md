@@ -188,9 +188,27 @@ Use the browser (Claude-in-Chrome) to complete the application:
    > Meduit's parser silently changed Ben's employment dates *and* his home address. It was caught only
    > because he happened to be watching the screen. Assume the parser got something wrong and go look.
 5. Fill profile, work history, and education from Ben's facts.
-6. Answer screening questions from the Career Intake Profile / Ben's facts. For salary, use his target from the profile; **numbers only** if the field validates as numeric (strip `$`/commas).
+6. Answer screening questions from the Career Intake Profile / Ben's facts. For salary: **$77,000-$100,000, floor $77,000** (updated 2026-08-22). If the posting's own
+   band runs higher, answer inside the posting's band. Never a figure below $77,000. **Numbers
+   only** if the field validates as numeric (strip `$`/commas).
 7. Voluntary self-ID: Male / White (non-Hispanic) / **Protected Veteran: Yes** / **Disability: Yes**, unless Ben says otherwise.
 8. **Stop at the final review/submit screen and get Ben's explicit go before clicking Submit.** Submitting is irreversible. Show him the salary and any judgment-call answers first.
+
+### Step 4b - Workday "use my last application" pre-fill audit (pay figures)
+
+Workday's "use my last application" / autofill pulls answers from PRIOR submissions,
+so retired figures resurface silently. After any pre-fill, before moving on, scan every
+salary/compensation field against this retired list - a hit means STOP and re-enter from
+the current band ($77,000-$100,000, floor $77K):
+
+    \$?54[,.]?000|\$?54\s?K        (old $54K hard drop)
+    \$?60[,.]?000|\$?60\s?K        (old ~$60K break-even / target)
+    \$?63[,.]?000|\$?63\s?K        (old $63K)
+    \$?65[,.]?000|\$?65\s?K        (old $65K floor)
+    70,001                            (old $70,001-$80,000 band pick)
+    \$?75\s?[-]\s?\$?85\s?K|\$?75[,.]?000   (old $75-85K ask)
+    \$?78[,.]?000|\$?78\s?K        (old $78K)
+    \$?65\s?[-]\s?\$?70\s?K      (old $65-70K Phase 1 default)
 
 ### Step 6b — Form mechanics that actually work
 

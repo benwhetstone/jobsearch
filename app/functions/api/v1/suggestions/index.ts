@@ -11,7 +11,7 @@
 // score (0-100) is Cowork's; omitted -> the site scores it with the same engine
 // as the feed. note is the one-line "why it fits" shown on the card.
 import { json, err, currentUser, type Env, type CtxUser } from "../../_lib";
-import { canonicalJobId } from "../../_jobid";
+import { canonicalJobId, normCompany, normTitle } from "../../_jobid";
 
 const uuid = () => crypto.randomUUID();
 
@@ -36,7 +36,7 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
     const location = String(it?.location || "").trim() || null;
     const remote = it?.remote ? 1 : 0;
     const sMin = it?.salaryMin ?? null, sMax = it?.salaryMax ?? null;
-    const desc = it?.description ? String(it.description).slice(0, 8000) : null;
+    const desc = (it?.description || it?.snippet) ? String(it.description || it.snippet).slice(0, 8000) : null;
     const note = it?.note ? String(it.note).trim().slice(0, 500) : "";
     // The standard card facts. The same four render on every card, so a
     // suggestion is readable at a glance without opening the posting.
@@ -60,21 +60,67 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
       continue;
     }
 
-    // Skip anything Ben already dismissed / queued / applied — same job_id rule
-    // as the sweep, so a suggestion can't resurrect something he killed.
+    // Suppression, in three layers, each with a VISIBLE reason (nothing vanishes
+    // silently any more):
+    //  1. exact job_id the user already acted on;
+    //  2. an application already in the tracker whose normalized company+title
+    //     matches — two sightings of one role can hash differently (aggregator
+    //     vs ATS url), and a role at the interview stage must never come back
+    //     as a fresh card;
+    //  3. a dismissed match on normalized company+title (jid_sig instability).
+    const nc = normCompany(company), nt = normTitle(title);
+    const when = (d: string | null) => (d ? ` on ${String(d).slice(0, 10)}` : "");
+
     const acted = await env.DB.prepare(
-      `SELECT m.status FROM matches m JOIN jobs j ON j.uuid = m.job_uuid
+      `SELECT m.status, m.status_changed_at, m.created_at FROM matches m JOIN jobs j ON j.uuid = m.job_uuid
         WHERE m.user_id = ? AND j.job_id = ? AND m.status IN ('skipped','hidden','applied','queued') LIMIT 1`
-    ).bind(user.id, jobId).first<{ status: string }>();
-    if (acted) { results.push({ jobId, company, title, accepted: false, suppressed: true, reason: `already ${acted.status}` }); continue; }
+    ).bind(user.id, jobId).first<any>();
+    if (acted) {
+      results.push({ jobId, company, title, accepted: false, suppressed: true,
+        reason: `already ${acted.status}${when(acted.status_changed_at || acted.created_at)} (exact job_id)` });
+      continue;
+    }
+
+    const appRows = await env.DB.prepare(
+      `SELECT a.uuid, a.status, j.company_name, j.title FROM applications_v2 a JOIN jobs j ON j.uuid = a.job_uuid
+        WHERE a.user_id = ? AND a.status != 'discarded' AND lower(j.title) LIKE lower(?)`
+    ).bind(user.id, title.trim()).all<any>();
+    const appHit = (appRows.results ?? []).find((r: any) =>
+      normCompany(r.company_name || "") === nc && normTitle(r.title || "") === nt);
+    if (appHit) {
+      results.push({ jobId, company, title, accepted: false, suppressed: true,
+        reason: `already in the tracker as ${appHit.status} (company+title match, application ${String(appHit.uuid).slice(0, 8)})` });
+      continue;
+    }
+
+    // Existing cowork rows with the same normalized company+title. A DISMISSED
+    // one suppresses; a LIVE one is updated in place, so a corrected re-POST
+    // (fixed url, remote flag, salary) refreshes the same card instead of
+    // minting a fresh jid_sig from the changed fields.
+    const kinRows = await env.DB.prepare(
+      `SELECT j.uuid, j.company_name, j.title, m.status, m.status_changed_at, m.created_at
+         FROM matches m JOIN jobs j ON j.uuid = m.job_uuid
+        WHERE m.user_id = ? AND m.origin = 'cowork' AND lower(j.title) LIKE lower(?)`
+    ).bind(user.id, title.trim()).all<any>();
+    const kin = (kinRows.results ?? []).find((r: any) =>
+      normCompany(r.company_name || "") === nc && normTitle(r.title || "") === nt);
+    if (kin && ["skipped", "hidden", "applied", "queued"].includes(kin.status)) {
+      results.push({ jobId, company, title, accepted: false, suppressed: true,
+        reason: `already ${kin.status}${when(kin.status_changed_at || kin.created_at)} (company+title match)` });
+      continue;
+    }
 
     // Scores are retired; store one only if the caller supplies it.
     const score = it?.score != null && Number.isFinite(Number(it.score))
       ? Math.max(0, Math.min(1, Number(it.score) / 100)) : 0;
-    results.push({ jobId, company, title, accepted: true, suppressed: false, reason: jobId.startsWith("jid_sig-") ? "accepted (weak id — pass an employer/ATS url for a stable id)" : "accepted" });
+    results.push({ jobId, company, title, accepted: true, suppressed: false,
+      reason: (kin ? "updated existing card" : "accepted") +
+              (jobId.startsWith("jid_sig-") ? " (weak id — pass an employer/ATS url for a stable id)" : "") });
 
-    // Stable job uuid per suggestion so re-posting the same pick updates in place.
-    const jobUuid = "cowork:" + jobId;
+    // Stable job uuid per suggestion so re-posting the same pick updates in
+    // place. When a live match already exists for this company+title, reuse ITS
+    // uuid so the correction lands on the same card (item 4 of the 08-22 audit).
+    const jobUuid = kin ? kin.uuid : "cowork:" + jobId;
     stmts.push(env.DB.prepare(
       `INSERT INTO jobs (uuid, source, external_id, title, company_name, location, remote,
          salary_min, salary_max, url, apply_url, description, posted_at, job_id,

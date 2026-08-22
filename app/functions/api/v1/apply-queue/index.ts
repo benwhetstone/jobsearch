@@ -10,7 +10,7 @@
 //                             and mark the queue row applied
 //         action "skipped" -> mark the queue row skipped
 //         action "reset"   -> back to pending
-import { json, err, currentUser, logActivity, type Env, type CtxUser } from "../../_lib";
+import { json, err, currentUser, logActivity, nowEastern, type Env, type CtxUser } from "../../_lib";
 import { canonicalJobId } from "../../_jobid";
 
 const uuid = () => crypto.randomUUID();
@@ -264,7 +264,7 @@ export const onRequestPatch: PagesFunction<Env, string, { user?: CtxUser }> = as
     // Promote into the live tracker: create a job + application (status 'applied')
     // exactly like a manually-logged application, and link it back.
     const at = (typeof body.appliedAt === "string" && body.appliedAt.length <= 40 && !Number.isNaN(Date.parse(body.appliedAt)))
-      ? body.appliedAt : now;   // caller's local timestamp, stored verbatim (keeps offset)
+      ? body.appliedAt : nowEastern();   // caller's stamp verbatim, else Eastern-offset now
     const jobUuid = "queue:" + uuid();
     const appUuid = uuid();
     const jobId = row.job_id || canonicalJobId({ company: row.company, title: row.title, location: row.location, url: row.url });

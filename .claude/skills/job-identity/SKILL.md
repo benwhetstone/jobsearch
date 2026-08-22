@@ -49,7 +49,9 @@ location wording ("Remote" vs "Remote, US").
 
 **Never invent, guess, or hash a job_id yourself.** Call the endpoint. Pass the
 posting URL whenever you have it — a real ATS/Workday URL yields the precise,
-cross-board-stable id; without a URL you get a weaker signature id.
+cross-board-stable id; without a URL you get a weaker signature id. Recognized
+(2026-08-22): Greenhouse, Lever, Ashby, Workday, ADP (myjobs.adp.com), Oracle
+Recruiting Cloud, iCIMS, SuccessFactors, Paylocity, Taleo, SmartRecruiters.
 
 ```
 POST https://jobs.benwhetstone.info/api/v1/job-id

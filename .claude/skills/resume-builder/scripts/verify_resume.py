@@ -32,6 +32,23 @@ CONDITIONAL = [
  (r"\bPython\b",  r"Python\s*\(pandas",
   "Python allowed ONLY as 'Python (pandas, in progress)' (rule 6)"),
 ]
+
+# ---- RETIRED pay figures (band updated 2026-08-22): any hit = FAIL ---------
+# Current band: $77,000-$100,000, floor $77,000. If the posting's own band runs
+# higher, answer inside the posting's band. These older figures must never
+# appear in any resume, cover letter, or pre-filled form again.
+_RP = "retired pay figure - band is $77,000-$100,000 (floor $77K), updated 2026-08-22"
+BANNED += [
+ (r"\$\s?54[,.]?000|\$\s?54\s?[Kk]\b", _RP + " (was: $54K hard drop)"),
+ (r"\$\s?60[,.]?000|\$\s?60\s?[Kk]\b", _RP + " (was: ~$60K break-even / $60K target)"),
+ (r"\$\s?63[,.]?000|\$\s?63\s?[Kk]\b", _RP + " (was: $63K)"),
+ (r"\$\s?65[,.]?000|\$\s?65\s?[Kk]\b", _RP + " (was: $65K floor)"),
+ (r"70,001",                                _RP + " (was: $70,001-$80,000 band pick)"),
+ (r"\$\s?75\s?[-\u2013]\s?\$?\s?85\s?[Kk]|\$\s?75[,.]?000", _RP + " (was: $75-85K ask)"),
+ (r"\$\s?78[,.]?000|\$\s?78\s?[Kk]\b", _RP + " (was: $78K)"),
+ (r"\$\s?65\s?[-\u2013]\s?\$?\s?70\s?[Kk]",                   _RP + " (was: $65-70K Phase 1 default)"),
+]
+
 # ---- Must be present ------------------------------------------------------
 REQUIRED = [
  (r"brwhetstone@gmail\.com",   "contact email missing (rule 9)"),

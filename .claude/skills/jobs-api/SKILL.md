@@ -81,6 +81,19 @@ POST /api/v1/suggestions
 } ] }
 -> { ok, added, suppressed, rejected, results:[{jobId, accepted, suppressed, reason}] }
 ```
+- The field is **`description`**; `snippet` is accepted as an alias (GET /matches
+  returns the stored text as `job.snippet`). Both spellings work; prefer
+  `description`.
+- **Suppression is visible**: a suppressed result's `reason` names the prior
+  action and its date — "already skipped on 2026-08-20 (exact job_id)",
+  "already in the tracker as interview (company+title match, application
+  91c5bb42)". Nothing vanishes silently.
+- **Dedupe is two-layer**: exact `job_id`, then normalized company+title against
+  the applications tracker and dismissed cards — so one role seen under two URLs
+  can't come back as a fresh card.
+- **Corrected re-POSTs update the same card.** Re-POST a live suggestion with a
+  fixed url / remote flag / salary and the result says `updated existing card`
+  (matched on normalized company+title) instead of minting a new one.
 - `note` is **enforced**: missing or too thin → that job is rejected.
 - Pay / Location / Experience / Skills are the four **standard card facts**, shown
   in that order on every card. Omit one and the card reads "Not listed" — a
@@ -97,6 +110,11 @@ PATCH /api/v1/matches { jobUuid, status }               dismiss / restore one
 `status`: `matched` (on the board) · `skipped` (dismissed, "Not interested") ·
 `hidden` · `queued` (he added it to To-Apply) · `applied`.
 
+Each row carries `statusChangedAt` (when it was dismissed/moved), and every GET
+returns `meta.totalRecords` (the TRUE count for your filters), `meta.returned`,
+and `meta.limit` — if `returned < totalRecords` your read-back was truncated;
+raise `limit` (up to 1000).
+
 Use `skipped` to dismiss and `matched` to put one back. This is the cleanup path
 — see rule 2: only on Ben's instruction, then tell him what you removed. Nothing
 is destroyed; a dismissed card can always be restored.
@@ -106,9 +124,10 @@ is destroyed; a dismissed card can always be restored.
 POST /api/v1/job-id   { company, title, location, url }  ->  { jobId }
 ```
 Every posting has one canonical `job_id`. **Never invent or hash one.** Pass the
-employer/ATS URL and you get the stable ATS-anchored form
-(`jid_greenhouse-…`, `jid_workday-…`); without it you get the weaker
-`jid_sig-…`. Details in the `job-identity` skill.
+employer/ATS URL and you get the stable ATS-anchored form; without it you get
+the weaker `jid_sig-…`. Recognized systems (2026-08-22): Greenhouse, Lever,
+Ashby, Workday, **ADP, Oracle Recruiting Cloud, iCIMS, SuccessFactors,
+Paylocity, Taleo, SmartRecruiters**. Details in the `job-identity` skill.
 
 **Keep no local exclusion list.** Do not remember what you've seen, skipped, or
 applied to, and do not pre-filter candidates against such a list. The site
@@ -154,7 +173,8 @@ Statuses: `applied | interview | offer | hired | rejected | withdrawn`
 - Unknown or missing action → **400, nothing changes**. Never retry the same body;
   fix the shape.
 - Timestamps: send ISO **with offset** (`2026-08-07T19:30:00-04:00`). Stored
-  verbatim, so an evening-Eastern submit doesn't roll to the next UTC day.
+  verbatim. When you omit one, the server now stamps America/New_York offset
+  time itself — but send your own; you know when the event actually happened.
 
 ### Activity log
 ```

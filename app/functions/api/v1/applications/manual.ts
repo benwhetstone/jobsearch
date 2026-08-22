@@ -4,7 +4,7 @@
 // employer's site). Creates a minimal 'manual' job row and an application
 // already in the given stage (default 'applied'), so your own applications
 // live in the same funnel as the autopiloted ones.
-import { json, err, currentUser, logActivity, type Env, type CtxUser } from "../../_lib";
+import { json, err, currentUser, logActivity, nowEastern, type Env, type CtxUser } from "../../_lib";
 import { canonicalJobId } from "../../_jobid";
 
 const uuid = () => crypto.randomUUID();
@@ -25,7 +25,7 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
   // Store the caller's timestamp VERBATIM when it's valid ISO (keeps its offset
   // so an evening-Eastern submit doesn't roll to the next UTC day); else now.
   const appliedAt = (typeof body?.appliedAt === "string" && body.appliedAt.length <= 40 && !Number.isNaN(Date.parse(body.appliedAt)))
-    ? body.appliedAt : new Date().toISOString();
+    ? body.appliedAt : nowEastern();
   const now = new Date().toISOString();
 
   const jobUuid = "manual:" + uuid();

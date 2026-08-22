@@ -7,7 +7,7 @@
 //
 // Approve marks the application ready for the browser step on the desktop
 // client. Nothing in this file submits anything to an employer.
-import { json, err, currentUser, logActivity, type Env, type CtxUser } from "../../_lib";
+import { json, err, currentUser, logActivity, nowEastern, type Env, type CtxUser } from "../../_lib";
 import { redline, cvToText, type CvContent } from "../../_docs";
 import { submitToAts } from "../../_submit";
 import { prepare } from "./index";
@@ -151,7 +151,7 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
 
   // ---- manual submit done: the user applied on the employer's site ----
   if (body.action === "markApplied") {
-    const at = stampFrom(body.submittedAt ?? body.appliedAt ?? body.at, now);
+    const at = stampFrom(body.submittedAt ?? body.appliedAt ?? body.at, nowEastern());
     await env.DB.prepare("UPDATE applications_v2 SET status = 'applied', submitted_at = ?, updated_at = ? WHERE uuid = ?")
       .bind(at, now, uuid).run();
     await resolveActionItems(env, user.id, uuid);
@@ -171,7 +171,7 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     const allowed = new Set(["applied", "interview", "offer", "hired", "rejected", "withdrawn"]);
     const to = String(body.status || "");
     if (!allowed.has(to)) return err(400, `status must be one of: ${[...allowed].join(", ")}`);
-    const at = stampFrom(body.submittedAt ?? body.appliedAt ?? body.at, now);
+    const at = stampFrom(body.submittedAt ?? body.appliedAt ?? body.at, nowEastern());
     // A provided timestamp also back-stamps submitted_at when moving to applied.
     if (to === "applied") {
       await env.DB.prepare("UPDATE applications_v2 SET status = ?, submitted_at = COALESCE(submitted_at, ?), updated_at = ? WHERE uuid = ?")

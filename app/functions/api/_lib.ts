@@ -132,6 +132,28 @@ export async function logActivity(
   ).run().catch(() => {});
 }
 
+
+// The current moment as ISO-8601 WITH the America/New_York offset, e.g.
+// "2026-08-22T19:30:00-04:00". Used for user-facing event stamps
+// (submitted_at / applied_at) so an evening-Eastern submission keeps its
+// Eastern calendar date instead of rolling to the next UTC day. Internal
+// bookkeeping stamps (created_at/updated_at) stay plain UTC.
+export function nowEastern(d: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York", hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).formatToParts(d);
+  const p: Record<string, string> = {};
+  for (const x of parts) p[x.type] = x.value;
+  const wallUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  const offMin = Math.round((wallUtc - d.getTime()) / 60000);
+  const sign = offMin < 0 ? "-" : "+";
+  const a = Math.abs(offMin);
+  const oh = String(Math.floor(a / 60)).padStart(2, "0"), om = String(a % 60).padStart(2, "0");
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}${sign}${oh}:${om}`;
+}
+
 // Pull the authenticated user attached by the middleware.
 export interface CtxUser { id: string; email: string; name: string | null; role: string; notify_email: number; }
 export function currentUser(data: { user?: CtxUser }): CtxUser {

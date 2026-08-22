@@ -97,7 +97,7 @@ Specific to the DA space.
 
 ### Compensation Snapshot
 Current ranges for entry-level DA roles. Note any shifts. Flag if Ben's floor
-($60K) is competitive, below market, or above.
+($77K floor; $77,000-$100,000 band) is competitive, below market, or above.
 
 ### Red Flags and Warnings
 Anything Ben should avoid: oversaturated signals, tools that trigger skepticism,

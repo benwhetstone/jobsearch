@@ -34,7 +34,7 @@ function slug(s: string): string {
 
 // Company identity: drop legal suffixes and punctuation so "Acme, Inc." and
 // "Acme LLC" are the same employer.
-function normCompany(s: string): string {
+export function normCompany(s: string): string {
   return slug((s || "").replace(/\b(inc|llc|l\.l\.c|ltd|limited|corp|corporation|co|company|gmbh|plc|group|holdings|international)\b/gi, ""))
     .replace(/-+/g, "-");
 }
@@ -42,7 +42,7 @@ function normCompany(s: string): string {
 // Title identity: punctuation-insensitive, whitespace-collapsed. Kept faithful
 // otherwise (we do NOT strip seniority — "Senior Data Analyst" is a different
 // req from "Data Analyst").
-function normTitle(s: string): string { return slug(s); }
+export function normTitle(s: string): string { return slug(s); }
 
 // Location identity: every remote variant collapses to "remote" (so "Remote",
 // "Remote, US" and "" don't split one job three ways); on-site keeps city/state
@@ -81,6 +81,58 @@ function atsRef(input: JobIdInput): { ats: string; token: string; reqId: string 
     const wd = u.match(/([a-z0-9-]+)\.(?:wd\d+\.)?myworkdayjobs?\.com/i);
     const req = u.match(/\bR-?\d{4,}\b/i) || u.match(/\/job\/[^/]*\/[^/]*_(R-?\d{3,})/i);
     if (wd && req) return { ats: "workday", token: slug(wd[1]), reqId: slug(req[1] || req[0]) };
+    const more = extraAtsRef(u);
+    if (more) return more;
+  }
+  return null;
+}
+
+// Host parsers beyond the big four. Added 2026-08-22 after an audit found 13 of
+// 15 legitimate employer URLs falling back to jid_sig hashes. Each returns the
+// employer's real requisition as the identity, matching the jid_<ats>-<org>-<req>
+// schema. Query params are checked before path shapes where an ATS uses both.
+function extraAtsRef(u: string): { ats: string; token: string; reqId: string } | null {
+  let m: RegExpMatchArray | null;
+  const param = (name: string) => {
+    const r = u.match(new RegExp("[?&]" + name + "=([^&#]+)", "i"));
+    return r ? decodeURIComponent(r[1]) : null;
+  };
+
+  // ADP — myjobs.adp.com/<tenant>/cx/job-details?...&jobId=123456
+  if (/myjobs\.adp\.com/i.test(u)) {
+    m = u.match(/myjobs\.adp\.com\/([^/?#]+)/i);
+    const req = param("jobId") || (u.match(/\/job[s-]*(?:-details|-listing)?\/(\d{4,})/i) || [])[1];
+    if (m && req) return { ats: "adp", token: slug(m[1]), reqId: slug(req) };
+  }
+  // Oracle Recruiting Cloud — <tenant>.fa.<region>.oraclecloud.com/.../job/12345
+  if ((m = u.match(/([a-z0-9-]+)\.fa\.[a-z0-9.-]*oraclecloud\.com/i))) {
+    const req = (u.match(/\/job\/(\d{3,})/i) || [])[1] || (u.match(/\/requisitions\/preview\/(\d{3,})/i) || [])[1];
+    if (req) return { ats: "oracle", token: slug(m[1]), reqId: slug(req) };
+  }
+  // iCIMS — <tenant>.icims.com/jobs/12345/...  (careers- prefix stripped)
+  if ((m = u.match(/([a-z0-9-]+)\.icims\.com/i))) {
+    const req = (u.match(/\/jobs\/(\d{3,})/i) || [])[1];
+    if (req) return { ats: "icims", token: slug(m[1].replace(/^careers?-/i, "")), reqId: slug(req) };
+  }
+  // SuccessFactors — careerN.successfactors.com/... company=XYZ ... career_job_req_id=12345
+  if (/successfactors\.(?:com|eu)/i.test(u) || /\.sapsf\./i.test(u)) {
+    const req = param("career_job_req_id") || param("job_req_id") || (u.match(/\/job\/[^/]*\/(\d{3,})/i) || [])[1];
+    const co = param("company");
+    if (req) return { ats: "successfactors", token: slug(co || "sf"), reqId: slug(req) };
+  }
+  // Paylocity — recruiting.paylocity.com/recruiting/jobs/Details/1234567/<Company>/...
+  if (/recruiting\.paylocity\.com/i.test(u)) {
+    m = u.match(/\/Details\/(\d{4,})(?:\/([^/?#]+))?/i);
+    if (m) return { ats: "paylocity", token: slug(m[2] || "paylocity"), reqId: slug(m[1]) };
+  }
+  // Taleo — <tenant>.taleo.net/careersection/...?job=12345 (or /jobdetail.ftl?job=ABC-123)
+  if ((m = u.match(/([a-z0-9-]+)\.taleo\.net/i))) {
+    const req = param("job") || (u.match(/\/jobdetail[^?#]*[?&]job=([^&#]+)/i) || [])[1];
+    if (req) return { ats: "taleo", token: slug(m[1]), reqId: slug(req) };
+  }
+  // SmartRecruiters — jobs.smartrecruiters.com/<Company>/743999999999999-title
+  if ((m = u.match(/jobs\.smartrecruiters\.com\/(?:oneclick-ui\/company\/)?([^/?#]+)\/(\d{9,})/i))) {
+    return { ats: "smartrecruiters", token: slug(m[1]), reqId: slug(m[2]) };
   }
   return null;
 }

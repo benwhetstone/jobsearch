@@ -27,12 +27,12 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
   // Cowork suggestions and the site's own sweep in one Jobs-For-You view.
   const originParam = url.searchParams.get("origin") || "all";
   const origins = originParam === "all" ? null : originParam.split(",").map((s) => s.trim()).filter(Boolean);
-  const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit")) || 50));
+  const limit = Math.min(1000, Math.max(1, Number(url.searchParams.get("limit")) || 50));
 
   const originClause = origins ? `AND m.origin IN (${origins.map(() => "?").join(",")})` : "";
   const rows = await env.DB.prepare(
     `SELECT m.job_uuid, m.total_score, m.skills, m.experience, m.compensation, m.terms, m.company,
-            m.comp_flag, m.missing_json, m.status, m.created_at, m.origin, m.note,
+            m.comp_flag, m.missing_json, m.status, m.created_at, m.status_changed_at, m.origin, m.note,
             j.title, j.company_name, j.location, j.remote, j.salary_min, j.salary_max, j.salary_currency,
             j.url, j.apply_url, j.board, j.source, j.posted_at, j.description, j.auto_apply, j.job_id, j.experience, j.skills_json, j.arrangement, j.created_at AS job_created_at
        FROM matches m JOIN jobs j ON j.uuid = m.job_uuid
@@ -67,7 +67,15 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
       firstSeenAt: (r as any).job_created_at || null,
     },
     matchedAt: r.created_at,
+    statusChangedAt: (r as any).status_changed_at || null,
   }));
+
+  // The true row count for THESE filters — not the length of the (possibly
+  // capped) page — so a read-back can tell it was truncated (08-22 audit #6).
+  const totalRow = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM matches m
+      WHERE m.user_id = ? AND (? = 'all' OR m.status = ?) ${originClause}`
+  ).bind(user.id, status, status, ...(origins ?? [])).first<{ n: number }>();
 
   const counts = await env.DB.prepare(
     "SELECT status, COUNT(*) AS n FROM matches WHERE user_id = ? GROUP BY status"
@@ -75,7 +83,7 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
   const byStatus: Record<string, number> = {};
   for (const c of counts.results ?? []) byStatus[c.status] = c.n;
 
-  return json({ matches: out, counts: byStatus }, { totalRecords: out.length });
+  return json({ matches: out, counts: byStatus }, { totalRecords: totalRow?.n ?? out.length, returned: out.length, limit });
 };
 
 async function patch(request: Request, env: Env, user: CtxUser): Promise<Response> {
@@ -86,8 +94,8 @@ async function patch(request: Request, env: Env, user: CtxUser): Promise<Respons
   if (!jobUuid) return err(400, "jobUuid is required.");
   if (!VALID_STATUS.has(status)) return err(400, `status must be one of: ${[...VALID_STATUS].join(", ")}`);
 
-  const res = await env.DB.prepare("UPDATE matches SET status = ? WHERE user_id = ? AND job_uuid = ?")
-    .bind(status, user.id, jobUuid).run();
+  const res = await env.DB.prepare("UPDATE matches SET status = ?, status_changed_at = ? WHERE user_id = ? AND job_uuid = ?")
+    .bind(status, new Date().toISOString(), user.id, jobUuid).run();
   if (!res.meta?.changes) return err(404, "No such match for this user.");
   return json({ jobUuid, status });
 }

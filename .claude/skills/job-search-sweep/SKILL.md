@@ -283,9 +283,10 @@ above is out unless it is explicitly an IC role.
 
 ### Pay Floor
 
-~$60K cash for W-2 with benefits. 10% variance band: $54K is the hard DROP. Roles paying
-$54K-$60K stay on the list with a note ("below floor, negotiation candidate") so Ben can
-decide whether the role is worth pursuing at that range. Above $60K scores normally.
+Band: $77,000-$100,000. Floor: $77,000 (updated 2026-08-22). A posting whose band
+ENTIRELY sits below $77K is a drop. A band that straddles the floor stays on the list
+flagged "below floor, negotiation candidate". If a posting's own band runs higher than
+ours, that's fine - salary answers go inside the posting's band.
 
 ### Qualification Gate (Hail-Mary Test)
 
@@ -385,13 +386,13 @@ is coverage and honesty, not ranking.
 **Do not filter by a judgment call either.** Rank-don't-filter. There are only
 these hard drops:
 - a genuine seniority mismatch in the title (Manager+ that isn't an IC role),
-- a posted band entirely under $54K,
+- a posted band entirely under $77K,
 - a required active security clearance,
 - anything on the "never surface" list above (BPO, gig/labeling, off-field).
 
 Everything else gets surfaced. A regex that discards causes false kills.
 
-**Pay floor:** $60,000 target, $54,000 hard drop. Judge a posted band on its
+**Pay:** band $77,000-$100,000, floor $77,000 (updated 2026-08-22). Judge a posted band on its
 MIDPOINT, not its bottom. An unposted band is unknown, not disqualifying — say
 "Not listed".
 
@@ -584,7 +585,7 @@ manager actually call this person?).
 2. Does the title match an approved title constant (Data Analyst, BI Analyst, Reporting
    Analyst, Operations Analyst, Insights Analyst, Business Analyst with real data content)?
    (If no, STOP.)
-3. Is pay above the $54K hard floor? (If no, STOP.)
+3. Is the posted band at least partly at/above the $77K floor? (Entirely below: STOP.)
 4. Was the resume-builder skill loaded and its source files (design-spec.css, voice.md) read?
    (If no, STOP and go read them.)
 5. Was the resume built with the HTML/weasyprint pipeline? (If no, STOP and rebuild.)
