@@ -26,6 +26,22 @@ const SKIP_REASONS = new Set([
   "duplicate",     // same req already applied to elsewhere         -> not revivable
 ]);
 
+// Why the tool is parking a row Ben already put on his list. A hold is NOT a
+// skip: the row stays in To-Apply, visibly flagged, and only Ben clears it.
+// Every hold needs a reason AND a concrete detail — "on hold" with no argument
+// is just a silent skip wearing a different hat.
+const HOLD_REASONS = new Set([
+  "closed",           // no longer accepting applications
+  "pay_below_floor",  // posted band sits entirely under the $77K floor
+  "location",         // on-site / geography conflict
+  "clearance",        // requires a clearance Ben does not hold
+  "experience_gap",   // hard requirement he does not meet
+  "duplicate",        // same req already in the funnel
+  "employer_flag",    // BPO / gig / staffing mill / never-surface category
+  "gated",            // needs Ben signed in at the keyboard
+  "other",            // anything else — detail carries the weight
+]);
+
 export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = async ({ request, env, data }) => {
   const user = currentUser(data);
   const q = new URL(request.url).searchParams;
@@ -33,13 +49,18 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
   // ?reason=gated narrows skipped rows to the revivable ones, so a backlog can
   // be reopened in one pass after a sign-in session.
   const reason = (q.get("reason") || "all").trim().toLowerCase();
+  // status accepts one value, "all", or a comma list ("pending,hold") so the
+  // To-Apply view can pull the worklist and its held rows in a single call.
+  const wanted = status === "all" ? null : status.split(",").map((x) => x.trim()).filter(Boolean);
+  const statusClause = wanted ? `AND status IN (${wanted.map(() => "?").join(",")})` : "";
   const rows = await env.DB.prepare(
     `SELECT id, company, title, url, location, notes, source, priority, status, application_uuid,
             match_score, salary_min, salary_max, resume_url, cover_url, job_id, experience, skills_json, arrangement, created_at, applied_at,
-            skip_reason, skip_detail, skipped_by, skipped_at
-       FROM apply_queue WHERE user_id = ? AND (? = 'all' OR status = ?) AND (? = 'all' OR skip_reason = ?)
+            skip_reason, skip_detail, skipped_by, skipped_at,
+            hold_reason, hold_detail, held_by, held_at
+       FROM apply_queue WHERE user_id = ? ${statusClause} AND (? = 'all' OR skip_reason = ?)
       ORDER BY priority DESC, match_score DESC, created_at ASC`
-  ).bind(user.id, status, status, reason, reason).all<any>();
+  ).bind(user.id, ...(wanted ?? []), reason, reason).all<any>();
   const counts = await env.DB.prepare(
     "SELECT status, COUNT(*) n FROM apply_queue WHERE user_id = ? GROUP BY status"
   ).bind(user.id).all<any>();
@@ -139,7 +160,11 @@ export const onRequestPost: PagesFunction<Env, string, { user?: CtxUser }> = asy
          skip_reason=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.skip_reason ELSE NULL END,
          skip_detail=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.skip_detail ELSE NULL END,
          skipped_by=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.skipped_by ELSE NULL END,
-         skipped_at=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.skipped_at ELSE NULL END`
+         skipped_at=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.skipped_at ELSE NULL END,
+         hold_reason=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.hold_reason ELSE NULL END,
+         hold_detail=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.hold_detail ELSE NULL END,
+         held_by=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.held_by ELSE NULL END,
+         held_at=CASE WHEN apply_queue.status = 'applied' THEN apply_queue.held_at ELSE NULL END`
     ).bind(uuid(), user.id, company, title, String(it?.url || "").trim() || null,
            String(it?.location || "").trim() || null, String(it?.notes || "").trim() || null,
            String(it?.source || "").trim() || null, Number(it?.priority) || 0, score,
@@ -230,11 +255,55 @@ export const onRequestPatch: PagesFunction<Env, string, { user?: CtxUser }> = as
                   skippedBy: byUser ? "user" : "agent", skippedAt: now });
   }
 
+  if (action === "hold") {
+    // The tool found a reason not to apply to something ALREADY on the list.
+    // It may flag, it may not remove: the row stays in To-Apply as 'hold' with
+    // the reason on the card, and Ben releases it or skips it himself.
+    const byUser = String(body?.actor || "") === "user";
+    const reason = String(body?.reason || "").trim().toLowerCase();
+    const detail = String(body?.detail || "").trim();
+    if (!byUser) {
+      if (!HOLD_REASONS.has(reason)) {
+        return err(400, `A hold needs reason: one of ${[...HOLD_REASONS].join(", ")}. ` +
+          "Send { id, action:\"hold\", reason, detail }.");
+      }
+      if (detail.length < 20) {
+        return err(400, "detail is required with a hold (at least 20 characters): say concretely what you found, " +
+          "including where you found it, so the row can be judged without re-reading the posting.");
+      }
+    }
+    if (row.status === "applied") {
+      return err(409, "That one is already applied — a hold cannot un-apply it. Change the application's status instead.");
+    }
+    await env.DB.prepare(
+      `UPDATE apply_queue SET status = 'hold', hold_reason = ?, hold_detail = ?,
+         held_by = ?, held_at = ? WHERE id = ?`
+    ).bind(reason || null, detail || null, byUser ? "user" : "agent", now, id).run();
+    await logActivity(env, user.id, { queueId: id, company: row.company, title: row.title,
+      kind: "status",
+      message: byUser ? `Put on hold (by user)${reason ? ` — ${reason}` : ""}.`
+                      : `Put on hold (agent, ${reason}): ${detail.slice(0, 200)}`,
+      meta: { reason: reason || null, by: byUser ? "user" : "agent" } });
+    return json({ ok: true, id, status: "hold", holdReason: reason || null,
+                  holdDetail: detail || null, heldBy: byUser ? "user" : "agent", heldAt: now });
+  }
+
+  if (action === "release") {
+    // Ben overruled the hold: back on the worklist, hold record cleared.
+    await env.DB.prepare(
+      "UPDATE apply_queue SET status = 'pending', hold_reason = NULL, hold_detail = NULL, held_by = NULL, held_at = NULL WHERE id = ?"
+    ).bind(id).run();
+    await logActivity(env, user.id, { queueId: id, company: row.company, title: row.title,
+      kind: "note", message: "Hold released — back on the To-Apply list." });
+    return json({ ok: true, id, status: "pending" });
+  }
+
   if (action === "reset") {
     // Restore to the worklist and clear the skip record — a revived row should
     // carry no stale "why it was dropped" state.
     await env.DB.prepare(
-      "UPDATE apply_queue SET status = 'pending', skip_reason = NULL, skip_detail = NULL, skipped_by = NULL, skipped_at = NULL WHERE id = ?"
+      "UPDATE apply_queue SET status = 'pending', skip_reason = NULL, skip_detail = NULL, skipped_by = NULL, skipped_at = NULL, " +
+      "hold_reason = NULL, hold_detail = NULL, held_by = NULL, held_at = NULL WHERE id = ?"
     ).bind(id).run();
     await logActivity(env, user.id, { queueId: id, company: row.company, title: row.title,
       kind: "note", message: "Moved back to pending in To-Apply." });

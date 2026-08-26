@@ -1043,10 +1043,21 @@
     const box = $("#applyList"); if (!box) return;
     box.innerHTML = ""; box.appendChild(el("div", "muted", "Loading…"));
     let d;
-    try { d = (await api("/apply-queue?status=pending")).data; }
+    try { d = (await api("/apply-queue?status=pending,hold")).data; }
     catch (e) { box.innerHTML = ""; box.appendChild(el("div", "banner bad", e.message)); return; }
     box.innerHTML = "";
     setCount("cntApply", (d.counts && d.counts.pending) || 0);
+    // Pending first, then held. A hold is a flag on Ben's own list, not a
+    // removal, so the row stays visible with the reason attached.
+    const HOLD_LABEL = {
+      closed: "No longer accepting applications", pay_below_floor: "Pay below floor",
+      location: "Location conflict", clearance: "Clearance required",
+      experience_gap: "Hard requirement not met", duplicate: "Already in the funnel",
+      employer_flag: "Employer flagged", gated: "Needs you signed in", other: "Flagged",
+    };
+    d.queue = (d.queue || []).slice().sort((a, b) =>
+      (a.status === "hold" ? 1 : 0) - (b.status === "hold" ? 1 : 0));
+    let holdHeaderDone = false;
     if (!d.queue.length) {
       const p = el("div", "card placeholder");
       p.innerHTML = '<div class="ph-icon"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>' +
@@ -1054,7 +1065,20 @@
       box.appendChild(p); return;
     }
     d.queue.forEach((q) => {
+      const held = q.status === "hold";
+      if (held && !holdHeaderDone) {
+        holdHeaderDone = true;
+        const hd = el("div", null);
+        hd.style.cssText = "margin:22px 0 8px;padding-top:14px;border-top:1px solid var(--line)";
+        hd.appendChild(el("strong", null, "On hold"));
+        const n = d.queue.filter((x) => x.status === "hold").length;
+        const sub = el("div", "muted", `${n} ${n === 1 ? "job" : "jobs"} the search flagged after you queued them — release to put one back on the list, or skip it.`);
+        sub.style.cssText = "font-size:12px;margin-top:2px";
+        hd.appendChild(sub);
+        box.appendChild(hd);
+      }
       const card = el("article", "card job appcard");
+      if (held) card.style.opacity = ".72";
       const top = el("div", "job-top");
       const [bg, fg] = avaFor(q.company);
       const ava = el("span", "job-ava", (q.company || "?").trim()[0].toUpperCase());
@@ -1065,6 +1089,18 @@
       if (q.job_id) { const jw = el("div"); jw.style.marginTop = "5px"; jw.appendChild(jobIdChip(q.job_id)); id.appendChild(jw); }
       top.appendChild(id);
       card.appendChild(top);
+      if (held) {
+        const hb = el("div", "banner amber");
+        hb.style.cssText = "margin:8px 0;font-size:13px";
+        hb.appendChild(el("strong", null, HOLD_LABEL[q.hold_reason] || "On hold"));
+        if (q.hold_detail) hb.appendChild(el("div", null, q.hold_detail));
+        const who = el("div", "muted");
+        who.style.cssText = "font-size:11px;margin-top:3px";
+        who.textContent = (q.held_by === "user" ? "You" : "The search") + " put this on hold" +
+          (q.held_at ? " " + fmtDate(q.held_at) : "");
+        hb.appendChild(who);
+        card.appendChild(hb);
+      }
       // the SAME four facts, in the same order, as the Jobs For You card
       card.appendChild(factRow({
         salaryMin: q.salary_min, salaryMax: q.salary_max, location: q.location,
@@ -1089,7 +1125,7 @@
       const actions = el("div", "job-actions");
       if (q.url) { const open = el("a", "btn ghost", "Open posting"); open.href = q.url; open.target = "_blank"; open.rel = "noopener"; actions.appendChild(open); }
       else { const nolink = el("span", "muted", "no link — search it"); nolink.style.cssText = "font-size:12px;align-self:center;margin-right:6px"; actions.appendChild(nolink); }
-      const done = el("button", "btn primary", "Mark applied");
+      const done = el("button", held ? "btn ghost" : "btn primary", held ? "Apply anyway" : "Mark applied");
       done.addEventListener("click", async () => {
         done.disabled = true;
         try { await api("/apply-queue", { method: "PATCH", body: JSON.stringify({ id: q.id, action: "applied" }) }); toast("Moved to Applications"); loadApplyQueue(); loadApplications(true); }
@@ -1100,6 +1136,15 @@
         try { await api("/apply-queue", { method: "PATCH", body: JSON.stringify({ id: q.id, action: "skipped", actor: "user" }) }); toast("Skipped"); loadApplyQueue(); }
         catch (e) { toast(e.message, 3000); }
       });
+      if (held) {
+        const rel = el("button", "btn primary", "Release");
+        rel.addEventListener("click", async () => {
+          rel.disabled = true;
+          try { await api("/apply-queue", { method: "PATCH", body: JSON.stringify({ id: q.id, action: "release" }) }); toast("Back on the list"); loadApplyQueue(); }
+          catch (e) { toast(e.message, 3000); rel.disabled = false; }
+        });
+        actions.appendChild(rel);
+      }
       actions.appendChild(done); actions.appendChild(skip);
       card.appendChild(actions);
       box.appendChild(card);

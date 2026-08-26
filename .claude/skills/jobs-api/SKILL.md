@@ -136,11 +136,14 @@ suppresses by `job_id`. A private list drifts and causes misses.
 ### The To-Apply worklist
 ```
 GET   /api/v1/apply-queue?status=pending
+GET   /api/v1/apply-queue?status=pending,hold             (worklist + held rows)
 GET   /api/v1/apply-queue?status=skipped&reason=gated     (the revivable backlog)
 PATCH /api/v1/apply-queue { id, action:"applied", appliedAt? }   promote to Applications
 PATCH /api/v1/apply-queue { id, action:"update", notes?, title?, location?, url?,
                             resumeUrl?, coverUrl?, priority? }
 PATCH /api/v1/apply-queue { id, action:"skipped", reason, detail }
+PATCH /api/v1/apply-queue { id, action:"hold", reason, detail }  flag, do NOT remove
+PATCH /api/v1/apply-queue { id, action:"release" }               clear the hold
 PATCH /api/v1/apply-queue { id, action:"reset" }                 back to pending
 ```
 `reason` must be one of — and `detail` is required, ≥20 chars, concrete:
@@ -153,6 +156,36 @@ PATCH /api/v1/apply-queue { id, action:"reset" }                 back to pending
 | `screened_out` | conflicts with a stated constraint | maybe |
 | `off_target` | outside the search targets | maybe |
 | `duplicate` | same req already applied to | no |
+
+### Hold — when you find a reason NOT to apply to something already queued
+
+Ben put it on the list; you do not take it off. When you discover, after the
+fact, that a queued job should not be applied to — the band came in under the
+floor, the req closed, it needs a clearance — **hold it, do not skip it**:
+
+```
+PATCH /api/v1/apply-queue { id, action:"hold", reason, detail }
+```
+
+The row stays in To-Apply, visibly flagged with your reason, and Ben releases it
+or skips it himself. `reason` is required and `detail` must be ≥20 concrete
+chars naming what you found and where.
+
+| reason | use when |
+|---|---|
+| `closed` | the req is no longer accepting applications |
+| `pay_below_floor` | the posted band sits entirely under the $77,000 floor |
+| `location` | on-site / geography conflict |
+| `clearance` | requires a clearance Ben does not hold |
+| `experience_gap` | a hard requirement he does not meet |
+| `duplicate` | the same req is already in the funnel |
+| `employer_flag` | BPO / gig / staffing mill / never-surface category |
+| `gated` | needs Ben signed in at the keyboard |
+| `other` | anything else — the detail carries the weight |
+
+Hold vs skip: **skip removes a row from the worklist, hold leaves it there.** If
+you are about to skip something Ben queued himself, you want hold. Holding an
+already-applied row returns 409 — a hold cannot un-apply anything.
 
 Prefer `gated` when unsure: a wrongly-dead row is lost, a wrongly-gated row just
 gets re-checked. Use `duplicate` **only** when an application to that same req
