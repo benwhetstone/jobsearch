@@ -20,9 +20,19 @@ const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ")
 const stampFrom = (v: unknown, fallback: string): string =>
   (typeof v === "string" && v.length <= 40 && !Number.isNaN(Date.parse(v))) ? v : fallback;
 
+// status_changed_at drives "most recent first" ordering, so it must be stored in
+// ONE comparable format. Eastern-offset and Z stamps do not sort against each
+// other as strings ("10:59-04:00" < "14:42Z" though it is 18 minutes later), so
+// every stage stamp is normalized to UTC. The user-facing submitted_at /
+// applied_at stamps stay Eastern — those are read, not sorted.
+const utcStamp = (v?: string | null): string => {
+  const t = v ? Date.parse(v) : NaN;
+  return Number.isNaN(t) ? new Date().toISOString() : new Date(t).toISOString();
+};
+
 export const onRequestGet: PagesFunction<Env, string, Ctx> = async ({ params, env, data }) => {
   const user = currentUser(data);
-  const uuid = String(params.uuid);
+const uuid = String(params.uuid);
 
   const app = await env.DB.prepare(
     `SELECT a.*, j.title, j.company_name, j.location, j.url AS job_url, j.apply_url, j.description
@@ -152,8 +162,8 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
   // ---- manual submit done: the user applied on the employer's site ----
   if (body.action === "markApplied") {
     const at = stampFrom(body.submittedAt ?? body.appliedAt ?? body.at, nowEastern());
-    await env.DB.prepare("UPDATE applications_v2 SET status = 'applied', submitted_at = ?, updated_at = ? WHERE uuid = ?")
-      .bind(at, now, uuid).run();
+    await env.DB.prepare("UPDATE applications_v2 SET status = 'applied', submitted_at = ?, updated_at = ?, status_changed_at = ? WHERE uuid = ?")
+      .bind(at, now, utcStamp(at), uuid).run();
     await resolveActionItems(env, user.id, uuid);
     await logActivity(env, user.id, { applicationUuid: uuid, kind: "applied", message: "Marked applied." });
     return json({ uuid, status: "applied" });
@@ -174,11 +184,11 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     const at = stampFrom(body.submittedAt ?? body.appliedAt ?? body.at, nowEastern());
     // A provided timestamp also back-stamps submitted_at when moving to applied.
     if (to === "applied") {
-      await env.DB.prepare("UPDATE applications_v2 SET status = ?, submitted_at = COALESCE(submitted_at, ?), updated_at = ? WHERE uuid = ?")
-        .bind(to, at, now, uuid).run();
+      await env.DB.prepare("UPDATE applications_v2 SET status = ?, submitted_at = COALESCE(submitted_at, ?), updated_at = ?, status_changed_at = ? WHERE uuid = ?")
+        .bind(to, at, now, utcStamp(at), uuid).run();
     } else {
-      await env.DB.prepare("UPDATE applications_v2 SET status = ?, updated_at = ? WHERE uuid = ?")
-        .bind(to, now, uuid).run();
+      await env.DB.prepare("UPDATE applications_v2 SET status = ?, updated_at = ?, status_changed_at = ? WHERE uuid = ?")
+        .bind(to, now, utcStamp(at), uuid).run();
     }
     if (to !== "actionRequired") await resolveActionItems(env, user.id, uuid);
     await logActivity(env, user.id, { applicationUuid: uuid, kind: "status", message: `Status → ${to}.` });
@@ -196,16 +206,16 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
     if (!job) return err(404, "No such application.");
     // clear the old mirrored form fields; prepare() re-mirrors and refills
     await env.DB.prepare("DELETE FROM application_form_fields WHERE application_uuid = ?").bind(uuid).run();
-    await env.DB.prepare("UPDATE applications_v2 SET status = 'preparing', updated_at = ? WHERE uuid = ?")
-      .bind(new Date().toISOString(), uuid).run();
+    await env.DB.prepare("UPDATE applications_v2 SET status = 'preparing', updated_at = ?, status_changed_at = ? WHERE uuid = ?")
+      .bind(new Date().toISOString(), new Date().toISOString(), uuid).run();
     waitUntil(prepare(env, user, uuid, job, { skipOnReject: false }));
     return json({ uuid, status: "preparing", regenerating: true });
   }
 
   // ---- discard: the user said no to this one ----
   if (body.action === "discard") {
-    await env.DB.prepare("UPDATE applications_v2 SET status = 'discarded', updated_at = ? WHERE uuid = ?")
-      .bind(new Date().toISOString(), uuid).run();
+    await env.DB.prepare("UPDATE applications_v2 SET status = 'discarded', updated_at = ?, status_changed_at = ? WHERE uuid = ?")
+      .bind(new Date().toISOString(), new Date().toISOString(), uuid).run();
     await resolveActionItems(env, user.id, uuid);
     return json({ uuid, status: "discarded" });
   }
@@ -215,8 +225,8 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
   //      You", ready to reconsider. Only meaningful before submission.
   if (body.action === "moveBack") {
     const now = new Date().toISOString();
-    await env.DB.prepare("UPDATE applications_v2 SET status = 'discarded', updated_at = ? WHERE uuid = ?")
-      .bind(now, uuid).run();
+    await env.DB.prepare("UPDATE applications_v2 SET status = 'discarded', updated_at = ?, status_changed_at = ? WHERE uuid = ?")
+      .bind(now, new Date().toISOString(), uuid).run();
     await env.DB.prepare(
       "UPDATE matches SET status = 'matched' WHERE user_id = ? AND job_uuid = (SELECT job_uuid FROM applications_v2 WHERE uuid = ?)"
     ).bind(user.id, uuid).run();
@@ -244,8 +254,8 @@ export const onRequestPatch: PagesFunction<Env, string, Ctx> = async ({ params, 
         return err(409, `QA blocked the ${label}: ${why[0] || "it did not pass the quality gate"}. Regenerate it before approving.`);
       }
     }
-    await env.DB.prepare("UPDATE applications_v2 SET status = 'approved', updated_at = ? WHERE uuid = ?")
-      .bind(new Date().toISOString(), uuid).run();
+    await env.DB.prepare("UPDATE applications_v2 SET status = 'approved', updated_at = ?, status_changed_at = ? WHERE uuid = ?")
+      .bind(new Date().toISOString(), new Date().toISOString(), uuid).run();
     await resolveActionItems(env, user.id, uuid);
     // Approval was the human gate. From here the machine files it with the
     // employer's ATS where the board accepts a direct post; if that path is

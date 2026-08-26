@@ -25,13 +25,16 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
   const rows = await env.DB.prepare(
     `SELECT a.uuid, a.status, a.ats, a.need_manual_apply, a.gate_verdict, a.match_score,
             a.prepare_error, a.created_at, a.submitted_at, a.cv_uuid, a.cover_letter_uuid, a.job_uuid,
-            a.resume_url, a.cover_url, a.job_id,
+            a.resume_url, a.cover_url, a.job_id, a.status_changed_at,
             j.title, j.company_name, j.location, j.remote, j.salary_min, j.salary_max, j.url, j.apply_url,
             (SELECT COUNT(*) FROM application_form_fields f
               WHERE f.application_uuid = a.uuid AND f.fill_status = 'needs_human') AS needs,
             (SELECT COUNT(*) FROM application_form_fields f WHERE f.application_uuid = a.uuid) AS total
        FROM applications_v2 a JOIN jobs j ON j.uuid = a.job_uuid
-      WHERE a.user_id = ? AND a.status != 'discarded' ORDER BY a.created_at DESC`
+      WHERE a.user_id = ? AND a.status != 'discarded'
+      -- Most recently MOVED first, not most recently started: the Rejected
+      -- list must lead with the newest rejection. Falls back for legacy rows.
+      ORDER BY COALESCE(a.status_changed_at, a.submitted_at, a.created_at) DESC`
   ).bind(user.id).all<any>();
 
   const apps = (rows.results ?? []).map((r) => ({
@@ -40,7 +43,7 @@ export const onRequestGet: PagesFunction<Env, string, { user?: CtxUser }> = asyn
     prepareError: r.prepare_error, cvUuid: r.cv_uuid, coverLetterUuid: r.cover_letter_uuid, jobUuid: r.job_uuid,
     resumeUrl: r.resume_url, coverUrl: r.cover_url, jobId: r.job_id,
     fields: { total: r.total, needsHuman: r.needs },
-    createdAt: r.created_at, submittedAt: r.submitted_at,
+    createdAt: r.created_at, submittedAt: r.submitted_at, statusChangedAt: r.status_changed_at || null,
     job: { title: r.title, company: r.company_name, location: r.location, remote: !!r.remote,
            salaryMin: r.salary_min, salaryMax: r.salary_max, url: r.url, applyUrl: r.apply_url },
   }));
