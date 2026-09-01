@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <meta name="build" content="20260901T015641Z-cee3fa6">
+  <meta name="build" content="20260901T131940Z-9356dcb">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ben's Data Analytics Roadmap</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b7fd4'/%3E%3Crect x='7' y='18' width='4' height='7' rx='1' fill='%23fff'/%3E%3Crect x='14' y='12' width='4' height='13' rx='1' fill='%23fff'/%3E%3Crect x='21' y='7' width='4' height='18' rx='1' fill='%23fff'/%3E%3Cpath d='M7 15 L15 10 L21 6' stroke='%23fff' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round' opacity='.55'/%3E%3C/svg%3E">
 <!--
   LIVING DOCUMENT - Ben's Data Analytics Roadmap
   - Self-contained single file. Host on GitHub Pages: keep named index.html.
-  - Cert & tool pills link to official training; job pills open live pre-filtered searches.
+  - Cert & tool pills link to official training; each stage tracks them on its own board.
   - Light/dark themes; animated salary trajectory; timeline spine + medallions.
 -->
 <script>
@@ -28,7 +28,7 @@
 :root{
   --c1:#00f0ff;            /* cyan — skills, structure, primary accent */
   --c2:#ff2d95;            /* magenta — credentials / exams, CTAs, The Goal */
-  --c3:#ffd166;            /* amber — salary, jobs, applied projects, reading */
+  --c3:#ffd166;            /* amber — salary, applied projects, further reading */
   --ok:#4ade80;            /* green — completed */
   --bg:#05070c; --panel:#0a0f18; --txt:#d7e3ec; --dim:#6f8194;
   --neutral:#c3d3df;       /* focus / leadership topics */
@@ -72,14 +72,7 @@ body.no-scan #scanline,html.pre-noscan #scanline{display:none;}
 .rm-sub b{color:var(--c3);font-weight:500;}
 .rm-meta{margin:8px 0 0;font-family:var(--mono);font-size:11.5px;line-height:1.7;color:var(--dim);}
 .rm-meta b{color:#9fb2c2;font-weight:400;}
-.rm-navlink,.rm-toggle,.rm-tbtn,.rm-foldbtn,.rm-back,.rm-next,.rm-donebtn,.rm-jbtn{
-  font-family:var(--mono);cursor:pointer;text-decoration:none;}
-.rm-navlink{font-size:11.5px;letter-spacing:.18em;color:var(--c2);text-transform:uppercase;
-  border:1px solid color-mix(in srgb,var(--c2) 55%,transparent);
-  background:color-mix(in srgb,var(--c2) 8%,transparent);padding:9px 18px;
-  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);}
-.rm-navlink:hover{background:color-mix(in srgb,var(--c2) 22%,transparent);color:#fff;}
-.rm-toggle{font-size:12px;color:var(--dim);background:rgba(255,255,255,.03);
+.rm-navlink,.rm-toggle,.rm-tbtn,.rm-foldbtn,.rm-back,.rm-next,.rm-donebtn,.rm-toggle{font-size:12px;color:var(--dim);background:rgba(255,255,255,.03);
   border:1px solid var(--line);padding:9px 12px;
   clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);}
 .rm-toggle:hover{color:var(--c1);border-color:color-mix(in srgb,var(--c1) 45%,transparent);}
@@ -115,7 +108,6 @@ body.no-scan #scanline,html.pre-noscan #scanline{display:none;}
 .d-core{background:var(--c2);box-shadow:0 0 8px var(--c2);}
 .d-tool{background:var(--c1);box-shadow:0 0 8px var(--c1);}
 .d-opt{background:var(--neutral);}
-.d-job{background:var(--c3);box-shadow:0 0 8px var(--c3);}
 
 /* overall meter */
 .rm-overall{display:flex;align-items:center;gap:12px;margin:0 0 26px;font-family:var(--mono);font-size:11px;
@@ -179,8 +171,8 @@ body.no-scan #scanline,html.pre-noscan #scanline{display:none;}
 .rm-core:hover{background:color-mix(in srgb,var(--c2) 22%,transparent);color:#fff;}
 .rm-tool,.rm-task{color:var(--c1);background:color-mix(in srgb,var(--c1) 8%,transparent);border:1px solid color-mix(in srgb,var(--c1) 45%,transparent);}
 .rm-tool:hover,.rm-task:hover{background:color-mix(in srgb,var(--c1) 22%,transparent);color:#fff;}
-.rm-job,.rm-book{color:var(--c3);background:color-mix(in srgb,var(--c3) 8%,transparent);border:1px solid color-mix(in srgb,var(--c3) 45%,transparent);}
-.rm-job:hover,.rm-book:hover{background:color-mix(in srgb,var(--c3) 22%,transparent);color:#fff;}
+.rm-link,.rm-book{color:var(--c3);background:color-mix(in srgb,var(--c3) 8%,transparent);border:1px solid color-mix(in srgb,var(--c3) 45%,transparent);}
+.rm-link:hover,.rm-book:hover{background:color-mix(in srgb,var(--c3) 22%,transparent);color:#fff;}
 .rm-opt{color:var(--neutral);background:rgba(255,255,255,.03);border:1px solid rgba(195,211,223,.3);}
 a.rm-tag.done{color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent);border-color:color-mix(in srgb,var(--ok) 50%,transparent);}
 a.rm-tag.done .rm-lbl::before{content:"✓ ";}
@@ -189,9 +181,6 @@ a.rm-tag.done:hover{background:color-mix(in srgb,var(--ok) 24%,transparent);colo
 .rm-earned-ck::before{content:"✓";color:var(--ok);}
 
 /* terminal notes */
-.rm-order,.rm-freq{font-family:var(--mono);font-size:12.5px;line-height:1.75;color:#a8bac8;
-  padding:11px 15px;margin:16px 0 0;border:1px dashed rgba(140,175,205,.28);}
-.rm-order b,.rm-freq b{color:var(--c1);font-weight:500;letter-spacing:.1em;text-transform:uppercase;}
 
 /* ---------- board ---------- */
 .rm-kan{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0 0;}
@@ -221,22 +210,8 @@ a.rm-tag.done:hover{background:color-mix(in srgb,var(--ok) 24%,transparent);colo
 .rm-col.rm-over{border:1px dashed var(--c1);background:color-mix(in srgb,var(--c1) 7%,transparent);}
 body.rm-dragmode{cursor:grabbing;user-select:none;}
 
-/* ---------- jobs strip ---------- */
-.rm-jobs{margin:18px 0 0;border-top:1px dashed color-mix(in srgb,var(--c3) 30%,transparent);padding-top:14px;}
-.rm-jobs summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
-.rm-jobs summary::-webkit-details-marker{display:none;}
-.rm-chev{color:var(--c3);font-size:10px;transition:transform .12s ease-out;}
-.rm-jobs[open] .rm-chev{transform:rotate(90deg);}
 .rm-jbtn{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--c3);}
-.rm-jrole{font-family:var(--mono);font-size:12px;color:var(--txt);}
-.rm-jhint{font-family:var(--mono);font-size:11px;color:var(--dim);}
-.rm-jbody{margin-top:12px;display:flex;flex-direction:column;gap:10px;}
-.rm-jbody .rm-line{align-items:flex-start;}
-.rm-jloc{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
-  min-width:86px;padding-top:6px;}
-.rm-jobs .rm-tag{font-size:11.5px;padding:5px 10px;clip-path:none;color:#bfe9f2;
   background:transparent;border:1px solid color-mix(in srgb,var(--c1) 28%,transparent);}
-.rm-jobs .rm-tag:hover{background:color-mix(in srgb,var(--c1) 18%,transparent);color:#fff;}
 
 /* ---------- stage nav / fold / footer ---------- */
 .rm-prog{display:flex;align-items:center;gap:12px;margin:14px 0 0;font-family:var(--mono);font-size:11px;
@@ -297,7 +272,6 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
   .rm-barval{font-size:10.5px;}
   .rm-axis{gap:6px;padding:8px 4px 0;}
   .rm-axlabel{font-size:9px;letter-spacing:.06em;}
-  .rm-jloc{min-width:0;padding-top:0;}
   /* the meter's counter is long prose; let it wrap rather than push the page wide */
   .rm-overall{flex-wrap:wrap;}
   .rm-overall .cnt,.rm-prog .cnt{white-space:normal;flex:1 1 100%;}
@@ -327,11 +301,10 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
   <div class="rm-head">
     <div>
       <p class="rm-title">Ben's Data Analytics Roadmap</p>
-      <p class="rm-sub"><b>Tampa Bay</b> · Target: <b>Chief Data Officer / VP Analytics</b> · Skills-first, analytics leadership</p>
-      <p class="rm-meta">Living document · <b>certs + hard skills front-load Stages 1–2 (what postings screen on); leadership + MPA + domain carry Stages 3–4</b> · pills open official training · DataCamp tracks are the continuous-learning spine · last updated September 2026</p>
+      <p class="rm-sub"><b>Tampa Bay</b> · Target: <b>Chief Data Officer / VP Analytics</b></p>
+      <p class="rm-meta">Updated September 2026</p>
     </div>
     <div style="flex:0 0 auto;display:flex;gap:8px;align-items:flex-start;">
-      <a class="rm-navlink" href="/job-search">Job&nbsp;Search</a>
       <button class="rm-toggle" id="scanBtn" type="button" aria-pressed="true" aria-label="Toggle CRT scanlines" title="Toggle CRT scanlines">SCAN</button>
     </div>
   </div>
@@ -355,7 +328,6 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <span><i class="rm-dot d-core"></i>Credential — proctored exam</span>
     <span><i class="rm-dot d-tool"></i>Skill course (DataCamp)</span>
     <span><i class="rm-dot d-opt"></i>Focus — leadership / strategy</span>
-    <span><i class="rm-dot d-job"></i>Current jobs — saved-search + alert (expand per stage)</span>
   </div>
 
   <div class="tl">
@@ -393,32 +365,8 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
       </div></div>
       <div class="rm-group"><div class="rm-glabel">Skills — Microsoft Learn</div><div class="rm-line">
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://learn.microsoft.com/training/fabric/">Microsoft Fabric</a>
-        <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://data.benwhetstone.info/#work">Portfolio → my work</a>
+        <a class="rm-tag rm-link" target="_blank" rel="noopener" href="https://data.benwhetstone.info/#work">Portfolio → my work</a>
       </div></div>
-      <div class="rm-freq"><b>Posting signal →</b> SQL ~80% · Excel ~60% · Python ~50% · one BI tool standard</div>
-      <div class="rm-order"><b>Order →</b> ① SQL track + ② Power BI Fundamentals (in tandem) → ③ Data Analyst in Power BI (deeper; unlocks 50% off PL-300) → ④ PL-300 exam · ⑤ Excel Fundamentals → ⑥ Excel Power Tools · ⑦ Data Communication · ⑧ Python track · ⑨ Statistics · ⑩ Microsoft Fabric (Learn path + DataCamp courses) · ⑪ DataCamp Data Analyst Professional (needs SQL + Python) · ⑫ DP-600 Fabric Analytics Engineer. Never run three brand-new tracks at once.</div>
-      <details class="rm-jobs">
-        <summary><span class="rm-chev">▸</span><span class="rm-jbtn">Current jobs</span><span class="rm-jrole">“Data Analyst”</span><span class="rm-jhint">— open a search, then hit “Save / Create alert” for a daily digest</span></summary>
-        <div class="rm-jbody">
-          <div class="rm-line"><span class="rm-jloc">Tampa Bay</span>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Data+Analyst+jobs+Tampa+Bay&ibp=htl;jobs">Google Jobs</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Data%20Analyst&location=Tampa%2C%20Florida%2C%20United%20States&sortBy=DD">LinkedIn</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Data+Analyst&l=Tampa%2C+FL&sort=date">Indeed</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Data+Analyst&location=Tampa%2C+FL&days=5">ZipRecruiter</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Data%20Analyst&location=Tampa%2C%20FL%2C%20USA&radius=30&radiusUnit=mi&filters.postedDate=SEVEN">Dice</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.usajobs.gov/Search/Results?k=Data%20Analyst&l=Tampa%2C%20Florida">USAJobs</a>
-          </div>
-          <div class="rm-line"><span class="rm-jloc">Remote</span>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Data+Analyst+jobs+remote&ibp=htl;jobs">Google Jobs</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Data%20Analyst&location=United%20States&f_WT=2&sortBy=DD">LinkedIn</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Data+Analyst&l=Remote&sort=date">Indeed</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Data+Analyst&location=Remote&days=5">ZipRecruiter</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Data%20Analyst&filters.workplaceTypes=Remote&filters.postedDate=SEVEN">Dice</a>
-          </div>
-        </div>
-      </details>
     </div>
   </div>
 
@@ -437,30 +385,6 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/machine-learning-fundamentals-with-python">Machine Learning Fundamentals</a>
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/marketing-analytics-with-python">Marketing Analytics</a>
       </div></div>
-      <div class="rm-freq"><b>Income lever →</b> 2+ AI skills ≈ 43% pay premium · experimentation is the other Senior lever</div>
-      <div class="rm-order"><b>Order →</b> ① A/B Testing · ② AI Fundamentals · ③ Machine Learning Fundamentals · ④ Marketing Analytics</div>
-      <details class="rm-jobs">
-        <summary><span class="rm-chev">▸</span><span class="rm-jbtn">Current jobs</span><span class="rm-jrole">“Senior Data Analyst”</span><span class="rm-jhint">— open a search, then hit “Save / Create alert” for a daily digest</span></summary>
-        <div class="rm-jbody">
-          <div class="rm-line"><span class="rm-jloc">Tampa Bay</span>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Senior+Data+Analyst+jobs+Tampa+Bay&ibp=htl;jobs">Google Jobs</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Senior%20Data%20Analyst&location=Tampa%2C%20Florida%2C%20United%20States&sortBy=DD">LinkedIn</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Senior+Data+Analyst&l=Tampa%2C+FL&sort=date">Indeed</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Senior+Data+Analyst&location=Tampa%2C+FL&days=5">ZipRecruiter</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Senior%20Data%20Analyst&location=Tampa%2C%20FL%2C%20USA&radius=30&radiusUnit=mi&filters.postedDate=SEVEN">Dice</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.usajobs.gov/Search/Results?k=Senior%20Data%20Analyst&l=Tampa%2C%20Florida">USAJobs</a>
-          </div>
-          <div class="rm-line"><span class="rm-jloc">Remote</span>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Senior+Data+Analyst+jobs+remote&ibp=htl;jobs">Google Jobs</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Senior%20Data%20Analyst&location=United%20States&f_WT=2&sortBy=DD">LinkedIn</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Senior+Data+Analyst&l=Remote&sort=date">Indeed</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Senior+Data+Analyst&location=Remote&days=5">ZipRecruiter</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Senior%20Data%20Analyst&filters.workplaceTypes=Remote&filters.postedDate=SEVEN">Dice</a>
-          </div>
-        </div>
-      </details>
     </div>
   </div>
 
@@ -488,28 +412,6 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
         <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Storytelling+with+Data+Cole+Nussbaumer+Knaflic+book">Storytelling with Data — Knaflic</a>
         <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Creating+a+Data-Driven+Organization+Carl+Anderson+book">Creating a Data-Driven Organization — Anderson</a>
       </div></div>
-      <details class="rm-jobs">
-        <summary><span class="rm-chev">▸</span><span class="rm-jbtn">Current jobs</span><span class="rm-jrole">“Analytics Manager”</span><span class="rm-jhint">— open a search, then hit “Save / Create alert” for a daily digest</span></summary>
-        <div class="rm-jbody">
-          <div class="rm-line"><span class="rm-jloc">Tampa Bay</span>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Analytics+Manager+jobs+Tampa+Bay&ibp=htl;jobs">Google Jobs</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Analytics%20Manager&location=Tampa%2C%20Florida%2C%20United%20States&sortBy=DD">LinkedIn</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Analytics+Manager&l=Tampa%2C+FL&sort=date">Indeed</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Analytics+Manager&location=Tampa%2C+FL&days=5">ZipRecruiter</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Analytics%20Manager&location=Tampa%2C%20FL%2C%20USA&radius=30&radiusUnit=mi&filters.postedDate=SEVEN">Dice</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.usajobs.gov/Search/Results?k=Analytics%20Manager&l=Tampa%2C%20Florida">USAJobs</a>
-          </div>
-          <div class="rm-line"><span class="rm-jloc">Remote</span>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Analytics+Manager+jobs+remote&ibp=htl;jobs">Google Jobs</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Analytics%20Manager&location=United%20States&f_WT=2&sortBy=DD">LinkedIn</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Analytics+Manager&l=Remote&sort=date">Indeed</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Analytics+Manager&location=Remote&days=5">ZipRecruiter</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Analytics%20Manager&filters.workplaceTypes=Remote&filters.postedDate=SEVEN">Dice</a>
-          </div>
-        </div>
-      </details>
     </div>
   </div>
 
@@ -534,28 +436,6 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
         <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Prediction+Machines+Agrawal+Gans+Goldfarb+book">Prediction Machines — Agrawal et al.</a>
         <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Infonomics+Doug+Laney+data+asset+book">Infonomics — Laney</a>
       </div></div>
-      <details class="rm-jobs">
-        <summary><span class="rm-chev">▸</span><span class="rm-jbtn">Current jobs</span><span class="rm-jrole">“Director of Analytics”</span><span class="rm-jhint">— open a search, then hit “Save / Create alert” for a daily digest</span></summary>
-        <div class="rm-jbody">
-          <div class="rm-line"><span class="rm-jloc">Tampa Bay</span>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Director+of+Analytics+jobs+Tampa+Bay&ibp=htl;jobs">Google Jobs</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Director%20of%20Analytics&location=Tampa%2C%20Florida%2C%20United%20States&sortBy=DD">LinkedIn</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Director+of+Analytics&l=Tampa%2C+FL&sort=date">Indeed</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Director+of+Analytics&location=Tampa%2C+FL&days=5">ZipRecruiter</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Director%20of%20Analytics&location=Tampa%2C%20FL%2C%20USA&radius=30&radiusUnit=mi&filters.postedDate=SEVEN">Dice</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.usajobs.gov/Search/Results?k=Director%20of%20Analytics&l=Tampa%2C%20Florida">USAJobs</a>
-          </div>
-          <div class="rm-line"><span class="rm-jloc">Remote</span>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://my.greenhouse.io/jobs">MyGreenhouse</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.google.com/search?q=Director+of+Analytics+jobs+remote&ibp=htl;jobs">Google Jobs</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.linkedin.com/jobs/search/?keywords=Director%20of%20Analytics&location=United%20States&f_WT=2&sortBy=DD">LinkedIn</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.indeed.com/jobs?q=Director+of+Analytics&l=Remote&sort=date">Indeed</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.ziprecruiter.com/jobs-search?search=Director+of+Analytics&location=Remote&days=5">ZipRecruiter</a>
-            <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://www.dice.com/jobs?q=Director%20of%20Analytics&filters.workplaceTypes=Remote&filters.postedDate=SEVEN">Dice</a>
-          </div>
-        </div>
-      </details>
     </div>
   </div>
 
@@ -609,7 +489,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     function hdr(x){var h=x||{}; h[HDR]=TOKEN; return h;}
     function setState(a,id){ var d=done.has(id); a.classList.toggle('done',d); a.classList.toggle('doing',!d&&inProgress.has(id)); }
 
-    // build a check toggle inside each completable pill (certs + skills, not jobs)
+    // register every completable pill (certs + skills) with the progress engine
     var pills=document.querySelectorAll('.tl-stage a.rm-core, .tl-stage a.rm-opt, .tl-stage a.rm-tool, .tl-stage a.rm-task');
     pills.forEach(function(a){
       var stage=a.closest('.tl-stage').dataset.stage;
@@ -759,7 +639,6 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     document.addEventListener('pointerdown',function(e){
       var card=e.target.closest && e.target.closest('.rm-card');
       if(!card || e.button>0) return;
-      if(e.target.closest('.rm-ck')) return;            // the checkbox keeps its own job
       var a=card.querySelector('a[data-pid]'); if(!a) return;
       drag={card:card, pid:a.dataset.pid, x0:e.clientX, y0:e.clientY, active:false, moved:false, touch:e.pointerType!=='mouse'};
       if(drag.touch){
@@ -959,41 +838,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     pull();            // adopt server truth, then live-sync on every change
   })();
 </script>
-<script>
-  /* ===== broaden job-search links to cover related role titles (boolean OR) ===== */
-  (function(){
-    var TERMS={
-      1:['Data Analyst','BI Analyst','Reporting Analyst','Analytics Associate'],
-      2:['Senior Data Analyst','Lead Data Analyst','Senior BI Analyst','Analytics Lead'],
-      3:['Analytics Manager','Data Analytics Manager','Analytics Lead','BI Manager'],
-      4:['Director of Analytics','VP Analytics','Head of Analytics','Chief Data Officer']
-    };
-    function orq(t){ return t.map(function(x){return '"'+x+'"';}).join(' OR '); }
-    function build(board, terms, remote){
-      var q=orq(terms), E=encodeURIComponent(q);
-      if(board==='google') return 'https://www.google.com/search?q='+encodeURIComponent(q+' jobs '+(remote?'remote':'Tampa Bay'))+'&ibp=htl;jobs';
-      if(board==='linkedin') return 'https://www.linkedin.com/jobs/search/?keywords='+E+'&location='+(remote?'United%20States&f_WT=2':'Tampa%2C%20Florida%2C%20United%20States')+'&sortBy=DD';
-      if(board==='indeed') return 'https://www.indeed.com/jobs?q='+E+'&l='+(remote?'Remote':'Tampa%2C%20FL')+'&sort=date';
-      if(board==='ziprecruiter') return 'https://www.ziprecruiter.com/jobs-search?search='+E+'&location='+(remote?'Remote':'Tampa%2C%20FL')+'&days=5';
-      if(board==='dice') return 'https://www.dice.com/jobs?q='+E+(remote?'&filters.workplaceTypes=Remote':'&location=Tampa%2C%20FL%2C%20USA&radius=30&radiusUnit=mi')+'&filters.postedDate=SEVEN';
-      if(board==='usajobs') return 'https://www.usajobs.gov/Search/Results?k=Data&l=Tampa%2C+Florida&sc=0&p=1&r=25&hp=public&hp=vet&hp=disability'; // veteran + disability hiring paths; broad 'Data' keyword works best on USAJobs
-      return null;
-    }
-    var KEY={'google jobs':'google','linkedin':'linkedin','indeed':'indeed','ziprecruiter':'ziprecruiter','dice':'dice','usajobs':'usajobs'};
-    document.querySelectorAll('.tl-stage').forEach(function(st){
-      var terms=TERMS[parseInt(st.dataset.stage,10)]; if(!terms) return;
-      st.querySelectorAll('.rm-jobs .rm-line').forEach(function(line){
-        var lab=(line.querySelector('.rm-jloc')||{}).textContent||'', remote=/remote/i.test(lab);
-        line.querySelectorAll('a.rm-job').forEach(function(a){
-          var b=KEY[(a.textContent||'').trim().toLowerCase()]; if(!b) return;
-          var u=build(b,terms,remote); if(u) a.href=u;
-        });
-      });
-      var role=st.querySelector('.rm-jobs .rm-jrole');
-      if(role && !/related/.test(role.textContent)) role.textContent=role.textContent+' + related roles';
-    });
-  })();
-</script>
+
 
 <script>
 /* ===== editable per-stage salary bands (stored in KV via /api/salaries) ===== */
