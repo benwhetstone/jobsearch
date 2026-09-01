@@ -33,5 +33,22 @@ store renders exactly what shipped.
 ## Deploy
     cd roadmap && npx wrangler pages deploy public --project-name=bens-roadmap --branch=main
 
-Bindings come from `wrangler.toml`. A pre-rebuild backup of the live progress is
-in `schema/progress-backup-2026-08-08.json`.
+Bindings come from `wrangler.toml`.
+
+## Backups
+
+The live data — board cards, progress, salary bands and the password hash — is
+in KV, not D1. The nightly `d1-backups` worker sweeps six D1 databases including
+`bens-roadmap-db`, but that database is an older store this page no longer
+writes to, so the data people actually see was not covered.
+
+`workers/roadmap-kv-backup` closes that. It runs daily at 07:10 UTC, just after
+the D1 sweep, and writes `bens-roadmap-kv/<date>.json` into the same
+`d1-backups` R2 bucket, so everything restores from one place. It refuses to
+write a snapshot with an empty board, since overwriting a good copy with nothing
+is worse than no backup. `GET /run` on the worker takes one on demand.
+
+Restore with `scripts/restore-roadmap.sh <YYYY-MM-DD>`.
+
+A pre-rebuild backup of the live progress is in
+`schema/progress-backup-2026-08-08.json`.

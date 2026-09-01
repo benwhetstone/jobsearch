@@ -1,0 +1,22 @@
+name = "roadmap-kv-backup"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# Runs at 07:10 UTC daily, just after the existing d1-backups worker, so a day's
+# snapshots land together.
+[triggers]
+crons = ["10 7 * * *"]
+
+# The roadmap's live data — board cards, progress marks, salary bands, and the
+# password hash — is in KV, not in D1. The nightly d1-backups worker sweeps six
+# databases including bens-roadmap-db, but that database is an older store the
+# page no longer writes to, so the data people actually see had no backup at all.
+[[kv_namespaces]]
+binding = "PROGRESS"
+id = "fa914bb7714d4037b9feed15e2bf008e"
+
+# Same bucket and the same <project>/<date> layout the D1 backups already use,
+# so everything restores from one place.
+[[r2_buckets]]
+binding = "BACKUPS"
+bucket_name = "d1-backups"
