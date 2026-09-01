@@ -7,7 +7,7 @@ verified byte-for-byte against it before the first deploy from this directory.
 
 Cloudflare Pages project: `benwhetstone-data`
 
-    npx wrangler pages deploy . --project-name=benwhetstone-data --branch=main
+    npx wrangler pages deploy public --project-name=benwhetstone-data --branch=main
 
 A Pages deploy REPLACES the whole site, so never deploy a partial tree — the 22
 files under `assets/` are project screenshots referenced by `projects.json` and
