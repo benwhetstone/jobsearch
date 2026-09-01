@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <meta name="build" content="20260901T133823Z-51cd3cc">
+  <meta name="build" content="20260901T140521Z-a7e210c">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ben's Data Analytics Roadmap</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b7fd4'/%3E%3Crect x='7' y='18' width='4' height='7' rx='1' fill='%23fff'/%3E%3Crect x='14' y='12' width='4' height='13' rx='1' fill='%23fff'/%3E%3Crect x='21' y='7' width='4' height='18' rx='1' fill='%23fff'/%3E%3Cpath d='M7 15 L15 10 L21 6' stroke='%23fff' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round' opacity='.55'/%3E%3C/svg%3E">
@@ -13,7 +13,7 @@
   - Light/dark themes; animated salary trajectory; timeline spine + medallions.
 -->
 <script>
-  (function(){try{if(localStorage.getItem('rm-scan')==='off')document.documentElement.classList.add('pre-noscan');}catch(e){}document.documentElement.classList.add('js');})();
+  (function(){document.documentElement.classList.add('js');})();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,10 +53,6 @@ a:hover{color:#fff;}
 @keyframes blinkCursor{0%,49%{opacity:1}50%,100%{opacity:0}}
 @keyframes pulseDot{0%,100%{opacity:.5}50%{opacity:1}}
 
-/* CRT scanlines — toggleable, because some people hate them */
-#scanline{position:fixed;inset:0;z-index:60;pointer-events:none;
-  background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px);}
-body.no-scan #scanline,html.pre-noscan #scanline{display:none;}
 
 .rm-wrap{max-width:1100px;margin:0 auto;padding:36px 28px 64px;}
 
@@ -297,16 +293,12 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
 </style>
 </head>
 <body>
-<div id="scanline" aria-hidden="true"></div>
 <div class="rm-wrap">
   <div class="rm-head">
     <div>
       <p class="rm-title">Ben's Data Analytics Roadmap</p>
-      <p class="rm-sub"><b>Tampa Bay</b> · Target: <b>Chief Data Officer / VP Analytics</b></p>
+      <p class="rm-sub"><b>Tampa Bay</b> · Target: <b>Principal Data Engineer / Data Architect</b></p>
       <p class="rm-meta">Updated September 2026</p>
-    </div>
-    <div style="flex:0 0 auto;display:flex;gap:8px;align-items:flex-start;">
-      <button class="rm-toggle" id="scanBtn" type="button" aria-pressed="true" aria-label="Toggle CRT scanlines" title="Toggle CRT scanlines">SCAN</button>
     </div>
   </div>
 
@@ -377,17 +369,26 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <div class="tl-node"><div class="tl-badge">2</div></div>
     <div class="rm-stage">
       <div class="rm-row"><span><span class="rm-stlabel">Stage 2</span> &nbsp;<span class="rm-time">~3–5 yrs in</span></span><span class="rm-sal" data-sal-stage="2" title="Click to edit this band">$110K – $140K</span></div>
-      <div class="rm-role">Senior Data Analyst</div>
-      <p class="rm-desc">Own a business area end to end — design the model rather than query it, decide what gets measured, and review the junior analysts' work. Stakeholders come to you before the decision, not after.</p>
-      <div class="rm-alt">Senior Data Analyst · Lead Analyst — the biggest income jump; climbing to Manager</div>
+      <div class="rm-role">Senior Data Analyst / Analytics Engineer</div>
+      <p class="rm-desc">Own the transformation layer instead of consuming it. You build and test the models other analysts sit on top of — defined grain, documented joins, edge cases handled — and your work ships through pull requests and review rather than straight into a workspace.</p>
+      <div class="rm-alt">Senior Data Analyst · Analytics Engineer — the pivot into engineering, and the biggest income jump</div>
       <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/fabric-data-engineer-associate/">DP-700 · Fabric Data Engineer</a>
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.databricks.com/learn/certification/data-engineer-associate">Databricks Data Engineer Associate</a>
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.datacamp.com/certification/data-engineer-associate">DataCamp Data Engineer Associate</a>
       </div></div>
-      <div class="rm-group"><div class="rm-glabel">Skills — DataCamp</div><div class="rm-line">
-        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/courses/customer-analytics-and-ab-testing-in-python">A/B Testing · Customer Analytics</a>
-        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/ai-fundamentals">Applied AI · AI Fundamentals</a>
-        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/machine-learning-fundamentals-with-python">Machine Learning Fundamentals</a>
-        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/marketing-analytics-with-python">Marketing Analytics</a>
+      <div class="rm-group"><div class="rm-glabel">Skills — training</div><div class="rm-line">
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/data-engineer">Data Engineer in Python</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/associate-data-engineer-in-sql">Associate Data Engineer in SQL</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/courses/introduction-to-dbt">Introduction to dbt</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/training/paths/data-integration-scale-azure-data-factory/">Azure Data Factory labs</a>
       </div></div>
+      <div class="rm-group"><div class="rm-glabel">Focus — engineering practice</div><div class="rm-line">
+        <span class="rm-tag rm-opt" style="cursor:default;">Dimensional modeling — grain &amp; joins</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Git / pull-request workflow</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Tests before merge</span>
+      </div></div>
+
     </div>
   </div>
 
@@ -396,26 +397,38 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <div class="tl-node"><div class="tl-badge">3</div></div>
     <div class="rm-stage">
       <div class="rm-row"><span><span class="rm-stlabel">Stage 3</span> &nbsp;<span class="rm-time">~6–8 yrs in</span></span><span class="rm-sal" data-sal-stage="3" title="Click to edit this band">$130K – $160K</span></div>
-      <div class="rm-role">Analytics Manager / Lead</div>
-      <p class="rm-desc">Run the analysts, not the queries. Hiring, prioritization and stakeholder negotiation, accountable for what the team ships and the roadmap behind it. Hands-on analysis becomes the exception.</p>
-      <div class="rm-alt">Analytics Manager · Analytics Lead — postings want leadership + an advanced degree, not more certs</div>
-      <div class="rm-group"><div class="rm-glabel">Advanced degree</div><div class="rm-line">
-        <span class="rm-tag rm-earned" style="cursor:default;"><span class="rm-earned-ck">✓</span>MPA · the advanced degree most analysts lack</span>
+      <div class="rm-role">Senior / Staff Data Engineer</div>
+      <p class="rm-desc">Own the pipelines and the platform under them: ingestion, orchestration, streaming, and the medallion layers, running in production with tests, CI/CD, and infrastructure defined in code. You are the one on the hook when the data does not land at 6am, and you deliver without close supervision.</p>
+      <div class="rm-alt">Senior Data Engineer · Staff Data Engineer — postings gate on Databricks here, not on another Microsoft badge</div>
+      <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.databricks.com/learn/certification/apache-spark-developer-associate">Databricks Spark Developer Associate</a>
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/azure-administrator/">AZ-104 · Azure Administrator</a>
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/devops-engineer/">AZ-400 · DevOps Solutions (optional)</a>
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/azure-solutions-architect/">AZ-305 · Azure Solutions Architect</a>
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.databricks.com/learn/certification/data-engineer-professional">Databricks Data Engineer Professional</a>
       </div></div>
-      <div class="rm-group"><div class="rm-glabel">Focus — leadership</div><div class="rm-line">
-        <span class="rm-tag rm-opt" style="cursor:default;">People management &amp; hiring</span>
-        <span class="rm-tag rm-opt" style="cursor:default;">Analytics strategy &amp; roadmap</span>
-        <span class="rm-tag rm-opt" style="cursor:default;">KPI / OKR frameworks</span>
-        <span class="rm-tag rm-opt" style="cursor:default;">Executive communication</span>
-        <span class="rm-tag rm-opt" style="cursor:default;">Stakeholder management</span>
-        <span class="rm-tag rm-opt" style="cursor:default;">Budget &amp; vendor management</span>
+      <div class="rm-group"><div class="rm-glabel">Skills — platform</div><div class="rm-line">
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://docs.databricks.com/aws/en/delta/">Delta Lake · Unity Catalog</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://docs.databricks.com/aws/en/dlt/">Delta Live Tables</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://docs.databricks.com/aws/en/structured-streaming/">Structured Streaming</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://developer.hashicorp.com/terraform/tutorials">Terraform / Infrastructure as Code</a>
+      </div></div>
+      <div class="rm-group"><div class="rm-glabel">Focus</div><div class="rm-line">
+        <span class="rm-tag rm-opt" style="cursor:default;">Medallion architecture</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Production dimensional modeling</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Independent ownership</span>
+      </div></div>
+      <div class="rm-group"><div class="rm-glabel">Advanced degree</div><div class="rm-line">
+        <span class="rm-tag rm-opt" style="cursor:default;">MPA · a differentiator on the résumé, not the headline credential</span>
       </div></div>
       <div class="rm-group"><div class="rm-glabel">📖 Further reading</div><div class="rm-line">
-        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=The+Manager%27s+Path+Camille+Fournier+book">The Manager's Path — Fournier</a>
-        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Measure+What+Matters+John+Doerr+OKR+book">Measure What Matters — Doerr</a>
-        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Storytelling+with+Data+Cole+Nussbaumer+Knaflic+book">Storytelling with Data — Knaflic</a>
-        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Creating+a+Data-Driven+Organization+Carl+Anderson+book">Creating a Data-Driven Organization — Anderson</a>
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Fundamentals+of+Data+Engineering+Reis+Housley+book">Fundamentals of Data Engineering — Reis &amp; Housley</a>
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Designing+Data-Intensive+Applications+Kleppmann+book">Designing Data-Intensive Applications — Kleppmann</a>
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Staff+Engineer+Will+Larson+book">Staff Engineer — Larson</a>
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Data+Strategy+Bernard+Marr+book">Data Strategy — Marr</a>
       </div></div>
+
+
     </div>
   </div>
 
@@ -424,23 +437,17 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <div class="tl-node"><div class="tl-badge">4</div></div>
     <div class="rm-stage goal">
       <div class="rm-row"><span><span class="rm-stlabel">The Goal</span> &nbsp;<span class="rm-time">The ceiling</span></span><span class="rm-sal" data-sal-stage="4" title="Click to edit this band">$180K – $250K+</span></div>
-      <div class="rm-role">Director of Analytics → VP Analytics → Chief Data Officer</div>
-      <p class="rm-desc">Own the data function itself: strategy, budget, headcount, platform and governance. You decide what the organization measures, and you answer for data as a business asset at the executive table.</p>
-      <div class="rm-alt">Leadership scale + domain depth + MPA are the qualification — not certs</div>
+      <div class="rm-role">Principal Data Engineer / Data Architect</div>
+      <p class="rm-desc">Decide how data moves across the whole organization — platform architecture, governance, streaming at scale, cost. Influence without headcount: you set the standards other engineers build against and mentor them, rather than managing them.</p>
+      <div class="rm-alt">Principal Data Engineer · Data Architect — remote for a national employer, or one of a few large local enterprises</div>
       <div class="rm-group"><div class="rm-glabel">Focus</div><div class="rm-line">
-        <span class="rm-tag rm-tool" style="cursor:default;">Enterprise data strategy</span>
-        <span class="rm-tag rm-tool" style="cursor:default;">Data governance at scale</span>
-        <span class="rm-tag rm-tool" style="cursor:default;">AI / ML strategy &amp; responsible AI</span>
-        <span class="rm-tag rm-tool" style="cursor:default;">Building data culture</span>
-        <span class="rm-tag rm-tool" style="cursor:default;">Board &amp; executive communication</span>
-        <span class="rm-tag rm-tool" style="cursor:default;">Business &amp; P&amp;L acumen</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Platform-level architecture</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Enterprise governance at scale</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Streaming / real-time design</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Performance at scale</span>
+        <span class="rm-tag rm-opt" style="cursor:default;">Technical mentoring without headcount</span>
       </div></div>
-      <div class="rm-group"><div class="rm-glabel">📖 Further reading</div><div class="rm-line">
-        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Competing+on+Analytics+Davenport+Harris+book">Competing on Analytics — Davenport &amp; Harris</a>
-        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Data+Strategy+Bernard+Marr+book">Data Strategy — Marr</a>
-        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Prediction+Machines+Agrawal+Gans+Goldfarb+book">Prediction Machines — Agrawal et al.</a>
-        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.google.com/search?q=Infonomics+Doug+Laney+data+asset+book">Infonomics — Laney</a>
-      </div></div>
+
     </div>
   </div>
 
@@ -457,19 +464,6 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
 
 <script>
   (function(){
-    // CRT scanline toggle. The design is dark-only on purpose, so the old
-    // light/dark switch has no job; scanlines are the thing worth opting out of.
-    var btn=document.getElementById('scanBtn');
-    var scanOff=false; try{ scanOff=localStorage.getItem('rm-scan')==='off'; }catch(e){}
-    function paintScan(){
-      document.body.classList.toggle('no-scan',scanOff);
-      btn.setAttribute('aria-pressed',String(!scanOff));
-      btn.style.color = scanOff ? '' : 'var(--c1)';
-    }
-    paintScan();
-    btn.addEventListener('click',function(){
-      scanOff=!scanOff; try{localStorage.setItem('rm-scan',scanOff?'off':'on');}catch(e){} paintScan();
-    });
     // staggered reveal cascade (reliable everywhere; no viewport dependency)
     var stages=document.querySelectorAll('.tl-stage');
     function reveal(){stages.forEach(function(el,i){setTimeout(function(){el.classList.add('in');},110*i);});}
@@ -576,12 +570,17 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
         });
         // the old group shells are empty now — hide the ones with nothing left
         st.querySelectorAll('.rm-group').forEach(function(g){
-          var links=g.querySelector('a');
-          g.style.display = links ? '' : 'none';
-          // its skills moved onto the board; what is left is just links
-          if(links && !g.querySelector('a[data-pid]')){
-            var lab=g.querySelector('.rm-glabel');
-            if(lab && lab.textContent!=='Links') lab.textContent='Links';
+          // A group is spent only when NOTHING is left in it — the board takes
+          // the completable pills, but focus chips and the degree line are
+          // plain spans that live nowhere else and must stay put.
+          var left=g.querySelectorAll('.rm-tag').length;
+          g.style.display = left ? '' : 'none';
+          // A skills/credentials heading over nothing but links is a leftover;
+          // reading lists and focus groups keep the name they were given.
+          var lab=g.querySelector('.rm-glabel');
+          if(left && lab && /^(Skills|Credentials)/.test(lab.textContent)
+             && !g.querySelector('a[data-pid]') && !g.querySelector('span.rm-tag')){
+            lab.textContent='Links';
           }
         });
       });
