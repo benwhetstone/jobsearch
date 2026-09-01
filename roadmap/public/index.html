@@ -252,6 +252,37 @@
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}
     .js .tl-stage{opacity:1;transform:none;}.spark-line{stroke-dashoffset:0;}.spark-area,.spark-node circle,.spark-sal{opacity:1;}}
 
+    /* ===== per-stage board: To do / In progress / Complete ===== */
+    .rm-kan{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 4px;}
+    .rm-col{background:var(--col-bg,rgba(127,140,160,.07));border:1px solid var(--col-br,rgba(127,140,160,.20));border-radius:10px;padding:8px;min-width:0;}
+    .rm-colhead{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:0 2px 8px;}
+    .rm-coltitle{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
+    .rm-colcnt{font-size:11px;font-weight:700;color:var(--muted);background:rgba(127,140,160,.16);border-radius:999px;padding:1px 7px;min-width:20px;text-align:center;}
+    .rm-col[data-col="doing"]{background:rgba(245,158,11,.09);border-color:rgba(245,158,11,.30);}
+    .rm-col[data-col="done"]{background:rgba(34,197,94,.09);border-color:rgba(34,197,94,.28);}
+    .rm-colbody{display:flex;flex-direction:column;gap:6px;min-height:34px;}
+    .rm-card{display:flex;flex-direction:column;gap:2px;}
+    .rm-card .rm-tag{display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;white-space:normal;line-height:1.25;}
+    .rm-cardsrc{font-size:10px;color:var(--muted);padding-left:4px;letter-spacing:.02em;}
+    .rm-colempty{font-size:11px;color:var(--muted);opacity:.6;padding:4px 4px 2px;font-style:italic;}
+    @media (max-width:760px){
+      .rm-kan{grid-template-columns:1fr;gap:8px;}
+      .rm-col[data-col="todo"] .rm-colbody{max-height:none;}
+    }
+    /* collapse stages you are not working on — the page was getting long */
+    .tl-stage.rm-fold .rm-foldable{display:none;}
+    .rm-foldbtn{margin-left:auto;font:inherit;font-size:11px;font-weight:700;color:var(--muted);background:rgba(127,140,160,.14);
+      border:1px solid rgba(127,140,160,.22);border-radius:999px;padding:2px 10px;cursor:pointer;}
+    .rm-foldbtn:hover{opacity:.8;}
+
+    /* collapsible columns — a finished column is mostly noise once it is long */
+    .rm-col.rm-cfold .rm-colbody{display:none;}
+    .rm-col.rm-cfold{padding-bottom:6px;}
+    .rm-colhead{cursor:pointer;user-select:none;}
+    .rm-colhead:hover .rm-coltitle{opacity:.75;}
+    .rm-colcar{font-size:9px;color:var(--muted);transition:transform .15s ease;display:inline-block;margin-right:3px;}
+    .rm-col.rm-cfold .rm-colcar{transform:rotate(-90deg);}
+
     /* editable salary bands */
     .rm-sal{cursor:pointer;border-bottom:1px dashed rgba(255,255,255,.35);}
     .rm-sal:hover{opacity:.85;}
@@ -354,17 +385,19 @@
       <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
         <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.tableau.com/learn/certification/desktop-specialist">Tableau Desktop Specialist</a>
         <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.datacamp.com/certification/data-analyst">DataCamp Data Analyst Professional</a>
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/fabric-analytics-engineer-associate/?practice-assessment-type=certification">DP-600 Fabric Analytics Engineer</a>
       </div></div>
       <div class="rm-group"><div class="rm-glabel">Skills — DataCamp</div><div class="rm-line">
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://app.datacamp.com/learn/skill-tracks/python-data-fundamentals">Python · Data Analyst track</a>
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/tableau-fundamentals">Tableau Fundamentals</a>
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/statistics-fundamentals-with-python">Statistics Fundamentals</a>
+        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://app.datacamp.com/learn/courses?search=fabric">Fabric courses (search)</a>
       </div></div>
       <div class="rm-group"><div class="rm-glabel">Skills — Microsoft Learn</div><div class="rm-line">
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://learn.microsoft.com/training/fabric/">Microsoft Fabric</a>
-        <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://data.benwhetstone.info/?tag=fabric">Fabric work → portfolio</a>
+        <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://data.benwhetstone.info/#work">Portfolio → my work</a>
       </div></div>
-      <div class="rm-order"><b>Order →</b> ① Python track · ② Tableau Fundamentals · ③ Tableau Desktop Specialist · ④ Statistics · ⑤ Microsoft Fabric (Learn path) · ⑥ DataCamp Data Analyst Professional (needs SQL + Python)</div>
+      <div class="rm-order"><b>Order →</b> ① Python track · ② Tableau Fundamentals · ③ Tableau Desktop Specialist · ④ Statistics · ⑤ Microsoft Fabric (Learn path + DataCamp courses) · ⑥ DataCamp Data Analyst Professional (needs SQL + Python) · ⑦ DP-600 Fabric Analytics Engineer</div>
       <details class="rm-jobs">
         <summary><span class="rm-chev">▸</span><span class="rm-jbtn">Current jobs</span><span class="rm-jrole">“Data Analyst”</span><span class="rm-jhint">— open a search, then hit “Save / Create alert” for a daily digest</span></summary>
         <div class="rm-jbody">
@@ -590,9 +623,110 @@
         if(done.has(id)){ done.delete(id); }                               // done → not started
         else if(inProgress.has(id)){ inProgress.delete(id); done.add(id); } // in progress → done
         else { inProgress.add(id); }                                        // not started → in progress
-        setState(a,id); persist(); render(); push();
+        setState(a,id); persist(); render(); place(); push();
       });
     });
+
+    /* ---- board view: the three-state pill IS a kanban, so show it as one ----
+       The cards are the SAME <a data-pid> elements, just relocated into a
+       column, so every id, the KV sync and the progress maths are untouched. */
+    var UIKEY='rm-ui-folds';
+    var colFolds=new Set(), stageFolds=null;   // null = never touched, use the default
+    try{ var ui=JSON.parse(localStorage.getItem(UIKEY)||'{}');
+         if(Array.isArray(ui.cols)) colFolds=new Set(ui.cols);
+         if(Array.isArray(ui.stages)) stageFolds=new Set(ui.stages);
+    }catch(e){}
+    function saveUi(){ try{ localStorage.setItem(UIKEY,JSON.stringify({cols:[...colFolds],stages:stageFolds?[...stageFolds]:null})); }catch(e){} }
+    var COLS={todo:'To do',doing:'In progress',done:'Complete'};
+    document.querySelectorAll('.tl-stage').forEach(function(st){
+      var pills=st.querySelectorAll('a.rm-core, a.rm-opt, a.rm-tool, a.rm-task');
+      if(!pills.length) return;
+      pills.forEach(function(a){
+        var g=a.closest('.rm-group'), lbl=g&&g.querySelector('.rm-glabel');
+        if(lbl) a.dataset.src=lbl.textContent.replace(/^(Skills|Credentials)\s*[—-]\s*/,'');
+      });
+      var kan=document.createElement('div'); kan.className='rm-kan rm-foldable';
+      Object.keys(COLS).forEach(function(k){
+        var col=document.createElement('div'); col.className='rm-col'; col.dataset.col=k;
+        col.innerHTML='<div class="rm-colhead"><span class="rm-coltitle"><span class="rm-colcar">\u25bc</span>'+COLS[k]+'</span><span class="rm-colcnt">0</span></div><div class="rm-colbody"></div>';
+        col.querySelector('.rm-colhead').addEventListener('click',function(){
+          col.classList.toggle('rm-cfold');
+          var key=st.dataset.stage+':'+k;
+          if(col.classList.contains('rm-cfold')) colFolds.add(key); else colFolds.delete(key);
+          saveUi();
+        });
+        kan.appendChild(col);
+      });
+      var firstGroup=st.querySelector('.rm-group');
+      firstGroup.parentNode.insertBefore(kan, firstGroup);
+    });
+
+    function place(){
+      document.querySelectorAll('.tl-stage').forEach(function(st){
+        var kan=st.querySelector('.rm-kan'); if(!kan) return;
+        var body={}; kan.querySelectorAll('.rm-col').forEach(function(c){ body[c.dataset.col]=c.querySelector('.rm-colbody'); });
+        st.querySelectorAll('a.rm-tag[data-pid]').forEach(function(a){
+          var id=a.dataset.pid;
+          var k=done.has(id)?'done':(inProgress.has(id)?'doing':'todo');
+          var card=a.parentNode&&a.parentNode.classList&&a.parentNode.classList.contains('rm-card') ? a.parentNode : null;
+          if(!card){
+            card=document.createElement('div'); card.className='rm-card';
+            a.parentNode.insertBefore(card,a); card.appendChild(a);
+            if(a.dataset.src){ var sr=document.createElement('span'); sr.className='rm-cardsrc'; sr.textContent=a.dataset.src; card.appendChild(sr); }
+          }
+          if(card.parentNode!==body[k]) body[k].appendChild(card);
+        });
+        kan.querySelectorAll('.rm-col').forEach(function(c){
+          var b=c.querySelector('.rm-colbody'), n=b.querySelectorAll('.rm-card').length;
+          c.querySelector('.rm-colcnt').textContent=n;
+          var ph=b.querySelector('.rm-colempty');
+          if(!n && !ph){ var e=document.createElement('div'); e.className='rm-colempty'; e.textContent='nothing here'; b.appendChild(e); }
+          if(n && ph) ph.remove();
+        });
+        kan.querySelectorAll('.rm-col').forEach(function(c){
+          c.classList.toggle('rm-cfold', colFolds.has(st.dataset.stage+':'+c.dataset.col));
+        });
+        // the old group shells are empty now — hide the ones with nothing left
+        st.querySelectorAll('.rm-group').forEach(function(g){
+          g.style.display = g.querySelector('a') ? '' : 'none';
+        });
+      });
+    }
+
+    /* ---- fold every stage except the one you are on ---- */
+    document.querySelectorAll('.tl-stage').forEach(function(st){
+      var card=st.querySelector('.rm-stage');
+      Array.prototype.forEach.call(card.children,function(ch){
+        if(!ch.classList.contains('rm-row')) ch.classList.add('rm-foldable');
+      });
+      var row=st.querySelector('.rm-row');
+      var b=document.createElement('button'); b.className='rm-foldbtn'; b.type='button';
+      row.appendChild(b);
+      function toggleStage(e){
+        e.stopPropagation();
+        st.classList.toggle('rm-fold');
+        b.textContent = st.classList.contains('rm-fold') ? 'Show' : 'Hide';
+        if(!stageFolds) stageFolds=new Set();
+        var n=parseInt(st.dataset.stage,10);
+        if(st.classList.contains('rm-fold')) stageFolds.add(n); else stageFolds.delete(n);
+        saveUi();
+      }
+      b.addEventListener('click',toggleStage);
+      // the whole header row is the target — the pill alone was a small hit box
+      row.style.cursor='pointer';
+      row.addEventListener('click',function(e){
+        if(e.target.closest('.rm-sal, .sal-edit, a, button')) return;   // not the band editor or a link
+        toggleStage(e);
+      });
+    });
+    function renderFold(){
+      document.querySelectorAll('.tl-stage').forEach(function(st){
+        var n=parseInt(st.dataset.stage,10);
+        st.classList.toggle('rm-fold', stageFolds ? stageFolds.has(n) : (n!==current));
+        var b=st.querySelector('.rm-foldbtn');
+        if(b) b.textContent = st.classList.contains('rm-fold') ? 'Show' : 'Hide';
+      });
+    }
 
     // per-stage progress rows (insert after the alt-roles line)
     document.querySelectorAll('.tl-stage').forEach(function(st){
@@ -640,7 +774,7 @@
         if(Array.isArray(d.inProgress)) inProgress=new Set(d.inProgress);
         if(d.stage>=0&&d.stage<=4) current=d.stage;
         if(Array.isArray(d.stagesDone)) stagesDone=new Set(d.stagesDone);
-        persist(); applyPills(); render(); renderStage(); renderStageDone();   // server wins
+        persist(); applyPills(); render(); place(); renderStage(); renderStageDone(); renderFold();   // server wins
       }).catch(function(){});
     }
 
@@ -665,7 +799,7 @@
         var b=st.querySelector('.rm-donebtn'); if(b){ b.querySelector('.box').textContent=d?'✓':''; b.querySelector('.lbl').textContent=d?'Stage complete':'Mark stage complete'; }
       });
     }
-    function setStage(n){ if(n<0)n=0; if(n>4)n=4; if(n===current) return; current=n; persist(); renderStage(); render(); push();
+    function setStage(n){ if(n<0)n=0; if(n>4)n=4; if(n===current) return; current=n; persist(); renderStage(); renderFold(); render(); push();
       var c=document.querySelector('.tl-stage.is-current'); if(c) c.scrollIntoView({behavior:'smooth',block:'center'}); }
     // per-stage nav (Back / Move to next) — shown only on the current stage via CSS
     document.querySelectorAll('.tl-stage').forEach(function(st){
@@ -701,12 +835,14 @@
       foot.parentNode.insertBefore(tools, foot.nextSibling);
       document.getElementById('rmReset').addEventListener('click',function(){
         if(!confirm('Clear all completion marks? This clears them on every device.')) return;
-        done=new Set(); inProgress=new Set(); stagesDone=new Set(); applyPills(); persist(); render(); renderStageDone(); push();
+        done=new Set(); inProgress=new Set(); stagesDone=new Set(); applyPills(); persist(); render(); place(); renderStageDone(); push();
       });
     }
 
     render();          // instant from local cache
+    place();           // lay the cards out on their boards
     renderStage();     // show which stage you're on
+    renderFold();      // only the current stage stays open
     renderStageDone(); // show completed stages
     pull();            // adopt server truth, then live-sync on every change
   })();
