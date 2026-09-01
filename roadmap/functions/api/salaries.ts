@@ -1,3 +1,4 @@
+import { validSession, type Env } from "./_auth";
 // GET  /api/salaries -> { salaries: { "0": {min,max,plus,label}, ... }, updated }
 // POST /api/salaries <- { stage, min, max, plus? }   (one stage at a time)
 //                    or { salaries: { "0": {...}, ... } }  (bulk)
@@ -9,13 +10,8 @@
 //
 // Stored beside progress in the same namespace under key "salaries", which is
 // why this needed no migration and no new binding.
-export interface Env {
-  PROGRESS: KVNamespace;
-  ROADMAP_KEY?: string;
-}
 
 const KEY = "salaries";
-const DEFAULT_KEY = "46444d84816b31186e75551c5bee4a15";
 
 // What the page shipped with. Serve these until Ben overrides a stage, so an
 // empty store renders exactly what he sees today rather than blanks.
@@ -39,8 +35,6 @@ const json = (data: unknown, status = 200) =>
     },
   });
 
-const authed = (request: Request, env: Env) =>
-  (request.headers.get("x-roadmap-key") || "") === (env.ROADMAP_KEY || DEFAULT_KEY);
 
 async function load(env: Env): Promise<{ salaries: Record<string, any>; updated: number }> {
   const raw = await env.PROGRESS.get(KEY);
@@ -70,12 +64,11 @@ function clean(v: any, fallback: { min: number; max: number; plus: boolean }) {
 export const onRequestOptions: PagesFunction<Env> = () => json({ ok: true });
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
-  if (!authed(request, env)) return json({ error: "unauthorized" }, 401);
   return json(await load(env));
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  if (!authed(request, env)) return json({ error: "unauthorized" }, 401);
+  if (!(await validSession(request, env))) return json({ error: "Sign in to make changes." }, 401);
   let body: any;
   try { body = await request.json(); } catch { return json({ error: "invalid json" }, 400); }
 

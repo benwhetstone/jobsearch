@@ -42,7 +42,8 @@ for i in $(seq 1 40); do
     echo; echo "CONFIRMED LIVE: $BUILD  (after ${i} checks)"
     # a page without its API is a broken deploy, so prove the functions answer too
     if [ -d "$ROOT/functions" ]; then
-      for ep in $(ls "$ROOT/functions/api" 2>/dev/null | sed 's/\.ts$//'); do
+      # files starting with _ are shared modules, not routes
+      for ep in $(ls "$ROOT/functions/api" 2>/dev/null | grep -v '^_' | sed 's/\.ts$//'); do
         CT="$(curl -s -o /dev/null -w '%{content_type}' "https://$DOMAIN/api/$ep")"
         case "$CT" in application/json*) echo "  API /api/$ep OK";;
           *) echo "  API /api/$ep BROKEN — returned '$CT', expected JSON"; exit 1;; esac

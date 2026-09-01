@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <meta name="build" content="20260901T141636Z-818f299">
+  <meta name="build" content="20260901T144124Z-5d7b9c1">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ben's Data Roadmap</title>
+<title>Ben's Professional Development Roadmap</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b7fd4'/%3E%3Crect x='7' y='18' width='4' height='7' rx='1' fill='%23fff'/%3E%3Crect x='14' y='12' width='4' height='13' rx='1' fill='%23fff'/%3E%3Crect x='21' y='7' width='4' height='18' rx='1' fill='%23fff'/%3E%3Cpath d='M7 15 L15 10 L21 6' stroke='%23fff' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round' opacity='.55'/%3E%3C/svg%3E">
 <!--
   LIVING DOCUMENT - Ben's Data Analytics Roadmap
@@ -154,7 +154,11 @@ a:hover{color:#fff;}
   animation:pulseDot 1.6s ease-in-out infinite;}
 .rm-role{margin:16px 0 2px;font-family:var(--disp);font-size:29px;font-weight:700;line-height:1.1;color:#eaf6fb;}
 .tl-stage[data-stage="4"] .rm-role{color:#ffe3f1;}
-.rm-desc{margin:6px 0 8px;max-width:68ch;font-family:var(--mono);font-size:12.5px;line-height:1.75;color:#a8bac8;}
+.rm-desc{margin:8px 0 10px;max-width:74ch;}
+.rm-jdlead{margin:0 0 7px;font-family:var(--mono);font-size:12.5px;line-height:1.7;color:#c3d3df;}
+.rm-jd{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;}
+.rm-jd li{position:relative;padding-left:16px;font-family:var(--mono);font-size:12.5px;line-height:1.65;color:#a8bac8;}
+.rm-jd li::before{content:"›";position:absolute;left:2px;color:var(--c1);}
 .rm-alt{margin:0 0 4px;font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--dim);}
 
 /* ---------- section labels + pills ---------- */
@@ -172,9 +176,10 @@ a:hover{color:#fff;}
 .rm-link,.rm-book{color:var(--c3);background:color-mix(in srgb,var(--c3) 8%,transparent);border:1px solid color-mix(in srgb,var(--c3) 45%,transparent);}
 .rm-link:hover,.rm-book:hover{background:color-mix(in srgb,var(--c3) 22%,transparent);color:#fff;}
 .rm-opt{color:var(--neutral);background:rgba(255,255,255,.03);border:1px solid rgba(195,211,223,.3);}
-a.rm-tag.done{color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent);border-color:color-mix(in srgb,var(--ok) 50%,transparent);}
+/* A finished card keeps its own colour — the column it sits in already says it
+   is done, and recolouring everything green threw away the credential / skill /
+   reading distinction exactly where the record of what you finished matters. */
 a.rm-tag.done .rm-lbl::before{content:"✓ ";}
-a.rm-tag.done:hover{background:color-mix(in srgb,var(--ok) 24%,transparent);color:#fff;}
 .rm-earned{font-family:var(--mono);font-size:11.5px;color:var(--ok);display:inline-flex;align-items:center;gap:6px;}
 .rm-earned-ck::before{content:"✓";color:var(--ok);}
 
@@ -201,6 +206,27 @@ a.rm-tag.done:hover{background:color-mix(in srgb,var(--ok) 24%,transparent);colo
 .rm-card{display:flex;flex-direction:column;gap:3px;cursor:grab;touch-action:pan-y;}
 .rm-card .rm-tag{width:100%;white-space:normal;}
 .rm-cardsrc{font-family:var(--mono);font-size:11px;color:var(--dim);padding-left:4px;}
+.rm-cardmeta{display:flex;align-items:center;gap:8px;padding:0 2px 0 4px;}
+.rm-cardtype{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;}
+.rm-ct-core{color:var(--c2);} .rm-ct-tool{color:var(--c1);} .rm-ct-book{color:var(--c3);} .rm-ct-opt{color:var(--neutral);}
+.rm-cardedit{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  background:none;border:0;padding:2px 3px;color:var(--dim);cursor:pointer;opacity:0;transition:opacity .12s ease-out;}
+.rm-card:hover .rm-cardedit,.rm-cardedit:focus-visible{opacity:1;}
+@media (hover:none){ .rm-cardedit{opacity:1;} }
+.rm-cardedit:hover{color:var(--c1);}
+.rm-addbtn{width:100%;margin-top:7px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  background:none;border:1px dashed var(--line);color:var(--dim);padding:6px;cursor:pointer;}
+.rm-addbtn:hover{color:var(--c1);border-color:color-mix(in srgb,var(--c1) 45%,transparent);}
+.rm-editor{display:flex;flex-direction:column;gap:6px;padding:8px;border:1px solid color-mix(in srgb,var(--c1) 40%,transparent);
+  background:rgba(0,240,255,.05);}
+.rm-ein{font-family:var(--mono);font-size:12px;padding:5px 7px;color:var(--txt);
+  background:rgba(255,255,255,.04);border:1px solid var(--line);}
+.rm-ein:focus{outline:1px solid var(--c1);}
+.rm-erow{display:flex;gap:6px;flex-wrap:wrap;}
+.rm-ebtn{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+  background:rgba(255,255,255,.03);border:1px solid var(--line);color:var(--dim);padding:5px 10px;}
+.rm-ebtn:hover{color:#fff;}
+.rm-edel{color:var(--c2);border-color:color-mix(in srgb,var(--c2) 45%,transparent);}
 .rm-colempty{font-family:var(--mono);font-size:11.5px;color:var(--dim);opacity:.7;padding:3px 2px;}
 .rm-card.rm-dragging{opacity:.35;cursor:grabbing;}
 .rm-card.rm-dragging .rm-tag{box-shadow:0 0 14px color-mix(in srgb,var(--c1) 35%,transparent);}
@@ -217,7 +243,6 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
 .rm-prog.alldone .fill{background:linear-gradient(90deg,var(--ok),color-mix(in srgb,var(--ok) 40%,transparent));
   box-shadow:0 0 12px color-mix(in srgb,var(--ok) 45%,transparent);}
 .rm-stagenav{display:none;gap:8px;margin:16px 0 0;flex-wrap:wrap;}
-.tl-stage.is-current .rm-stagenav{display:flex;}
 .rm-back,.rm-next,.rm-tbtn,.rm-donebtn{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
   background:rgba(255,255,255,.03);border:1px solid var(--line);color:var(--dim);padding:8px 14px;
   clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);}
@@ -233,6 +258,27 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
   color:var(--dim);background:rgba(255,255,255,.03);border:1px solid var(--line);padding:4px 12px;}
 .rm-foldbtn:hover{color:var(--c1);border-color:color-mix(in srgb,var(--c1) 45%,transparent);}
 .tl-stage.rm-fold .rm-foldable{display:none;}
+/* Signed out is the default. Everything that writes stays hidden until a
+   session exists, so a shared link is genuinely view-only. */
+.rm-signin{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  background:none;border:0;padding:0;color:var(--c1);cursor:pointer;border-bottom:1px dotted color-mix(in srgb,var(--c1) 50%,transparent);}
+.rm-signin:hover{color:#fff;}
+.rm-addbtn,.rm-cardedit,.rm-stagenav,.rm-donerow{display:none;}
+body.rm-can-edit .rm-addbtn{display:block;}
+body.rm-can-edit .rm-card:hover .rm-cardedit,body.rm-can-edit .rm-cardedit:focus-visible{display:block;opacity:1;}
+@media (hover:none){ body.rm-can-edit .rm-cardedit{display:block;opacity:1;} }
+body.rm-can-edit .tl-stage.is-current .rm-stagenav{display:flex;}
+body.rm-can-edit .rm-donerow{display:block;}
+body:not(.rm-can-edit) .rm-sal{cursor:default;border-bottom:0;}
+body:not(.rm-can-edit) .rm-card{cursor:default;}
+.rm-auth{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:rgba(3,6,11,.82);padding:20px;}
+.rm-authbox{width:100%;max-width:340px;background:var(--panel);border:1px solid color-mix(in srgb,var(--c1) 35%,transparent);
+  padding:22px;display:flex;flex-direction:column;gap:10px;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,14px 100%,0 calc(100% - 14px));}
+.rm-authbox h2{margin:0 0 4px;font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--c1);font-weight:600;}
+.rm-autherr{font-family:var(--mono);font-size:11.5px;color:var(--c2);line-height:1.5;}
+.rm-authnote{font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.6;}
 .rm-foot{margin:34px 0 0;padding-top:18px;border-top:1px solid var(--line);
   display:flex;flex-wrap:wrap;justify-content:center;gap:10px 26px;
   font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);}
@@ -297,9 +343,9 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
 <div class="rm-wrap">
   <div class="rm-head">
     <div>
-      <p class="rm-title">Ben's Data Roadmap</p>
+      <p class="rm-title">Ben's Professional Development Roadmap</p>
       <p class="rm-sub"><b>Tampa Bay</b> · Target: <b>Principal Data Engineer / Data Architect</b></p>
-      <p class="rm-meta">Updated September 2026</p>
+      <p class="rm-meta">Updated September 2026 · <button class="rm-signin" id="signBtn" type="button">sign in to edit</button></p>
     </div>
   </div>
 
@@ -333,7 +379,15 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <div class="rm-stage">
       <div class="rm-row"><span><span class="rm-stlabel">Stage 1</span> &nbsp;<span class="rm-time">~0–3 yrs in</span></span><span class="rm-sal" data-sal-stage="1" title="Click to edit this band">$55K – $80K</span></div>
       <div class="rm-role">Data Analyst</div>
-      <p class="rm-desc">You answer questions with data. Someone asks why one region missed its number; you write the SQL, check the figures are right, and come back with the answer — usually as a dashboard or a report people open every Monday. The tables you query were built by someone else.</p>
+      <div class="rm-desc">
+        <p class="rm-jdlead">You answer questions with data. The tables you query were built by someone else.</p>
+        <ul class="rm-jd">
+        <li>Pull and prepare data to answer the questions the business asks</li>
+        <li>Build and maintain the reports and dashboards people rely on</li>
+        <li>Investigate why a number changed and explain it to a non-technical audience</li>
+        <li>Check data quality and fix problems in the source</li>
+        </ul>
+      </div>
       <div class="rm-alt">Data Analyst · BI Analyst · Reporting Analyst — where you are now; the SQL and BI foundation the rest stands on</div>
       <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
         <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/data-analyst-associate/">PL-300 · Power BI Data Analyst</a>
@@ -377,8 +431,16 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <div class="rm-stage">
       <div class="rm-row"><span><span class="rm-stlabel">Stage 2</span> &nbsp;<span class="rm-time">~3–5 yrs in</span></span><span class="rm-sal" data-sal-stage="2" title="Click to edit this band">$110K – $140K</span></div>
       <div class="rm-role">Senior Data Analyst / Analytics Engineer</div>
-      <p class="rm-desc">You build the tables the analysts use, instead of only the reports sitting on them. Raw source data comes in messy; you turn it into clean, documented, tested tables the whole team can trust. The work ships through code review like software, not saved straight into a workspace.</p>
-      <div class="rm-alt">Senior Data Analyst · Analytics Engineer — the step from using data to building what others use; also the biggest pay jump</div>
+      <div class="rm-desc">
+        <p class="rm-jdlead">You build the tables other people's reports sit on, and you ship them like software.</p>
+        <ul class="rm-jd">
+        <li>Build the shared tables and models the rest of the team works from</li>
+        <li>Define what the data means — grain, definitions, business rules</li>
+        <li>Version, review and test changes before they reach anyone</li>
+        <li>Advise on decisions rather than reporting on them afterwards</li>
+        </ul>
+      </div>
+      <div class="rm-alt">Senior Data Analyst · Analytics Engineer — the real bridge role between BI and data engineering</div>
       <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
         <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/fabric-data-engineer-associate/">DP-700 · Fabric Data Engineer</a>
         <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.databricks.com/learn/certification/data-engineer-associate">Databricks Data Engineer Associate</a>
@@ -396,7 +458,6 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
         <span class="rm-tag rm-opt" style="cursor:default;">Writing tests that run before code merges</span>
       </div></div>
       <div class="rm-group"><div class="rm-glabel">📖 Further reading</div><div class="rm-line">
-        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.amazon.com/s?i=stripbooks&k=Data+Warehouse+Toolkit+Kimball+Ross+dimensional+modeling">The Data Warehouse Toolkit — Kimball</a>
         <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.amazon.com/s?i=stripbooks&k=Analytics+Engineering+with+SQL+and+dbt">Analytics Engineering with SQL and dbt</a>
         <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.amazon.com/s?i=stripbooks&k=Pragmatic+Programmer+Hunt+Thomas">The Pragmatic Programmer — Hunt &amp; Thomas</a>
       </div></div>
@@ -410,8 +471,17 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <div class="rm-stage">
       <div class="rm-row"><span><span class="rm-stlabel">Stage 3</span> &nbsp;<span class="rm-time">~6–8 yrs in</span></span><span class="rm-sal" data-sal-stage="3" title="Click to edit this band">$130K – $160K</span></div>
       <div class="rm-role">Senior / Staff Data Engineer</div>
-      <p class="rm-desc">You build and run the systems that move the data. Pulling it out of source systems on a schedule, transforming it at volume, and making sure it lands on time and correct every morning. When it breaks at 3am it is your pipeline, so it is built with tests, version control, and deployment that runs itself.</p>
-      <div class="rm-alt">Senior Data Engineer · Staff Data Engineer — postings gate on Databricks here, not on another Microsoft badge</div>
+      <div class="rm-desc">
+        <p class="rm-jdlead">You build and run the systems that move the data, and you are on call for them.</p>
+        <ul class="rm-jd">
+        <li>Design and build the pipelines that move data between systems</li>
+        <li>Keep them reliable — monitoring, alerting, and fixing failures</li>
+        <li>Work at volumes where performance and cost have to be designed for</li>
+        <li>Manage infrastructure and deployment as code</li>
+        <li>Set technical standards and review other engineers' work</li>
+        </ul>
+      </div>
+      <div class="rm-alt">Senior Data Engineer · Staff Data Engineer — IC track, no people management</div>
       <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
         <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.databricks.com/learn/certification/apache-spark-developer-associate">Databricks Spark Developer Associate</a>
         <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/azure-administrator/">AZ-104 · Azure Administrator</a>
@@ -431,12 +501,12 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
         <span class="rm-tag rm-opt" style="cursor:default;">Running a system without being told what to do next</span>
       </div></div>
       <div class="rm-group"><div class="rm-glabel">Advanced degree</div><div class="rm-line">
-        <span class="rm-tag rm-opt" style="cursor:default;">MPA — helps you stand out, but no posting requires it</span>
+        <span class="rm-tag rm-earned" style="cursor:default;"><span class="rm-earned-ck">✓</span>MPA — helps you stand out, but no posting requires it</span>
       </div></div>
       <div class="rm-group"><div class="rm-glabel">📖 Further reading</div><div class="rm-line">
         <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.amazon.com/s?i=stripbooks&k=Fundamentals+of+Data+Engineering+Reis+Housley">Fundamentals of Data Engineering — Reis &amp; Housley</a>
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.amazon.com/s?i=stripbooks&k=Data+Warehouse+Toolkit+Kimball+Ross+dimensional+modeling">The Data Warehouse Toolkit — Kimball</a>
         <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.amazon.com/s?i=stripbooks&k=Designing+Data-Intensive+Applications+Kleppmann">Designing Data-Intensive Applications — Kleppmann</a>
-        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.amazon.com/s?i=stripbooks&k=Staff+Engineer+Leadership+Beyond+the+Management+Track+Larson">Staff Engineer — Larson</a>
       </div></div>
 
 
@@ -449,8 +519,17 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <div class="rm-stage goal">
       <div class="rm-row"><span><span class="rm-stlabel">The Goal</span> &nbsp;<span class="rm-time">The ceiling</span></span><span class="rm-sal" data-sal-stage="4" title="Click to edit this band">$180K – $250K+</span></div>
       <div class="rm-role">Principal Data Engineer / Data Architect</div>
-      <p class="rm-desc">You decide how data works across the whole company — which platform, how it is governed, how it scales, what it costs. No direct reports: you set the technical standards other engineers build to, and you are the one who answers for whether the design still holds in five years.</p>
-      <div class="rm-alt">Principal Data Engineer · Data Architect — remote for a national employer, or one of a few large local enterprises</div>
+      <div class="rm-desc">
+        <p class="rm-jdlead">You decide how data works across the whole company. No direct reports.</p>
+        <ul class="rm-jd">
+        <li>Set the data architecture and choose the platforms behind it</li>
+        <li>Own security, access and governance for company data</li>
+        <li>Design for real-time data as well as batch</li>
+        <li>Plan for scale, performance and cost across the platform</li>
+        <li>Guide technical direction and mentor engineers without managing them</li>
+        </ul>
+      </div>
+      <div class="rm-alt">Principal Data Engineer → Staff Data Engineer → Data Architect — IC track; realistically remote for a national employer, or one of a few large local enterprises</div>
       <div class="rm-group"><div class="rm-glabel">Focus — what the job is</div><div class="rm-line">
         <span class="rm-tag rm-opt" style="cursor:default;">Choosing the platform everyone else builds on</span>
         <span class="rm-tag rm-opt" style="cursor:default;">Who can see which data, and being able to prove it</span>
@@ -461,6 +540,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
       <div class="rm-group"><div class="rm-glabel">📖 Further reading</div><div class="rm-line">
         <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.amazon.com/s?i=stripbooks&k=Fundamentals+of+Software+Architecture+Richards+Ford">Fundamentals of Software Architecture — Richards &amp; Ford</a>
         <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.amazon.com/s?i=stripbooks&k=Data+Mesh+Zhamak+Dehghani">Data Mesh — Dehghani</a>
+        <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.amazon.com/s?i=stripbooks&k=Staff+Engineer+Leadership+Beyond+the+Management+Track+Larson">Staff Engineer — Larson</a>
         <a class="rm-tag rm-book" target="_blank" rel="noopener" href="https://www.amazon.com/s?i=stripbooks&k=Data+Strategy+Bernard+Marr">Data Strategy — Marr</a>
       </div></div>
 
@@ -468,13 +548,6 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
   </div>
 
   </div><!-- /tl -->
-
-  <div class="rm-foot">
-    <span><b>4</b> stages</span>
-    <span>Analyst → Analytics Engineer → Data Engineer</span>
-    <span><b>Individual contributor</b> · no management track</span>
-    <span><b data-sal-range>$95K → $250K+</b> climb</span>
-  </div>
 </div>
 
 <script>
@@ -490,7 +563,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
 <script>
   /* ===== completion tracking (localStorage now, Cloudflare-sync ready) ===== */
   (function(){
-    var STORE='rm-progress-v1', STAGEKEY='rm-stage', STAGESDONE='rm-stages-done', INPROG='rm-inprogress', API='/api/progress', HDR='x-roadmap-key', TOKEN='46444d84816b31186e75551c5bee4a15';
+    var STORE='rm-progress-v1', STAGEKEY='rm-stage', STAGESDONE='rm-stages-done', INPROG='rm-inprogress', API='/api/progress';
     var done=new Set(), inProgress=new Set();
     try{done=new Set(JSON.parse(localStorage.getItem(STORE)||'[]'));}catch(e){}
     try{inProgress=new Set(JSON.parse(localStorage.getItem(INPROG)||'[]'));}catch(e){}
@@ -500,25 +573,42 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     try{(JSON.parse(localStorage.getItem(STAGESDONE)||'[]')||[]).forEach(function(n){stagesDone.add(n);});}catch(e){}
     function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
     function persist(){try{localStorage.setItem(STORE,JSON.stringify([...done]));localStorage.setItem(INPROG,JSON.stringify([...inProgress]));localStorage.setItem(STAGEKEY,String(current));localStorage.setItem(STAGESDONE,JSON.stringify([...stagesDone]));}catch(e){}}
-    function hdr(x){var h=x||{}; h[HDR]=TOKEN; return h;}
+    // Reads need no credential; writes ride the HttpOnly session cookie.
+    function hdr(x){ return x||{}; }
     function setState(a,id){ var d=done.has(id); a.classList.toggle('done',d); a.classList.toggle('doing',!d&&inProgress.has(id)); }
 
-    // register every completable pill (certs + skills) with the progress engine
-    var pills=document.querySelectorAll('.tl-stage a.rm-core, .tl-stage a.rm-opt, .tl-stage a.rm-tool, .tl-stage a.rm-task, .tl-stage a.rm-book');
-    pills.forEach(function(a){
-      var stage=a.closest('.tl-stage').dataset.stage;
-      var id='s'+stage+':'+slug(a.textContent);
-      a.dataset.pid=id;
-      var label=a.textContent; a.textContent='';
-      var lbl=document.createElement('span'); lbl.className='rm-lbl'; lbl.textContent=label;
-      a.appendChild(lbl);
-      setState(a,id);
-      a.title='Drag between columns to change status · click to open';
-    });
+    /* ---- the board's cards are DATA, not markup ---------------------------
+       They used to be hard-coded <a> tags, so adding a course or fixing a dead
+       link meant a redeploy. The tags in the HTML are now only a seed: on first
+       run they are read into /api/items and removed from the page, and from
+       then on the store is what renders. Which column a card sits in still
+       comes from /api/progress, because the portfolio site reads those ids. */
+    var ITEMS={}, ITEMS_READY=false;
+    var TYPE_LABEL={core:'Credential',tool:'Course',book:'Reading',opt:'Focus'};
+    var ITEMS_API='/api/items';
 
-    /* ---- board view: the three-state pill IS a kanban, so show it as one ----
-       The cards are the SAME <a data-pid> elements, just relocated into a
-       column, so every id, the KV sync and the progress maths are untouched. */
+    function seedFromMarkup(){
+      var seed={};
+      document.querySelectorAll('.tl-stage').forEach(function(st){
+        var stage=st.dataset.stage, list=[];
+        st.querySelectorAll('a.rm-core, a.rm-tool, a.rm-book, a.rm-task, a.rm-opt').forEach(function(a){
+          var type=a.classList.contains('rm-core')?'core':a.classList.contains('rm-book')?'book':a.classList.contains('rm-opt')?'opt':'tool';
+          list.push({id:'s'+stage+':'+slug(a.textContent), label:a.textContent.trim(), url:a.getAttribute('href')||'', type:type});
+          a.parentNode.removeChild(a);          // the seed has been taken
+        });
+        if(list.length) seed[stage]=list;
+      });
+      return seed;
+    }
+    var SEED=seedFromMarkup();
+
+    function saveItems(body){
+      return fetch(ITEMS_API,{method:'POST',headers:hdr({'content-type':'application/json'}),body:JSON.stringify(body)})
+        .then(function(r){return r.ok?r.json():null;})
+        .then(function(d){ if(d&&d.items){ ITEMS=d.items; place(); render(); } })
+        .catch(function(){});
+    }
+
     var UIKEY='rm-ui-folds';
     var colFolds=new Set(), stageFolds=null;   // null = never touched, use the default
     try{ var ui=JSON.parse(localStorage.getItem(UIKEY)||'{}');
@@ -527,80 +617,123 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     }catch(e){}
     function saveUi(){ try{ localStorage.setItem(UIKEY,JSON.stringify({cols:[...colFolds],stages:stageFolds?[...stageFolds]:null})); }catch(e){} }
     var COLS={todo:'Backlog',doing:'In progress',done:'Done'};
+
     document.querySelectorAll('.tl-stage').forEach(function(st){
-      var pills=st.querySelectorAll('a.rm-core, a.rm-opt, a.rm-tool, a.rm-task, a.rm-book');
-      if(!pills.length) return;
-      pills.forEach(function(a){
-        var g=a.closest('.rm-group'), lbl=g&&g.querySelector('.rm-glabel');
-        if(lbl) a.dataset.src=lbl.textContent.replace(/^(Skills|Credentials)\s*[—-]\s*/,'');
-      });
+      var stage=st.dataset.stage;
+      if(!SEED[stage]) return;                       // a stage with nothing to track gets no board
       var klab=document.createElement('div'); klab.className='rm-glabel rm-foldable'; klab.textContent='Board';
       var kan=document.createElement('div'); kan.className='rm-kan rm-foldable';
       Object.keys(COLS).forEach(function(k){
         var col=document.createElement('div'); col.className='rm-col'; col.dataset.col=k;
-        col.innerHTML='<button class="rm-colhead" type="button" aria-expanded="true"><span class="rm-coltitle"><span class="rm-colcar">\u25bc</span>'+COLS[k]+'</span><span class="rm-colcnt">0</span></button><div class="rm-colbody"></div>';
+        col.innerHTML='<button class="rm-colhead" type="button" aria-expanded="true"><span class="rm-coltitle"><span class="rm-colcar">▼</span>'+COLS[k]+'</span><span class="rm-colcnt">0</span></button><div class="rm-colbody"></div><button class="rm-addbtn" type="button">+ add</button>';
         var chead=col.querySelector('.rm-colhead');
-        chead.setAttribute('aria-label',COLS[k]+' column, stage '+st.dataset.stage);
+        chead.setAttribute('aria-label',COLS[k]+' column, stage '+stage);
         chead.addEventListener('click',function(){
           col.classList.toggle('rm-cfold');
           var folded=col.classList.contains('rm-cfold');
           chead.setAttribute('aria-expanded',String(!folded));
-          var key=st.dataset.stage+':'+k;
-          if(folded) colFolds.add(key); else colFolds.delete(key);
+          var key=stage+':'+k; if(folded) colFolds.add(key); else colFolds.delete(key);
           saveUi();
         });
+        col.querySelector('.rm-addbtn').addEventListener('click',function(){ openEditor(col,stage,k,null); });
         kan.appendChild(col);
       });
-      var firstGroup=st.querySelector('.rm-group');
-      firstGroup.parentNode.insertBefore(klab, firstGroup);
-      firstGroup.parentNode.insertBefore(kan, firstGroup);
+      var anchor=st.querySelector('.rm-group') || st.querySelector('.rm-alt').nextSibling;
+      if(anchor && anchor.parentNode){ anchor.parentNode.insertBefore(klab,anchor); anchor.parentNode.insertBefore(kan,anchor); }
+      else { st.querySelector('.rm-stage').appendChild(klab); st.querySelector('.rm-stage').appendChild(kan); }
     });
+
+    /* ---- add / edit / delete one card ------------------------------------ */
+    function openEditor(col, stage, colKey, item){
+      var host=col.querySelector('.rm-colbody');
+      var existing=host.querySelector('.rm-editor'); if(existing) existing.remove();
+      var f=document.createElement('form'); f.className='rm-editor';
+      f.innerHTML=
+        '<input class="rm-ein" name="label" placeholder="what is it" maxlength="120" required>'+
+        '<input class="rm-ein" name="url" placeholder="link (optional)" maxlength="500">'+
+        '<select class="rm-ein" name="type">'+
+          Object.keys(TYPE_LABEL).map(function(t){return '<option value="'+t+'">'+TYPE_LABEL[t]+'</option>';}).join('')+
+        '</select>'+
+        '<div class="rm-erow"><button class="rm-ebtn" type="submit">save</button>'+
+        '<button class="rm-ebtn" type="button" data-act="cancel">cancel</button>'+
+        (item?'<button class="rm-ebtn rm-edel" type="button" data-act="delete">delete</button>':'')+'</div>';
+      if(item){ f.label.value=item.label; f.url.value=item.url||''; f.type.value=item.type||'tool'; }
+      var card=item?document.querySelector('.rm-card[data-id="'+CSS.escape(item.id)+'"]'):null;
+      if(card) card.replaceWith(f); else host.appendChild(f);
+      f.label.focus();
+      f.addEventListener('submit',function(e){
+        e.preventDefault();
+        var label=f.label.value.trim(); if(!label) return;
+        var id=item?item.id:('s'+stage+':'+slug(label));
+        var list=(ITEMS[stage]||[]).slice();
+        if(!item && list.some(function(x){return x.id===id;})) id=id+'-'+Date.now().toString(36).slice(-4);
+        if(!item){                        // a new card starts in the column it was added to
+          if(colKey==='done'){ done.add(id); inProgress.delete(id); }
+          else if(colKey==='doing'){ inProgress.add(id); done.delete(id); }
+          persist(); push();
+        }
+        saveItems({stage:stage,item:{id:id,label:label,url:f.url.value.trim(),type:f.type.value}});
+      });
+      f.addEventListener('click',function(e){
+        var act=e.target.getAttribute&&e.target.getAttribute('data-act');
+        if(act==='cancel'){ e.preventDefault(); place(); }
+        if(act==='delete'&&item){ e.preventDefault();
+          if(!confirm('Delete “'+item.label+'”?')) return;
+          done.delete(item.id); inProgress.delete(item.id); persist(); push();
+          saveItems({stage:stage,remove:item.id});
+        }
+      });
+    }
+
+    function buildCard(stage,it){
+      var card=document.createElement('div'); card.className='rm-card';
+      card.dataset.id=it.id; card.dataset.stage=stage;
+      var a=document.createElement('a');
+      a.className='rm-tag rm-'+(it.type||'tool');
+      a.dataset.pid=it.id;
+      if(it.url){ a.href=it.url; a.target='_blank'; a.rel='noopener'; }
+      a.setAttribute('draggable','false');
+      a.title='Drag to move or reorder · click to open';
+      var lbl=document.createElement('span'); lbl.className='rm-lbl'; lbl.textContent=it.label;
+      a.appendChild(lbl); card.appendChild(a);
+      setState(a,it.id);
+      var meta=document.createElement('div'); meta.className='rm-cardmeta';
+      var t=document.createElement('span'); t.className='rm-cardtype rm-ct-'+(it.type||'tool');
+      t.textContent=TYPE_LABEL[it.type]||'Course';
+      var ed=document.createElement('button'); ed.className='rm-cardedit'; ed.type='button'; ed.textContent='edit';
+      ed.setAttribute('aria-label','Edit '+it.label);
+      ed.addEventListener('click',function(e){ e.stopPropagation(); e.preventDefault();
+        openEditor(card.closest('.rm-col'),stage,null,it); });
+      meta.appendChild(t); meta.appendChild(ed); card.appendChild(meta);
+      return card;
+    }
 
     function place(){
       document.querySelectorAll('.tl-stage').forEach(function(st){
         var kan=st.querySelector('.rm-kan'); if(!kan) return;
-        var body={}; kan.querySelectorAll('.rm-col').forEach(function(c){ body[c.dataset.col]=c.querySelector('.rm-colbody'); });
-        st.querySelectorAll('a.rm-tag[data-pid]').forEach(function(a){
-          var id=a.dataset.pid;
-          var k=done.has(id)?'done':(inProgress.has(id)?'doing':'todo');
-          var card=a.parentNode&&a.parentNode.classList&&a.parentNode.classList.contains('rm-card') ? a.parentNode : null;
-          if(!card){
-            card=document.createElement('div'); card.className='rm-card';
-            a.parentNode.insertBefore(card,a); card.appendChild(a);
-              a.setAttribute('draggable','false');
-          }
-          if(card.parentNode!==body[k]) body[k].appendChild(card);
+        var stage=st.dataset.stage;
+        var body={}; kan.querySelectorAll('.rm-col').forEach(function(c){ var b=c.querySelector('.rm-colbody'); b.innerHTML=''; body[c.dataset.col]=b; });
+        (ITEMS[stage]||[]).forEach(function(it){
+          var k=done.has(it.id)?'done':(inProgress.has(it.id)?'doing':'todo');
+          body[k].appendChild(buildCard(stage,it));
         });
         kan.querySelectorAll('.rm-col').forEach(function(c){
           var b=c.querySelector('.rm-colbody'), n=b.querySelectorAll('.rm-card').length;
           c.querySelector('.rm-colcnt').textContent=n;
-          var ph=b.querySelector('.rm-colempty');
-          if(!n && !ph){ var e=document.createElement('div'); e.className='rm-colempty'; e.textContent='> nothing queued'; b.appendChild(e); }
-          if(n && ph) ph.remove();
-        });
-        kan.querySelectorAll('.rm-col').forEach(function(c){
-          var folded=colFolds.has(st.dataset.stage+':'+c.dataset.col);
+          if(!n){ var e=document.createElement('div'); e.className='rm-colempty'; e.textContent='> nothing queued'; b.appendChild(e); }
+          var folded=colFolds.has(stage+':'+c.dataset.col);
           c.classList.toggle('rm-cfold', folded);
           var h=c.querySelector('.rm-colhead'); if(h) h.setAttribute('aria-expanded',String(!folded));
         });
-        // the old group shells are empty now — hide the ones with nothing left
+        // the seed groups are empty now; anything still holding a chip stays
         st.querySelectorAll('.rm-group').forEach(function(g){
-          // A group is spent only when NOTHING is left in it — the board takes
-          // the completable pills, but focus chips and the degree line are
-          // plain spans that live nowhere else and must stay put.
           var left=g.querySelectorAll('.rm-tag').length;
           g.style.display = left ? '' : 'none';
-          // A skills/credentials heading over nothing but links is a leftover;
-          // reading lists and focus groups keep the name they were given.
           var lab=g.querySelector('.rm-glabel');
-          if(left && lab && /^(Skills|Credentials)/.test(lab.textContent)
-             && !g.querySelector('a[data-pid]') && !g.querySelector('span.rm-tag')){
-            lab.textContent='Links';
-          }
+          if(left && lab && /^(Skills|Credentials)/.test(lab.textContent) && !g.querySelector('span.rm-tag')) lab.textContent='Links';
         });
       });
     }
-
 
     /* ---- drag a card between columns -------------------------------------
        Pointer Events, not HTML5 drag-and-drop: one code path that works for
@@ -650,12 +783,32 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
       d.card.dataset.suppressClick='1';
       var col=colUnder(x,y);
       highlight(null);
-      if(col && col.closest('.tl-stage')===d.card.closest('.tl-stage')) setCardState(d.pid, col.dataset.col);
+      if(col && col.closest('.tl-stage')===d.card.closest('.tl-stage')){
+        // Work out which card it was dropped ABOVE, so the drop position is
+        // the new position — a board where you cannot order the queue is just
+        // three lists.
+        var stage=col.closest('.tl-stage').dataset.stage;
+        var before=null;
+        col.querySelectorAll('.rm-card').forEach(function(c){
+          if(before||c===d.card) return;
+          var r=c.getBoundingClientRect();
+          if(y < r.top + r.height/2) before=c.dataset.id;
+        });
+        var list=(ITEMS[stage]||[]).map(function(x){return x.id;});
+        var order=list.filter(function(id){return id!==d.pid;});
+        var at=before?order.indexOf(before):-1;
+        if(at<0) order.push(d.pid); else order.splice(at,0,d.pid);
+        setCardState(d.pid, col.dataset.col);
+        ITEMS[stage]=order.map(function(id){return (ITEMS[stage]||[]).find(function(x){return x.id===id;});}).filter(Boolean);
+        place();
+        saveItems({stage:stage,order:order});
+      }
       else place();                                     // dropped outside its own board: snap back
       return true;
     }
 
     document.addEventListener('pointerdown',function(e){
+      if(!document.body.classList.contains('rm-can-edit')) return;   // view-only
       var card=e.target.closest && e.target.closest('.rm-card');
       if(!card || e.button>0) return;
       var a=card.querySelector('a[data-pid]'); if(!a) return;
@@ -740,7 +893,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
 
     // per-stage progress rows (insert after the alt-roles line)
     document.querySelectorAll('.tl-stage').forEach(function(st){
-      var ps=st.querySelectorAll('a.rm-core, a.rm-opt, a.rm-tool, a.rm-task, a.rm-book'); if(!ps.length) return;
+      if(!SEED[st.dataset.stage]) return;
       var alt=st.querySelector('.rm-alt');
       var p=document.createElement('div'); p.className='rm-prog';
       p.innerHTML='<span class="plabel">Progress</span><span class="bar"><span class="fill"></span></span><span class="cnt"></span>';
@@ -840,17 +993,89 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     });
 
     // footer: a single reset (clears every device)
-    var foot=document.querySelector('.rm-foot');
-    if(foot){ var tools=document.createElement('div'); tools.className='rm-tools';
-      tools.innerHTML='<button class="rm-tbtn" id="rmReset">Reset progress</button>';
-      foot.parentNode.insertBefore(tools, foot.nextSibling);
-      document.getElementById('rmReset').addEventListener('click',function(){
-        if(!confirm('Clear all completion marks? This clears them on every device.')) return;
-        done=new Set(); inProgress=new Set(); stagesDone=new Set(); applyPills(); persist(); render(); place(); renderStageDone(); push();
-      });
-    }
 
     render();          // instant from local cache
+    /* ---- who is looking: signed in edits, everyone else reads ---------- */
+    function setEditable(on){
+      document.body.classList.toggle('rm-can-edit', !!on);
+      var b=document.getElementById('signBtn');
+      if(b) b.textContent = on ? 'account' : 'sign in to edit';
+    }
+    function authFetch(body){
+      return fetch('/api/auth',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); });
+    }
+    function closeAuth(){ var m=document.querySelector('.rm-auth'); if(m) m.remove(); }
+    function openAuth(mode){
+      closeAuth();
+      var wrap=document.createElement('div'); wrap.className='rm-auth';
+      var signedIn=document.body.classList.contains('rm-can-edit');
+      var box=document.createElement('form'); box.className='rm-authbox';
+      if(!signedIn){
+        box.innerHTML='<h2>Sign in</h2>'+
+          '<input class="rm-ein" name="email" type="email" placeholder="email" autocomplete="username" required>'+
+          '<input class="rm-ein" name="password" type="password" placeholder="password" autocomplete="current-password" required>'+
+          '<div class="rm-autherr" hidden></div>'+
+          '<div class="rm-erow"><button class="rm-ebtn" type="submit">sign in</button>'+
+          '<button class="rm-ebtn" type="button" data-act="close">cancel</button></div>'+
+          '<div class="rm-authnote">Anyone can read this page. Signing in is only needed to change it.</div>';
+      } else if(mode==='password'){
+        box.innerHTML='<h2>Change password</h2>'+
+          '<input class="rm-ein" name="current" type="password" placeholder="current password" autocomplete="current-password" required>'+
+          '<input class="rm-ein" name="next" type="password" placeholder="new password (10+ characters)" autocomplete="new-password" required>'+
+          '<div class="rm-autherr" hidden></div>'+
+          '<div class="rm-erow"><button class="rm-ebtn" type="submit">save</button>'+
+          '<button class="rm-ebtn" type="button" data-act="close">cancel</button></div>';
+      } else {
+        box.innerHTML='<h2>Account</h2>'+
+          '<div class="rm-authnote">Signed in as brwhetstone@gmail.com. Editing is on.</div>'+
+          '<div class="rm-erow"><button class="rm-ebtn" type="button" data-act="password">change password</button>'+
+          '<button class="rm-ebtn" type="button" data-act="signout">sign out</button></div>'+
+          '<div class="rm-erow"><button class="rm-ebtn rm-edel" type="button" data-act="reset">reset progress</button>'+
+          '<button class="rm-ebtn" type="button" data-act="close">close</button></div>';
+      }
+      wrap.appendChild(box); document.body.appendChild(wrap);
+      var err=box.querySelector('.rm-autherr');
+      function fail(m){ if(err){ err.textContent=m; err.hidden=false; } }
+      var f=box.querySelector('input'); if(f) f.focus();
+      wrap.addEventListener('click',function(e){ if(e.target===wrap) closeAuth(); });
+      box.addEventListener('click',function(e){
+        var act=e.target.getAttribute&&e.target.getAttribute('data-act'); if(!act) return;
+        e.preventDefault();
+        if(act==='close') closeAuth();
+        if(act==='password') openAuth('password');
+        if(act==='signout') authFetch({action:'logout'}).then(function(){ setEditable(false); closeAuth(); });
+        if(act==='reset'){
+          if(!confirm('Clear all completion marks? This clears them on every device.')) return;
+          done=new Set(); inProgress=new Set(); stagesDone=new Set();
+          persist(); render(); place(); renderStageDone(); push(); closeAuth();
+        }
+      });
+      box.addEventListener('submit',function(e){
+        e.preventDefault();
+        if(!signedIn){
+          authFetch({action:'login',email:box.email.value.trim(),password:box.password.value})
+            .then(function(r){ if(r.ok){ setEditable(true); closeAuth(); pull(); } else fail(r.d.error||'Sign in failed.'); });
+        } else {
+          authFetch({action:'changePassword',current:box.current.value,next:box.next.value})
+            .then(function(r){ if(r.ok){ closeAuth(); } else fail(r.d.error||'Could not change it.'); });
+        }
+      });
+    }
+    document.getElementById('signBtn').addEventListener('click',function(){ openAuth(); });
+    fetch('/api/auth').then(function(r){return r.json();}).then(function(d){ setEditable(d&&d.signedIn); }).catch(function(){});
+
+    // Pull the card definitions before the first paint. An empty store means
+    // this is the first run since the cards became data, so the markup seed is
+    // written up as the starting set.
+    fetch(ITEMS_API,{headers:hdr()}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      var got=(d&&d.items)||{};
+      var any=Object.keys(got).some(function(k){return (got[k]||[]).length;});
+      if(!any){ ITEMS=SEED; saveItems({items:SEED}); }
+      else { ITEMS=got; Object.keys(SEED).forEach(function(k){ if(!(got[k]||[]).length) ITEMS[k]=SEED[k]; }); }
+      ITEMS_READY=true; place(); render();
+    }).catch(function(){ ITEMS=SEED; ITEMS_READY=true; place(); render(); });
+
     place();           // lay the cards out on their boards
     renderStage();     // show which stage you're on
     renderFold();      // only the current stage stays open
@@ -863,8 +1088,8 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
 <script>
 /* ===== editable per-stage salary bands (stored in KV via /api/salaries) ===== */
 (function(){
-  var API='/api/salaries', HDR='x-roadmap-key', TOKEN='46444d84816b31186e75551c5bee4a15';
-  function hdr(x){var h=x||{}; h[HDR]=TOKEN; return h;}
+  var API='/api/salaries';
+  function hdr(x){ return x||{}; }
   var DATA={};
   function fmt(v){
     if(!v) return '';
@@ -952,7 +1177,10 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     });
   }
   document.querySelectorAll('.rm-sal[data-sal-stage]').forEach(function(el){
-    el.addEventListener('click',function(e){ e.stopPropagation(); e.preventDefault(); edit(el); });
+    el.addEventListener('click',function(e){
+      if(!document.body.classList.contains('rm-can-edit')) return;   // view-only
+      e.stopPropagation(); e.preventDefault(); edit(el);
+    });
   });
   load();
 })();

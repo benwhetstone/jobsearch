@@ -1,3 +1,4 @@
+import { validSession, type Env } from "./_auth";
 // GET  /api/progress -> { done[], inProgress[], stage, stagesDone[], updated }
 // POST /api/progress <- { done[], inProgress[], stage, stagesDone[] }
 //
@@ -10,15 +11,10 @@
 // real data". If it is 0/absent and the device has local progress, the client
 // seeds the server from localStorage. So a fresh/empty store must NOT return a
 // bogus timestamp.
-export interface Env {
-  PROGRESS: KVNamespace;
-  ROADMAP_KEY?: string;
-}
 
 const KEY = "state";
 // The page ships this key in its own JavaScript, so it is a light gate against
 // drive-by writes, not a secret. An env override wins when one is configured.
-const DEFAULT_KEY = "46444d84816b31186e75551c5bee4a15";
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -32,22 +28,19 @@ const json = (data: unknown, status = 200) =>
     },
   });
 
-const authed = (request: Request, env: Env) =>
-  (request.headers.get("x-roadmap-key") || "") === (env.ROADMAP_KEY || DEFAULT_KEY);
 
 const EMPTY = { done: [], inProgress: [], stage: 0, stagesDone: [], updated: 0 };
 
 export const onRequestOptions: PagesFunction<Env> = () => json({ ok: true });
 
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
-  if (!authed(request, env)) return json({ error: "unauthorized" }, 401);
+export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   const raw = await env.PROGRESS.get(KEY);
   if (!raw) return json(EMPTY);
   try { return json(JSON.parse(raw)); } catch { return json(EMPTY); }
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  if (!authed(request, env)) return json({ error: "unauthorized" }, 401);
+  if (!(await validSession(request, env))) return json({ error: "Sign in to make changes." }, 401);
   let body: any;
   try { body = await request.json(); } catch { return json({ error: "invalid json" }, 400); }
 
