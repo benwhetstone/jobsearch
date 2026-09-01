@@ -25,13 +25,31 @@ fi
 grep -q "$BUILD" "$INDEX" || { echo "could not stamp build id"; exit 1; }
 echo "build $BUILD"
 
-npx wrangler pages deploy "$DIR" --project-name="$PROJECT" --branch=main 2>&1 \
-  | grep -iE "Uploaded|Deployment complete" || true
+# Pages picks up functions/ RELATIVE TO THE WORKING DIRECTORY, not to the asset
+# dir. Deploying from the repo root silently shipped roadmap/public without
+# roadmap/functions and took the whole API offline. So always run from the
+# project root (the parent of the asset dir) and pass a relative path.
+ROOT="$(cd "$(dirname "$DIR")" && pwd)"
+ASSETS="$(basename "$DIR")"
+if [ -d "$ROOT/functions" ]; then echo "functions/ found — API will ship"; fi
+( cd "$ROOT" && npx wrangler pages deploy "$ASSETS" --project-name="$PROJECT" --branch=main 2>&1 \
+  | grep -iE "Uploaded|Deployment complete" ) || true
 
 printf 'confirming live'
 for i in $(seq 1 40); do
   LIVE="$(curl -s "https://$DOMAIN/?cb=$RANDOM$i" | grep -o 'name="build" content="[^"]*"' | head -1 | cut -d'"' -f4 || true)"
-  if [ "$LIVE" = "$BUILD" ]; then echo; echo "CONFIRMED LIVE: $BUILD  (after ${i} checks)"; exit 0; fi
+  if [ "$LIVE" = "$BUILD" ]; then
+    echo; echo "CONFIRMED LIVE: $BUILD  (after ${i} checks)"
+    # a page without its API is a broken deploy, so prove the functions answer too
+    if [ -d "$ROOT/functions" ]; then
+      for ep in $(ls "$ROOT/functions/api" 2>/dev/null | sed 's/\.ts$//'); do
+        CT="$(curl -s -o /dev/null -w '%{content_type}' "https://$DOMAIN/api/$ep")"
+        case "$CT" in application/json*) echo "  API /api/$ep OK";;
+          *) echo "  API /api/$ep BROKEN — returned '$CT', expected JSON"; exit 1;; esac
+      done
+    fi
+    exit 0
+  fi
   printf '.'; sleep 6
 done
 echo; echo "NOT CONFIRMED after 40 checks — live reports '${LIVE:-none}', expected '$BUILD'"

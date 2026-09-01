@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <meta name="build" content="20260901T013440Z-ad1c051">
+  <meta name="build" content="20260901T015400Z-3c63d47">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ben's Data Analytics Roadmap</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b7fd4'/%3E%3Crect x='7' y='18' width='4' height='7' rx='1' fill='%23fff'/%3E%3Crect x='14' y='12' width='4' height='13' rx='1' fill='%23fff'/%3E%3Crect x='21' y='7' width='4' height='18' rx='1' fill='%23fff'/%3E%3Cpath d='M7 15 L15 10 L21 6' stroke='%23fff' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round' opacity='.55'/%3E%3C/svg%3E">
@@ -87,7 +87,7 @@ body.no-scan #scanline,html.pre-noscan #scanline{display:none;}
 /* ---------- salary trajectory chart (HTML bars, wired to the live bands) --- */
 .rm-chart{margin:34px 0 26px;padding:18px 8px 10px;border:1px solid var(--line);background:rgba(255,255,255,.015);
   clip-path:polygon(0 0,calc(100% - 20px) 0,100% 20px,100% 100%,18px 100%,0 calc(100% - 18px));}
-.rm-bars{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:end;height:200px;padding:0 10px;
+.rm-bars{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end;height:200px;padding:0 10px;
   background:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 40px);}
 .rm-barcol{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:8px;min-width:0;}
 .rm-barval{font-family:var(--mono);font-size:13px;color:var(--c1);white-space:nowrap;
@@ -101,7 +101,7 @@ body.no-scan #scanline,html.pre-noscan #scanline{display:none;}
   background:linear-gradient(180deg,color-mix(in srgb,var(--c2) 70%,#ffffff),color-mix(in srgb,var(--c2) 12%,transparent));
   box-shadow:0 0 22px color-mix(in srgb,var(--c2) 28%,transparent);}
 .rm-barcol.is-here .rm-bar{outline:1px solid var(--c1);outline-offset:2px;}
-.rm-axis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:10px 10px 0;}
+.rm-axis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:10px 10px 0;}
 .rm-axlabel{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
   color:var(--dim);text-align:center;overflow:hidden;text-overflow:ellipsis;}
 .rm-axlabel[data-ax="4"]{color:var(--c2);}
@@ -278,6 +278,16 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
 .sal-edit button:hover{color:#fff;}
 
 /* ---------- responsive ---------- */
+@media (max-width:1024px){
+  /* tablet: give the panel the full width — the rail costs 80px it needs */
+  .tl-stage{grid-template-columns:1fr;gap:0;}
+  .tl-node{flex-direction:row;justify-content:flex-start;align-items:center;gap:10px;margin:0 0 10px;}
+  .tl-node::after{display:none;}
+  .tl-badge{width:38px;height:38px;font-size:14px;}
+  .rm-kan{gap:10px;}
+  .rm-col{padding:8px;}
+  .rm-card .rm-tag{font-size:12px;padding:6px 10px;}
+}
 @media (max-width:760px){
   .rm-wrap{padding:24px 16px 48px;}
   .rm-kan{grid-template-columns:1fr;gap:10px;}
@@ -295,13 +305,16 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
   .rm-jbody .rm-line{flex-direction:column;align-items:flex-start;}
 }
 @media (max-width:640px){
-  /* drop the rail: the hex node moves inline with the stage header */
-  .tl-stage{grid-template-columns:1fr;gap:0;}
-  .tl-node{flex-direction:row;justify-content:flex-start;margin:0 0 8px;}
-  .tl-node::after{display:none;}
-  .tl-badge{width:36px;height:36px;font-size:13px;}
   .rm-sal{margin-left:0;}
   .rm-row{gap:8px;}
+  .rm-title{font-size:clamp(30px,9vw,44px);}
+}
+/* touch devices: the tap targets have to be real ones */
+@media (hover:none){
+  .rm-foldbtn{padding:8px 14px;}
+  .rm-colhead{padding:4px 2px;}
+  .rm-sal{padding:4px 0;}
+  .rm-card .rm-tag{min-height:38px;}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none !important;transition:none !important;}
@@ -314,8 +327,8 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
   <div class="rm-head">
     <div>
       <p class="rm-title">Ben's Data Analytics Roadmap</p>
-      <p class="rm-sub"><b>Tampa Bay</b> · <b>$55K → $250K+</b> · Target: <b>Chief Data Officer / VP Analytics</b> · Skills-first, analytics leadership</p>
-      <p class="rm-meta">Living document · <b>certs + hard skills front-load Transition–Stage 2 (what postings screen on); leadership + MPA + domain carry Stages 3–4</b> · pills open official training · DataCamp tracks are the continuous-learning spine · last updated July 2026</p>
+      <p class="rm-sub"><b>Tampa Bay</b> · <b data-sal-range>$95K → $250K+</b> · Target: <b>Chief Data Officer / VP Analytics</b> · Skills-first, analytics leadership</p>
+      <p class="rm-meta">Living document · <b>certs + hard skills front-load Stages 1–2 (what postings screen on); leadership + MPA + domain carry Stages 3–4</b> · pills open official training · DataCamp tracks are the continuous-learning spine · last updated September 2026</p>
     </div>
     <div style="flex:0 0 auto;display:flex;gap:8px;align-items:flex-start;">
       <a class="rm-navlink" href="/job-search">Job&nbsp;Search</a>
@@ -326,14 +339,13 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
   <!-- ===== salary trajectory ===== -->
   <div class="rm-chart">
     <div class="rm-bars" role="img" aria-label="Salary trajectory from getting hired as a Data Analyst climbing through four stages to analytics leadership">
-      <div class="rm-barcol" data-bar="0"><span class="rm-barval spark-sal n0">$55K</span><span class="rm-bar" style="height:26px"></span></div>
       <div class="rm-barcol" data-bar="1"><span class="rm-barval spark-sal n1">~$70K</span><span class="rm-bar" style="height:52px"></span></div>
       <div class="rm-barcol" data-bar="2"><span class="rm-barval spark-sal n2">~$125K</span><span class="rm-bar" style="height:96px"></span></div>
       <div class="rm-barcol" data-bar="3"><span class="rm-barval spark-sal n3">~$145K</span><span class="rm-bar" style="height:116px"></span></div>
       <div class="rm-barcol" data-bar="4"><span class="rm-barval spark-sal n4">$250K+</span><span class="rm-bar" style="height:156px"></span></div>
     </div>
     <div class="rm-axis">
-      <span class="rm-axlabel" data-ax="0">Now</span><span class="rm-axlabel" data-ax="1">Stage 1</span>
+      <span class="rm-axlabel" data-ax="1">Stage 1</span>
       <span class="rm-axlabel" data-ax="2">Stage 2</span><span class="rm-axlabel" data-ax="3">Stage 3</span>
       <span class="rm-axlabel" data-ax="4">The Goal</span>
     </div>
@@ -349,15 +361,15 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
   <div class="tl">
 
   <!-- ===================== NOW · FUNDAMENTALS ===================== -->
-  <div class="tl-stage" data-stage="0">
-    <div class="tl-node"><div class="tl-badge tl-badge-now"></div></div>
+  <div class="tl-stage" data-stage="1">
+    <div class="tl-node"><div class="tl-badge">1</div></div>
     <div class="rm-stage">
-      <div class="rm-row"><span><span class="rm-stlabel">Transition</span> &nbsp;<span class="rm-time">Not yet hired</span></span><span class="rm-sal" data-sal-stage="0" title="Click to edit this band">$55K – $80K</span></div>
-      <div class="rm-role">Get hired as a Data Analyst</div>
-      <div class="rm-alt">Everything needed to land the first Data Analyst role</div>
+      <div class="rm-row"><span><span class="rm-stlabel">Stage 1</span> &nbsp;<span class="rm-time">~0–3 yrs in</span></span><span class="rm-sal" data-sal-stage="1" title="Click to edit this band">$55K – $80K</span></div>
+      <div class="rm-role">Data Analyst</div>
+      <div class="rm-alt">Data Analyst · BI Analyst · Reporting Analyst — hired; building the foundation and climbing to Senior</div>
       <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
         <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/data-analyst-associate/">PL-300 · Power BI Data Analyst</a>
-        <a class="rm-tag rm-earned" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/azure-data-fundamentals/"><span class="rm-earned-ck">✓</span>DP-900 · Azure Data Fundamentals</a>
+        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/azure-data-fundamentals/">DP-900 · Azure Data Fundamentals</a>
       </div></div>
       <div class="rm-group"><div class="rm-glabel">Skills — DataCamp</div><div class="rm-line">
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/associate-data-analyst-in-sql">SQL · Associate Data Analyst track</a>
@@ -370,26 +382,12 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
       <div class="rm-group"><div class="rm-glabel">Applied project</div><div class="rm-line">
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://app.extern.com/externships/615/projects">Extern · Breaking Games Project</a>
       </div></div>
-      <div class="rm-freq"><b>Posting signal →</b> SQL ~80% · Excel ~60% · Python ~50% · one BI tool standard</div>
-      <div class="rm-order"><b>Order →</b> ① SQL track + ② Power BI Fundamentals (in tandem) → ③ Data Analyst in Power BI (deeper; unlocks 50% off PL-300) → ④ PL-300 exam · ⑤ Excel Fundamentals → ⑥ Excel Power Tools · ⑦ Data Communication → get hired · then Python (Stage 1). Never run three brand-new tracks at once.</div>
-    </div>
-  </div>
-
-  <!-- ======================= STAGE 1 ======================= -->
-  <div class="tl-stage" data-stage="1">
-    <div class="tl-node"><div class="tl-badge">1</div></div>
-    <div class="rm-stage">
-      <div class="rm-row"><span><span class="rm-stlabel">Stage 1</span> &nbsp;<span class="rm-time">~1–2 yrs in</span></span><span class="rm-sal" data-sal-stage="1" title="Click to edit this band">$55K – $80K</span></div>
-      <div class="rm-role">Data Analyst</div>
-      <div class="rm-alt">Data Analyst · BI Analyst · Reporting Analyst — employed, climbing to Senior</div>
       <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
-        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.tableau.com/learn/certification/desktop-specialist">Tableau Desktop Specialist</a>
         <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.datacamp.com/certification/data-analyst">DataCamp Data Analyst Professional</a>
         <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/fabric-analytics-engineer-associate/?practice-assessment-type=certification">DP-600 Fabric Analytics Engineer</a>
       </div></div>
       <div class="rm-group"><div class="rm-glabel">Skills — DataCamp</div><div class="rm-line">
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://app.datacamp.com/learn/skill-tracks/python-data-fundamentals">Python · Data Analyst track</a>
-        <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/tableau-fundamentals">Tableau Fundamentals</a>
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/statistics-fundamentals-with-python">Statistics Fundamentals</a>
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://app.datacamp.com/learn/courses?search=fabric">Fabric courses (search)</a>
       </div></div>
@@ -397,7 +395,8 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://learn.microsoft.com/training/fabric/">Microsoft Fabric</a>
         <a class="rm-tag rm-job" target="_blank" rel="noopener" href="https://data.benwhetstone.info/#work">Portfolio → my work</a>
       </div></div>
-      <div class="rm-order"><b>Order →</b> ① Python track · ② Tableau Fundamentals · ③ Tableau Desktop Specialist · ④ Statistics · ⑤ Microsoft Fabric (Learn path + DataCamp courses) · ⑥ DataCamp Data Analyst Professional (needs SQL + Python) · ⑦ DP-600 Fabric Analytics Engineer</div>
+      <div class="rm-freq"><b>Posting signal →</b> SQL ~80% · Excel ~60% · Python ~50% · one BI tool standard</div>
+      <div class="rm-order"><b>Order →</b> ① SQL track + ② Power BI Fundamentals (in tandem) → ③ Data Analyst in Power BI (deeper; unlocks 50% off PL-300) → ④ PL-300 exam · ⑤ Excel Fundamentals → ⑥ Excel Power Tools · ⑦ Data Communication · ⑧ Python track · ⑨ Statistics · ⑩ Microsoft Fabric (Learn path + DataCamp courses) · ⑪ DataCamp Data Analyst Professional (needs SQL + Python) · ⑫ DP-600 Fabric Analytics Engineer. Never run three brand-new tracks at once.</div>
       <details class="rm-jobs">
         <summary><span class="rm-chev">▸</span><span class="rm-jbtn">Current jobs</span><span class="rm-jrole">“Data Analyst”</span><span class="rm-jhint">— open a search, then hit “Save / Create alert” for a daily digest</span></summary>
         <div class="rm-jbody">
@@ -431,7 +430,6 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
       <div class="rm-role">Senior Data Analyst</div>
       <div class="rm-alt">Senior Data Analyst · Lead Analyst — the biggest income jump; climbing to Manager</div>
       <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
-        <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://www.tableau.com/learn/certification/certified-data-analyst">Tableau Certified Data Analyst</a>
       </div></div>
       <div class="rm-group"><div class="rm-glabel">Skills — DataCamp</div><div class="rm-line">
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/courses/customer-analytics-and-ab-testing-in-python">A/B Testing · Customer Analytics</a>
@@ -440,7 +438,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
         <a class="rm-tag rm-tool" target="_blank" rel="noopener" href="https://www.datacamp.com/tracks/marketing-analytics-with-python">Marketing Analytics</a>
       </div></div>
       <div class="rm-freq"><b>Income lever →</b> 2+ AI skills ≈ 43% pay premium · experimentation is the other Senior lever</div>
-      <div class="rm-order"><b>Order →</b> ① A/B Testing · ② AI Fundamentals · ③ Machine Learning Fundamentals · ④ Marketing Analytics · ⑤ Tableau Certified Data Analyst</div>
+      <div class="rm-order"><b>Order →</b> ① A/B Testing · ② AI Fundamentals · ③ Machine Learning Fundamentals · ④ Marketing Analytics</div>
       <details class="rm-jobs">
         <summary><span class="rm-chev">▸</span><span class="rm-jbtn">Current jobs</span><span class="rm-jrole">“Senior Data Analyst”</span><span class="rm-jhint">— open a search, then hit “Save / Create alert” for a daily digest</span></summary>
         <div class="rm-jbody">
@@ -567,7 +565,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <span><b>4</b> stages</span>
     <span><b>Skills-first</b> · analytics leadership</span>
     <span><b>Leadership + MPA</b> carry Stages 3–4</span>
-    <span><b>$55K → $250K+</b> climb</span>
+    <span><b data-sal-range>$95K → $250K+</b> climb</span>
     <span>Analyst → Manager → Director</span>
   </div>
 </div>
@@ -602,8 +600,8 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     var done=new Set(), inProgress=new Set();
     try{done=new Set(JSON.parse(localStorage.getItem(STORE)||'[]'));}catch(e){}
     try{inProgress=new Set(JSON.parse(localStorage.getItem(INPROG)||'[]'));}catch(e){}
-    var current=parseInt((function(){try{return localStorage.getItem(STAGEKEY);}catch(e){return null;}})()||'0',10);
-    if(!(current>=0&&current<=4)) current=0;
+    var current=parseInt((function(){try{return localStorage.getItem(STAGEKEY);}catch(e){return null;}})()||'1',10);
+    if(!(current>=1&&current<=4)) current=1;
     var stagesDone=new Set();
     try{(JSON.parse(localStorage.getItem(STAGESDONE)||'[]')||[]).forEach(function(n){stagesDone.add(n);});}catch(e){}
     function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
@@ -675,8 +673,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
           if(!card){
             card=document.createElement('div'); card.className='rm-card';
             a.parentNode.insertBefore(card,a); card.appendChild(a);
-            if(a.dataset.src){ var sr=document.createElement('span'); sr.className='rm-cardsrc'; sr.textContent=a.dataset.src; card.appendChild(sr); }
-            a.setAttribute('draggable','false');
+              a.setAttribute('draggable','false');
           }
           if(card.parentNode!==body[k]) body[k].appendChild(card);
         });
@@ -886,7 +883,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
         if(!written){ if(done.size>0||inProgress.size>0||current>0||stagesDone.size>0) push(); return; }  // fresh server: seed from this device
         if(Array.isArray(d.done)) done=new Set(d.done);
         if(Array.isArray(d.inProgress)) inProgress=new Set(d.inProgress);
-        if(d.stage>=0&&d.stage<=4) current=d.stage;
+        if(d.stage>=1&&d.stage<=4) current=d.stage;
         if(Array.isArray(d.stagesDone)) stagesDone=new Set(d.stagesDone);
         persist(); applyPills(); render(); place(); renderStage(); renderStageDone(); renderFold();   // server wins
       }).catch(function(){});
@@ -914,14 +911,14 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
         var b=st.querySelector('.rm-donebtn'); if(b){ b.querySelector('.box').textContent=d?'✓':''; b.querySelector('.lbl').textContent=d?'Stage complete':'Mark stage complete'; }
       });
     }
-    function setStage(n){ if(n<0)n=0; if(n>4)n=4; if(n===current) return; current=n; persist(); renderStage(); renderFold(); render(); push();
+    function setStage(n){ if(n<1)n=1; if(n>4)n=4; if(n===current) return; current=n; persist(); renderStage(); renderFold(); render(); push();
       var c=document.querySelector('.tl-stage.is-current'); if(c) c.scrollIntoView({behavior:'smooth',block:'center'}); }
     // per-stage nav (Back / Move to next) — shown only on the current stage via CSS
     document.querySelectorAll('.tl-stage').forEach(function(st){
       var n=parseInt(st.dataset.stage,10);
       var nav=document.createElement('div'); nav.className='rm-stagenav rm-foldable';
       var html='';
-      if(n>0) html+='<button class="rm-back" type="button" data-go="'+(n-1)+'">← Back</button>';
+      if(n>1) html+='<button class="rm-back" type="button" data-go="'+(n-1)+'">← Back</button>';
       if(n<4) html+='<button class="rm-next" type="button" data-go="'+(n+1)+'">Move to next stage →</button>';
       else html+='<span class="rm-goalmsg">🎯 You’ve reached the goal</span>';
       nav.innerHTML=html;
@@ -1006,6 +1003,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
   var DATA={};
   function fmt(v){
     if(!v) return '';
+    if(!v.min && !v.max) return '\u2014';          // Transition: not yet hired
     var k=function(n){return '$'+Math.round(n/1000)+'K';};
     return k(v.min)+' \u2013 '+k(v.max)+(v.plus?'+':'');
   }
@@ -1015,7 +1013,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
       if(v) el.textContent=fmt(v);
     });
     // the header + progress-strip figures track the stage bands
-    var lo=DATA['0'], hi=DATA['4'];
+    var lo=DATA['1'], hi=DATA['4'];
     if(lo&&hi){
       document.querySelectorAll('[data-sal-range]').forEach(function(el){
         el.textContent='$'+Math.round(lo.min/1000)+'K \u2192 $'+Math.round(hi.max/1000)+'K'+(hi.plus?'+':'');
@@ -1027,17 +1025,19 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     // Bars are proportional to the figure each column represents, scaled to the
     // tallest, so editing a band redraws the chart instead of just relabelling it.
     var figs={};
-    [0,1,2,3,4].forEach(function(n){
+    [1,2,3,4].forEach(function(n){
       var v=DATA[String(n)]; if(!v) return;
       figs[n] = (n===4) ? v.max : Math.round(((v.min+v.max)/2)/5000)*5000;
     });
-    var top=Math.max.apply(null,Object.keys(figs).map(function(k){return figs[k];}))||1;
-    [0,1,2,3,4].forEach(function(n){
-      var v=DATA[String(n)], f=figs[n]; if(!v||!f) return;
+    var vals=Object.keys(figs).map(function(k){return figs[k];}).filter(function(x){return x>0;});
+    var top=vals.length?Math.max.apply(null,vals):1;
+    [1,2,3,4].forEach(function(n){
+      var v=DATA[String(n)]; if(!v) return;
+      var f=figs[n]||0;
       var t=document.querySelector('.spark-sal.n'+n);
-      if(t) t.textContent=(n===4?'$':'~$')+Math.round(f/1000)+'K'+(n===4&&v.plus?'+':'');
+      if(t) t.textContent = f>0 ? ((n===4?'$':'~$')+Math.round(f/1000)+'K'+(n===4&&v.plus?'+':'')) : '\u2014';
       var bar=document.querySelector('.rm-barcol[data-bar="'+n+'"] .rm-bar');
-      if(bar) bar.style.height=Math.max(10,Math.round(f/top*156))+'px';
+      if(bar) bar.style.height = f>0 ? Math.max(10,Math.round(f/top*156))+'px' : '3px';
     });
   }
   function load(){
@@ -1072,7 +1072,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     function cancel(){ el.textContent=prev; }
     function commit(){
       var mn=parseFloat(a.value)*1000, mx=parseFloat(b.value)*1000;
-      if(!isFinite(mn)||!isFinite(mx)||mn<=0||mx<=0){ cancel(); return; }
+      if(!isFinite(mn)||!isFinite(mx)||mn<0||mx<0){ cancel(); return; }
       el.textContent='\u2026';
       save(stage,mn,mx,cur.plus,el);
     }

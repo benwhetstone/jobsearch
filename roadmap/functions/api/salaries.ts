@@ -20,7 +20,7 @@ const DEFAULT_KEY = "46444d84816b31186e75551c5bee4a15";
 // What the page shipped with. Serve these until Ben overrides a stage, so an
 // empty store renders exactly what he sees today rather than blanks.
 const DEFAULTS: Record<string, { min: number; max: number; plus: boolean }> = {
-  "0": { min: 55000, max: 80000, plus: false },   // Transition — not yet hired
+  "0": { min: 0, max: 0, plus: false },           // Transition — not yet hired, so no band at all
   "1": { min: 55000, max: 80000, plus: false },   // Stage 1 — Data Analyst
   "2": { min: 110000, max: 140000, plus: false }, // Stage 2 — Senior Data Analyst
   "3": { min: 130000, max: 160000, plus: false }, // Stage 3 — Analytics Manager
@@ -53,7 +53,14 @@ async function load(env: Env): Promise<{ salaries: Record<string, any>; updated:
 
 // A band is only meaningful if it's a real number and min <= max.
 function clean(v: any, fallback: { min: number; max: number; plus: boolean }) {
-  const n = (x: any) => { const y = Number(String(x ?? "").replace(/[^0-9.]/g, "")); return Number.isFinite(y) && y > 0 ? Math.round(y) : null; };
+  // Zero is meaningful here: the Transition stage has no income yet. Only an
+  // empty or non-numeric value falls back to the previous figure.
+  const n = (x: any) => {
+    const raw = String(x ?? "").replace(/[^0-9.]/g, "");
+    if (!raw) return null;
+    const y = Number(raw);
+    return Number.isFinite(y) && y >= 0 ? Math.round(y) : null;
+  };
   let min = n(v?.min) ?? fallback.min;
   let max = n(v?.max) ?? fallback.max;
   if (min > max) [min, max] = [max, min];   // typed backwards; just swap
