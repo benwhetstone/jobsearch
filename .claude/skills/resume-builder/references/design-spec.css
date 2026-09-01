@@ -1,0 +1,180 @@
+/* ============================================================
+   BEN WHETSTONE RESUME — DESIGN SPEC v2 (option "1c" Swiss grid)
+   v2 change: SKILLS, CERTS + TRAINING, and EDUCATION moved to
+   page 1, between PROFILE and EXPERIENCE. See SECTION ORDER at
+   the bottom of this file — it is the source of truth.
+   ============================================================
+   Purpose: hand this file to any tool/agent that generates the
+   resume. It defines ALL design rules. Content is provided
+   separately — this file says WHERE content goes and HOW it
+   must look. Follow it exactly; do not invent new styles.
+
+   PAGE SETUP
+   - Paper: US Letter, 8.5 x 11 in (816 x 1056 px @ 96dpi).
+   - Max 2 pages. Page margins: 52px top/bottom, 58px left/right
+     (≈0.54in / 0.60in). No headers/footers except the page-2
+     continuation line (see .page-marker).
+   - Background: pure white. No borders, boxes, shadows, photos,
+     icons, or graphics of any kind. The ONLY graphic elements
+     allowed are the horizontal rules defined below.
+
+   FONTS (exactly two)
+   - Body/headings: Helvetica, Arial, sans-serif.
+   - Labels/dates/meta: "IBM Plex Mono", monospace
+     (Google Fonts: https://fonts.google.com/specimen/IBM+Plex+Mono
+      weights 400, 500). If unavailable, use Menlo/Consolas.
+   - No other fonts. No italics anywhere. Bold only where specified.
+
+   COLOR (4 grays only — never any other color)
+   - #141414  ink: name, body text, bold text, thick rule
+   - #666666  secondary: role sublines, small notes
+   - #888888  meta: dates
+   - #999999  labels: section labels in left margin column
+   - #d8d8d8  hairline rules
+   ============================================================ */
+
+/* ---------- PAGE GRID ----------
+   Every section of the resume is one "row": a 2-column grid.
+   LEFT column (128px): the section label, monospace, uppercase.
+   RIGHT column (flexible): the section's content.
+   Rows are separated by horizontal rules across the full width. */
+.page {
+  width: 816px; height: 1056px; box-sizing: border-box;
+  padding: 52px 58px; background: #fff;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12.5px; line-height: 1.5; color: #141414;
+}
+.row {
+  display: grid; grid-template-columns: 128px 1fr; gap: 0 26px;
+  padding-top: 16px; margin-top: 16px;
+}
+/* First row after the header uses a THICK rule; all later rows
+   use a hairline. Page 2's first row also uses the thick rule. */
+.row-first { border-top: 2px solid #141414; margin-top: 24px; }
+.row       { border-top: 1px solid #d8d8d8; }
+
+/* ---------- SECTION LABELS (left margin column) ---------- */
+.label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: #999;
+}
+/* Content rules: label is 1–2 short words max ("PROFILE",
+   "EXPERIENCE", "EARLIER CAREER" broken as two lines with <br>,
+   "SKILLS", "CERTS +" / "TRAINING" on two lines, "EDUCATION").
+   A continued section on page 2
+   appends "(cont.)" on its own line. */
+
+/* ---------- HEADER (page 1 only, no label column) ----------
+   Layout: flex row, space-between, align top.
+   LEFT: name + tagline + veteran line, stacked.
+   RIGHT: contact block, right-aligned, monospace. */
+.name {
+  font-size: 38px; font-weight: 700;
+  letter-spacing: -1px; line-height: 1;
+}
+/* Content: full name only. Nothing else on this line. */
+.tagline { margin-top: 10px; font-size: 12px; color: #444; }
+/* Content: 3–5 core tools/competencies separated by " · "
+   (e.g. "SQL · Excel · Power BI · Dashboards & Business
+   Reporting"). No sentences. */
+.veteran {
+  margin-top: 4px; font-family: "IBM Plex Mono", monospace;
+  font-size: 10px; letter-spacing: 1px;
+  text-transform: uppercase; color: #888;
+}
+/* Content: one short credential line, e.g. "U.S. ARMY VETERAN". */
+.contact {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px; line-height: 1.7;
+  text-align: right; color: #444;
+}
+/* Content: exactly 5 lines, one item each, this order:
+   city/metro, phone, email, LinkedIn URL (no https://),
+   portfolio URL (no https://). No labels, no icons. */
+
+/* ---------- PROFILE row ---------- */
+.profile { margin: 0; text-wrap: pretty; }
+/* Content: ONE paragraph, 60–90 words, no bullets, no "I".
+   Sentence 1: what he does (skills/tools). Sentences 2–3: the
+   1–2 strongest proof points with numbers. Nothing else. */
+
+/* ---------- EXPERIENCE row ----------
+   Right column holds job blocks stacked with 18px gaps. */
+.job-title-line {
+  display: flex; justify-content: space-between;
+  align-items: baseline;
+}
+.job-title { font-weight: 700; font-size: 13.5px; }
+/* Content: "Company — Role Title" on one line. */
+.job-dates {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px; color: #888;
+}
+/* Content: "MM/YYYY–MM/YYYY" or "MM/YYYY–NOW". Always uppercase
+   NOW for current roles. No other date formats. */
+.job-subline { font-size: 11.5px; color: #666; }
+/* Content: one line — what the company is + scale metric
+   (e.g. "Residential real estate, $36M annual volume").
+   On page 2, a continued job's subline reads
+   "Company Name, continued". */
+.job-summary { margin: 6px 0 0; text-wrap: pretty; }
+/* Optional: ONE plain paragraph (max 2 lines) describing the
+   headline accomplishment, only for the most recent role. */
+.job-bullets {
+  margin: 6px 0 0; padding-left: 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+/* Content rules for bullets:
+   - 3–6 bullets per job, each 1–2 lines (max ~28 words).
+   - Start with a past/present-tense verb, never "Responsible for".
+   - Every bullet should carry a number where one exists
+     (%, $, counts, table/row counts).
+   - No periods omitted: each bullet ends with a period.
+   - Standard <li> markers (disc). No custom bullets/dashes. */
+
+/* ---------- EARLIER CAREER row ---------- */
+.earlier { display: flex; flex-direction: column; gap: 7px; }
+/* Content: 2–4 compressed entries, plain paragraphs (no bullets).
+   Pattern per entry: "<b>Role,</b> Employer, YYYY–YYYY" — merge
+   related roles onto one line with " · ". One trailing sentence
+   of context max. Role names bold, nothing else. */
+
+/* ---------- EDUCATION row ---------- */
+.edu-line { display: flex; justify-content: space-between; }
+/* Content per line: "<b>Degree</b> — Institution" left,
+   year right in .job-dates style (mono #888). One line each,
+   newest-relevant first. Optional final plain line in #666 for
+   supplemental coursework. */
+
+/* ---------- SKILLS row ---------- */
+.skills { display: flex; flex-direction: column; gap: 4px; }
+/* Content: 2–4 lines, each "<b>Category:</b> item, item, item".
+   Categories in bold, items comma-separated, no ratings, no
+   bars, no pills. "In progress:" is allowed as a category. */
+
+/* ---------- CERTS + TRAINING row ---------- */
+.certs { display: flex; flex-direction: column; gap: 4px; }
+/* Content: one cert per line, "Name (CODE), Month YYYY" when
+   dated. No logos or issuer descriptions. */
+
+/* ---------- PAGE 2 marker ---------- */
+.page-marker {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px; letter-spacing: 1px;
+  text-transform: uppercase; color: #999; margin-bottom: 14px;
+}
+/* Content: "FIRSTNAME LASTNAME — 2/2". Page 2 has no header
+   block; it starts with this marker, then a .row-first. */
+
+/* ============================================================
+   SECTION ORDER (fixed — do not reorder)
+   Page 1: HEADER → PROFILE → SKILLS → CERTS + TRAINING →
+           EDUCATION → EXPERIENCE (most recent job fully)
+   Page 2: page-marker → EXPERIENCE (cont.: remaining jobs in
+           full, starting with their normal title/date line) →
+           EARLIER CAREER
+   Overflow rule: never shrink fonts or margins to fit. Cut or
+   tighten bullets instead. Nothing may cross a page boundary
+   mid-bullet; break between bullets only.
+   ============================================================ */

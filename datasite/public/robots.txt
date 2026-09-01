@@ -1,0 +1,118 @@
+# As a condition of accessing this website, you agree to abide by the following
+# content signals:
+
+# (a)  If a Content-Signal = yes, you may collect content for the corresponding
+#      use.
+# (b)  If a Content-Signal = no, you may not collect content for the
+#      corresponding use.
+# (c)  If the website operator does not include a Content-Signal for a
+#      corresponding use, the website operator neither grants nor restricts
+#      permission via Content-Signal with respect to the corresponding use.
+
+# The content signals and their meanings are:
+
+# search:   building a search index and providing search results (e.g., returning
+#           hyperlinks and short excerpts from your website's contents). Search does not
+#           include providing AI-generated search summaries.
+# ai-input: inputting content into one or more AI models (e.g., retrieval
+#           augmented generation, grounding, or other real-time taking of content for
+#           generative AI search answers).
+# ai-train: training or fine-tuning AI models.
+# use:      how AI systems may consume the content (immediate, reference, or full).
+
+# ANY RESTRICTIONS EXPRESSED VIA CONTENT SIGNALS ARE EXPRESS RESERVATIONS OF
+# RIGHTS UNDER ARTICLE 4 OF THE EUROPEAN UNION DIRECTIVE 2019/790 ON COPYRIGHT
+# AND RELATED RIGHTS IN THE DIGITAL SINGLE MARKET.
+
+# BEGIN Cloudflare Managed content
+
+User-agent: *
+Content-Signal: search=yes,ai-train=no,use=reference
+Allow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: CloudflareBrowserRenderingCrawler
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+# END Cloudflare Managed Content
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ben Whetstone — Seeking Opportunities in Data Analytics</title>
+  <meta name="description" content="Portfolio of Ben Whetstone: production software, data analytics artifacts, and certifications. Twenty-five years of service and leadership, now building with data and AI-assisted development." />
+  <meta property="og:title" content="Ben Whetstone — Seeking Opportunities in Data Analytics" />
+  <meta property="og:description" content="Shipped applications, data portfolio, and certifications — every claim links to proof." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://data.benwhetstone.info" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f6bd6'/%3E%3Ctext x='16' y='21' font-family='monospace' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3EBW%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Set theme before paint to avoid flash
+    (function () {
+      try {
+        var saved = localStorage.getItem('bw_theme');
+        var sys = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', saved === 'light' || saved === 'dark' ? saved : sys);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <button id="theme-toggle" class="theme-toggle theme-toggle--float" type="button" aria-label="Toggle color theme"></button>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="hero__text">
+        <div class="eyebrow">Seeking Opportunities in Data Analytics</div>
+        <h1>Ben Whetstone</h1>
+        <p class="hero__story">Real estate pro stepping into the data analytics world. I turn messy operational data into decisions — and build the efficient workflows and systems that keep it flowing — using SQL, Power BI, Excel, and Google Sheets. I've already designed the data model behind a production SaaS platform and shipped it to paying customers; now I'm after a data analyst or BI role where I can do the same for your team as I gain relevant experience in the industry.</p>
+        <div class="hero__links" id="hero-links"></div>
+      </div>
+      <div class="hero__photo">
+        <div class="hero__photo-frame">
+          <img src="assets/ben-whetstone.jpg" alt="Ben Whetstone" />
+        </div>
+      </div>
+    </section>
+
+    <section class="controls" id="work">
+      <span class="controls__label">Filter</span>
+      <div class="filters" id="filters" role="tablist"></div>
+    </section>
+
+    <section class="grid" id="grid" aria-live="polite"></section>
+
+    <footer class="site-footer">
+      <span>© <span id="year"></span> Ben Whetstone · data.benwhetstone.info</span>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

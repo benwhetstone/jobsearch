@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Job Search</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/styles.css?v=2026082601" />
+</head>
+<body>
+  <!-- Auth (login / signup) -->
+  <div id="auth" class="login" hidden>
+    <form id="authForm" class="login-card">
+      <h1>Job Search</h1>
+      <p id="authSub" class="sub">Sign in to your account.</p>
+      <input id="name" type="text" placeholder="Your name" autocomplete="name" hidden />
+      <label for="email">Email</label>
+      <input id="email" type="email" placeholder="you@example.com" autocomplete="email" required />
+      <label for="password">Password</label>
+      <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" required />
+      <input id="inviteCode" type="text" placeholder="Sign-up code (if you were given one)" hidden />
+      <button type="submit" id="authSubmit">Sign in</button>
+      <p id="authErr" class="err" hidden></p>
+      <p class="muted" style="margin:14px 0 0;font-size:13px;text-align:center">
+        <span id="switchText">New here?</span>
+        <button type="button" id="switchMode" class="linkbtn">Create an account</button>
+      </p>
+    </form>
+  </div>
+
+  <!-- App -->
+  <div id="app" class="shell" hidden>
+    <aside class="sidebar">
+      <div class="brand"><span class="mark">J</span> Job Search</div>
+      <nav class="sidenav" id="sidenav">
+        <button data-view="matches" class="active">
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span>Jobs</span><span class="count" id="cntMatches" hidden>0</span>
+        </button>
+        <button data-view="apply">
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span>To Apply</span><span class="count" id="cntApply" hidden>0</span>
+        </button>
+        <button data-view="applications">
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg>
+          <span>Applications</span><span class="count" id="cntApps" hidden>0</span>
+        </button>
+        <button data-view="inbox" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          <span>Inbox</span>
+        </button>
+        <button data-view="templates">
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="10" rx="1.5"/><rect x="13" y="3" width="8" height="6" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="15" width="8" height="6" rx="1.5"/></svg>
+          <span>Templates</span>
+        </button>
+        <button data-view="profile">
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Profile</span><span class="count" id="cntProfile">0%</span>
+        </button>
+      </nav>
+      <div class="side-foot">
+        <div class="side-user">
+          <span class="avatar" id="userAva">?</span>
+          <span class="who"><strong id="userName">—</strong><span id="userEmail"></span></span>
+        </div>
+        <button id="btnCoworkToken" class="btn ghost" style="width:100%;justify-content:center;margin-bottom:8px;font-size:12.5px">🔑 Cowork API token</button>
+        <button id="logout" class="btn ghost" style="width:100%;justify-content:center">Log out</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="wrap">
+        <div id="statusStrip" class="statusstrip" hidden></div>
+        <div class="mobile-head">
+          <div class="brand" style="padding:0"><span class="mark">J</span> Job Search</div>
+          <button id="logoutM" class="btn ghost">Log out</button>
+        </div>
+
+        <!-- Jobs / matches -->
+        <section id="view-matches" class="view">
+          <div class="tabs" style="margin-bottom:14px">
+            <button class="tab active" id="tabForYou">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2L12 3z"/><path d="M19 15l.9 2.6L22.5 18l-2.6.9L19 21l-.9-2.1-2.6-.9 2.6-.4L19 15z"/></svg>
+              Jobs For You
+            </button>
+            <button class="tab" id="tabSearch">Search jobs</button>
+          </div>
+          <div class="page-head" id="jobsHeadAuto">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+              <h1>Jobs For You</h1>
+              <button id="btnResweep" class="btn" title="Reload Cowork's latest suggestions">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                Refresh
+              </button>
+            </div>
+            <p>Your evaluation board. After each sweep, Cowork drops its curated picks here — every card shows the same facts in the same place: pay, location, experience and skills, plus the posting link and why it fits. Scan them, hit <strong>Add to To-Apply</strong> on the ones you want. Nothing is queued until you say so.</p>
+          </div>
+          <div class="page-head" id="jobsHeadSearch" hidden>
+            <h1>Search jobs</h1>
+            <p>Search on your own terms: keyword, place and radius. Results are scored the same way and can be queued the same way.</p>
+          </div>
+          <div id="matchStats" class="stats" hidden></div>
+          <div class="card searchbar" id="searchbarCard" hidden>
+            <div class="row">
+              <div class="f">
+                <label for="sKeywords">What are you looking for?</label>
+                <input id="sKeywords" type="text" placeholder="e.g. Data Analyst" />
+              </div>
+              <div class="f">
+                <label for="sLocation">Where?</label>
+                <input id="sLocation" type="text" placeholder="e.g. Tampa, FL" />
+              </div>
+              <div class="f">
+                <label for="sRadius">Radius</label>
+                <select id="sRadius">
+                  <option value="">Any</option>
+                  <option value="10">10 mi</option>
+                  <option value="25">25 mi</option>
+                  <option value="40" selected>40 mi</option>
+                  <option value="75">75 mi</option>
+                  <option value="150">150 mi</option>
+                </select>
+              </div>
+            </div>
+            <div class="row2">
+              <label><input type="checkbox" id="sRemote" /> Remote only</label>
+              <label style="gap:8px">Min salary
+                <input id="sSalary" type="number" placeholder="60000" style="width:104px" />
+              </label>
+              <span class="spacer"></span>
+              <button id="btnRefresh" class="btn primary">Find jobs</button>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span class="muted" style="font-size:12.5px">Sort by</span>
+            <select id="sortJobs" style="width:auto;padding:6px 10px;font-size:13px">
+              <option value="newest" selected>Newest</option>
+              <option value="salary">Highest salary</option>
+            </select>
+          </div>
+          <div id="matchMsg"></div>
+          <div id="matchList" class="joblist"></div>
+          <div id="bulkbar" class="bulkbar" hidden>
+            <span id="bulkCount">0 selected</span>
+            <button id="bulkClear" class="btn ghost">Clear</button>
+            <button id="bulkSkip" class="btn ghost">Not interested</button>
+            <button id="bulkStart" class="btn primary">Start applications</button>
+          </div>
+        </section>
+
+        <!-- To Apply queue -->
+        <section id="view-apply" class="view" hidden>
+          <div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+            <div>
+              <h1>To Apply</h1>
+              <p>Your worklist — only jobs you've chosen to apply to. Add one yourself below, or add from Jobs For You. Work them one by one; each finished one moves into Applications.</p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button id="btnAddJob" class="btn primary">+ Add a job</button>
+              <button id="btnApplyRefresh" class="btn">↻ Refresh</button>
+            </div>
+          </div>
+          <div id="applyList" class="joblist"></div>
+        </section>
+
+        <!-- Applications -->
+        <section id="view-applications" class="view" hidden>
+          <div class="page-head">
+            <h1>Applications</h1>
+            <p>Track your applications — we'll move them forward and ask for your help if needed.</p>
+          </div>
+          <div id="appStats" class="stats" hidden></div>
+          <div id="appList" class="joblist"></div>
+        </section>
+
+        <!-- Inbox -->
+        <section id="view-inbox" class="view" hidden>
+          <div class="page-head"><h1>Inbox</h1>
+            <p>Every application gets its own private email address. Replies land here, sorted for you, and your application statuses update automatically.</p></div>
+          <div class="chips" id="inboxCats" style="margin-bottom:12px"></div>
+          <div id="inboxList" class="joblist"></div>
+        </section>
+
+        <!-- Templates -->
+        <section id="view-templates" class="view" hidden>
+          <div class="page-head">
+            <h1>Templates</h1>
+            <p>How your resume and cover letter PDFs look. Pick one; every download uses it. You can preview your own resume in any of them before deciding.</p>
+          </div>
+          <div class="tplgrid" id="tplGrid"></div>
+        </section>
+
+        <!-- Profile -->
+        <section id="view-profile" class="view" hidden>
+          <div class="page-head">
+            <h1>Profile</h1>
+            <p>Answer once. Every application reuses these answers, and matching runs on them.</p>
+          </div>
+          <div class="card" style="padding:14px 15px;margin-bottom:14px">
+            <strong style="font-size:13.5px">Your profile and your resume are the same thing</strong>
+            <div class="muted" style="font-size:12.5px;margin:4px 0 10px;max-width:640px">
+              Have a resume you like? Upload it and it fills your profile in. Don't have one, or don't love it?
+              Answer the questions here at your own pace and we'll write you a strong one from your answers:
+              most people have far more evidence than their old resume ever showed. Either way, every application
+              gets its own tailored resume and cover letter, reviewed by a hiring-manager check before it goes anywhere.
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <input type="file" id="resumeFile" accept=".pdf,.txt,.md,image/*" hidden />
+              <button id="btnResume" class="btn">Upload my resume</button>
+              <button id="btnGenResume" class="btn primary">Write my resume from my answers</button>
+              <a id="btnDlResume" class="btn" hidden target="_blank" rel="noopener">Download PDF</a>
+            </div>
+            <div id="genResult" style="margin-top:10px"></div>
+          </div>
+          <div class="profile-layout">
+            <nav id="blockNav" class="blocklist"></nav>
+            <div id="blocks"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <nav class="tabbar" id="tabbar">
+      <button data-view="matches" class="active">
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Jobs</span><span class="tabcount" id="cntMatchesM" hidden>0</span>
+      </button>
+      <button data-view="apply">
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>To Apply</span><span class="tabcount" id="cntApplyM" hidden>0</span>
+      </button>
+      <button data-view="applications">
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg><span>Apps</span><span class="tabcount" id="cntAppsM" hidden>0</span>
+      </button>
+      <button data-view="inbox" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg><span>Inbox</span>
+      </button>
+      <button data-view="templates">
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="10" rx="1.5"/><rect x="13" y="3" width="8" height="6" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="15" width="8" height="6" rx="1.5"/></svg><span>Styles</span>
+      </button>
+      <button data-view="profile">
+        <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Profile</span>
+      </button>
+    </nav>
+
+    <div id="toast" class="toast" hidden></div>
+  </div>
+
+  <script src="/app.js?v=2026082601"></script>
+</body>
+</html>

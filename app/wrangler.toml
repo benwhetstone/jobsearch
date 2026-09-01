@@ -1,0 +1,35 @@
+# Cloudflare Pages + Functions config for jobs.benwhetstone.info
+# Deploy:  npx wrangler pages deploy public --project-name jobs-benwhetstone
+#
+# This app extends Ben's existing stack. It reuses the D1 database that already
+# backs roadmap.benwhetstone.info instead of creating a new one.
+
+name = "jobs-benwhetstone"
+compatibility_date = "2026-07-01"
+pages_build_output_dir = "public"
+
+# --- D1: the existing database (id + account from PROJECT-BRIEF §1) ----------
+# The binding name `DB` is what Functions read via `env.DB`.
+[[d1_databases]]
+binding = "DB"
+database_name = "bens-job-search-db"
+database_id = "b242bc78-7e28-4600-bfde-524ab7842283"
+
+# --- Vars & secrets ----------------------------------------------------------
+# Users log in with email + password (accounts live in D1); there is no shared
+# app token. The secrets below are for automation and optional email.
+#
+# Set secrets (do NOT commit them):
+#   npx wrangler pages secret put APP_ADMIN_TOKEN  --project-name jobs-benwhetstone   # cron/admin bearer (notifications runner)
+#   npx wrangler pages secret put APP_SIGNUP_CODE  --project-name jobs-benwhetstone   # optional: gate sign-up to people you invite
+#   npx wrangler pages secret put RESEND_API_KEY   --project-name jobs-benwhetstone   # optional: enables outbound email
+# (The notifications runner also accepts the existing ROADMAP_TOKEN as an admin fallback.)
+[vars]
+APP_ENV = "production"
+APP_BASE_URL = "https://jobs.benwhetstone.info"
+# NOTIFY_FROM is safe to keep here (not a secret). Only sends once RESEND_API_KEY is set.
+NOTIFY_FROM = "Job Search <notify@jobs.benwhetstone.info>"
+
+# Tip jar (public Stripe payment link, not a secret). Set to enable the
+# "Leave a tip" line in the sidebar; leave unset to hide it.
+# APP_TIPJAR_URL = "https://buy.stripe.com/..."
