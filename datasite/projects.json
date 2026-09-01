@@ -1,0 +1,322 @@
+[
+  {
+    "id": "closing-day",
+    "category": "apps",
+    "status": "live",
+    "title": "Closing Day",
+    "summary": "Production multi-tenant SaaS for real estate closing teams, with paying customers. Relational data model, SQL-backed analytics, SmartClose AI deal scoring, and subscription billing. Built with AI-assisted development under my direction.",
+    "tags": ["SaaS", "Multi-tenant", "SQL", "AI deal scoring", "Billing"],
+    "screenshots": [
+      "assets/closing-day/01-dashboard.jpg",
+      "assets/closing-day/02-smartclose-ai.jpg",
+      "assets/closing-day/03-deal-pipeline.jpg",
+      "assets/closing-day/04-production-report.jpg",
+      "assets/closing-day/05-how-am-i-doing.jpg"
+    ],
+    "links": [{ "label": "closingday.info", "url": "https://closingday.info" }]
+  },
+  {
+    "id": "rapid-knowledge",
+    "category": "apps",
+    "status": "live",
+    "title": "Rapid Learning Platform",
+    "summary": "Browser app that operationalizes current adult-learning research — spaced repetition and active recall — for fast knowledge ingestion and durable retention. Built with AI-assisted development under my direction.",
+    "tags": ["Learning science", "Spaced repetition", "Active recall", "Web app"],
+    "screenshots": [
+      "assets/rapid-knowledge/01-dashboard.jpg",
+      "assets/rapid-knowledge/02-ai-teacher.jpg",
+      "assets/rapid-knowledge/03-mastery-results.jpg",
+      "assets/rapid-knowledge/04-question.jpg",
+      "assets/rapid-knowledge/05-explanation.jpg",
+      "assets/rapid-knowledge/06-quiz-results.jpg"
+    ],
+    "links": []
+  },
+  {
+    "id": "algo-trading",
+    "category": "apps",
+    "status": "live",
+    "title": "Algorithmic Trading Tool",
+    "summary": "Automated trading system integrating brokerage and market-data APIs — executes strategies programmatically and monitors portfolio performance in real time. Built with AI-assisted development under my direction.",
+    "tags": ["APIs", "Automation", "Market data", "Portfolio monitoring"],
+    "screenshots": [
+      "assets/algo-trading/01-equity-scan.jpg",
+      "assets/algo-trading/02-strategy-positions.jpg",
+      "assets/algo-trading/03-closed-trades.jpg"
+    ],
+    "links": []
+  },
+  {
+    "id": "deskview",
+    "category": "apps",
+    "status": "live",
+    "title": "Deskview",
+    "summary": "Native macOS remote desktop app for accessing my own machines from anywhere. Built with AI-assisted development under my direction.",
+    "tags": ["macOS", "Native", "Remote desktop"],
+    "screenshots": [],
+    "links": []
+  },
+  {
+    "id": "snipplet",
+    "category": "apps",
+    "status": "live",
+    "title": "Snipplet",
+    "summary": "Native macOS screenshot and markup tool — built because the OS default fell short of how I wanted to capture and annotate. Built with AI-assisted development under my direction.",
+    "tags": ["macOS", "Native", "Screenshots", "Markup"],
+    "screenshots": [],
+    "links": []
+  },
+  {
+    "id": "clipflow",
+    "category": "apps",
+    "status": "live",
+    "title": "ClipFlow",
+    "summary": "Native macOS clipboard manager — a faster, richer clipboard history than the native experience. Built with AI-assisted development under my direction.",
+    "tags": ["macOS", "Native", "Clipboard", "Productivity"],
+    "screenshots": [
+      "assets/clipflow/01-popover.jpg"
+    ],
+    "links": []
+  },
+  {
+    "id": "excel-workbook",
+    "category": "data",
+    "status": "live",
+    "title": "Excel Skills Workbook",
+    "summary": "Multi-tab workbook on a real dataset: data cleaning, lookup and logic formulas, PivotTables, and dashboard charts.",
+    "tags": ["Excel", "PivotTables", "Data cleaning", "Charts"],
+    "screenshots": [
+      "assets/excel-workbook/01-data-cleaning.jpg",
+      "assets/excel-workbook/02-summary-formulas.jpg",
+      "assets/excel-workbook/03-pivottable.jpg",
+      "assets/excel-workbook/04-agents-lookup.jpg"
+    ],
+    "links": [{ "label": "Download workbook (.xlsx)", "url": "assets/excel-workbook/Whetstone_Excel_Skills.xlsx" }],
+    "spec": [
+      "A single .xlsx built from scratch that demonstrates the Excel skills an analyst uses daily, on a realistic pipeline dataset.",
+      { "h": "Build it tab by tab" },
+      { "list": [
+        "Data tab — paste the pipeline export and clean it: TRIM/PROPER on names, format dates, remove duplicates. Add a calculated Weighted $ column = Value × Probability (a filled-down formula).",
+        "Summary tab — SUMIFS (pipeline $ by stage), COUNTIFS (deals by agent), AVERAGEIFS (avg deal size), and one XLOOKUP (pull an agent's team from a lookup table). Add an IF/IFS column bucketing each deal High / Medium / Low by probability.",
+        "PivotTable — weighted pipeline by stage (rows) × agent (columns), plus a PivotChart.",
+        "Conditional formatting — color scale on probability, data bars on value, and a rule flagging deals with no activity in 30+ days.",
+        "Chart — one clean, titled bar or line chart (pipeline by stage, or deals created per month)."
+      ] },
+      { "h": "Done when" },
+      "Every number comes from a formula or pivot (nothing hardcoded), the file is tidy, and each tab can be explained in one sentence."
+    ]
+  },
+  {
+    "id": "data-quality",
+    "category": "data",
+    "status": "live",
+    "title": "Data Quality Case Study",
+    "summary": "A production data-quality incident I diagnosed and fixed end-to-end — legitimate duplicate charges were being silently dropped from a reconciliation store. Resolved with a schema-enforced per-transaction identity (txn_uid) and a database-level uniqueness invariant.",
+    "tags": [
+      "Data quality",
+      "Root-cause analysis",
+      "Deduplication",
+      "SQLite / D1",
+      "Schema design"
+    ],
+    "screenshots": [],
+    "links": [
+      {
+        "label": "Read the case study",
+        "url": "case-data-quality.html"
+      }
+    ]
+  },
+  {
+    "id": "green-river",
+    "category": "data",
+    "status": "live",
+    "title": "Project Green River",
+    "hero": "assets/green-river/hero.svg",
+    "warning": "This project examines a real serial-murder cold case (the Green River Killer) and violence against women — the subject is heavy. Ben's perspective comes from a background in law enforcement: the treatment is investigative and clinical, and the victims are treated as real people throughout.",
+    "summary": "An Azure data-analytics case study that rebuilds a decades-old cold case as a modern cloud data platform. Scattered paper evidence becomes one searchable system — ingested with Data Factory, stored in a Data Lake, analyzed in Synapse with geographic profiling, and acted on through Power BI maps, AI Search, and suspect ranking. The argument: the evidence to identify the killer largely existed by the mid-1980s; what was missing was the ability to organize, search, and connect it — exactly what modern data science provides. It closes by turning the same argument on today's unsolved cases.",
+    "tags": ["Azure", "Data platform", "Synapse / Data Lake", "Geographic profiling", "Case study"],
+    "screenshots": [],
+    "links": [{ "label": "Explore the project", "url": "https://benwhetstone.github.io/grk/" }]
+  },
+  {
+    "id": "extern-breaking-games",
+    "category": "data",
+    "status": "in-progress",
+    "roadmapId": "s0:extern-breaking-games-project",
+    "title": "Breaking Games — Data Externship",
+    "summary": "A real-world data analytics externship through the DataCamp × Extern program — working a live business problem for Breaking Games: cleaning and analyzing the data, then presenting the findings. Applied experience alongside the coursework.",
+    "tags": ["Externship", "Applied project", "Analysis", "DataCamp × Extern"],
+    "screenshots": [],
+    "links": []
+  },
+  {
+    "id": "direct-mail",
+    "category": "data",
+    "status": "live",
+    "title": "Direct-Mail Data Pipeline",
+    "summary": "Turned raw county public-records exports into targeted, compliant real-estate direct-mail campaigns — parsing and USPS-standardizing addresses, building household salutations, deduplicating, and scrubbing against do-not-market lists before handing a clean list to the print vendor (Corefact).",
+    "tags": ["Direct marketing", "ETL / data cleaning", "Address normalization", "Deduplication", "Compliance (do-not-market)"],
+    "screenshots": [],
+    "links": [
+      {
+        "label": "Read the case study",
+        "url": "case-direct-mail.html"
+      }
+    ]
+  },
+  {
+    "id": "power-bi",
+    "category": "data",
+    "status": "live",
+    "title": "Power BI Dashboard",
+    "summary": "Interactive Power BI report on Closing Day sales data — a modeled star schema, DAX measures, and a recruiter-readable dashboard covering pipeline, GCI, lead source, and geography.",
+    "tags": ["Power BI", "DAX", "Data modeling", "Dashboard"],
+    "screenshots": ["assets/power-bi/dashboard.png", "assets/power-bi/data-model.png"],
+    "links": [],
+    "spec": [
+      "One interactive dashboard built in Power BI Desktop from anonymized Closing Day pipeline data.",
+      { "h": "Steps" },
+      { "list": [
+        "Export pipeline data to CSV: deals with stage, dollar value, probability, created date, close date, agent, activity counts (names anonymized).",
+        "Import to Power BI Desktop and build a simple model (deals table + agents table with a relationship).",
+        "Build ONE report page with exactly four visuals: a card row (total pipeline $, weighted pipeline $, deal count, avg deal size), a bar chart (weighted pipeline by stage), a line chart (deals created per month), and a table with conditional formatting on probability.",
+        "Add one slicer (by agent or stage) for interactivity.",
+        "Save the .pbix and capture 2–3 clean screenshots."
+      ] },
+      { "h": "Done when" },
+      "You can open the .pbix, click the slicer, and explain each visual in one sentence. Scope: four visuals, one page — stop there."
+    ]
+  },
+  {
+    "id": "sql-analysis",
+    "category": "data",
+    "status": "in-progress",
+    "title": "SQL Analysis Doc",
+    "summary": "Documented SQL analysis answering real business questions — joins, aggregations, and window functions, with query and result narrative.",
+    "tags": ["SQL", "Window functions", "Joins", "Analysis"],
+    "screenshots": [],
+    "links": [],
+    "spec": [
+      "A documented set of 15–20 SQL queries against the Closing Day database, each answering a business question.",
+      { "h": "Format for every entry" },
+      { "list": [
+        "Question in plain English (e.g. \"Which stage loses the most deals?\").",
+        "The query (formatted SQL).",
+        "Result (small table or 1–2 lines).",
+        "So what — one sentence of business meaning."
+      ] },
+      { "h": "Coverage checklist" },
+      { "list": [
+        "Basic SELECT + WHERE filters (2–3).",
+        "JOINs across at least two tables (3–4).",
+        "GROUP BY with COUNT / SUM / AVG (3–4).",
+        "At least one subquery, one CTE (WITH), one window function, and one date-based query."
+      ] },
+      { "h": "Done when" },
+      "15+ entries complete and any one can be rewritten from memory."
+    ]
+  },
+  {
+    "id": "dp900",
+    "category": "certs",
+    "status": "live",
+    "title": "Azure Data Fundamentals (DP-900)",
+    "issuer": "Microsoft Certified",
+    "date": "Jul 2026",
+    "summary": "Foundational knowledge of core data concepts and Azure data services — relational, non-relational, and analytics workloads.",
+    "tags": ["Azure", "Data fundamentals"],
+    "screenshots": [],
+    "links": []
+  },
+  {
+    "id": "pl300",
+    "category": "certs",
+    "roadmapId": "s0:pl-300-power-bi-data-analyst",
+    "status": "in-progress",
+    "title": "Power BI Data Analyst (PL-300)",
+    "issuer": "Microsoft Certified",
+    "summary": "Associate certification for modeling, cleaning, and transforming data, then designing and delivering Power BI reports and dashboards.",
+    "tags": ["Power BI", "Data modeling", "DAX"],
+    "screenshots": [],
+    "links": []
+  },
+  {
+    "id": "google-da",
+    "category": "certs",
+    "status": "live",
+    "title": "Google Data Analytics Foundations",
+    "issuer": "Google · Coursera",
+    "summary": "Foundations of the data analytics workflow — asking questions, preparing, processing, and analyzing data.",
+    "tags": ["Data analytics", "Foundations"],
+    "screenshots": [],
+    "links": []
+  },
+  {
+    "id": "datacamp-sql",
+    "category": "certs",
+    "status": "live",
+    "title": "Introduction to SQL",
+    "issuer": "DataCamp",
+    "summary": "Core SQL: querying relational databases, filtering, and aggregation.",
+    "tags": ["SQL"],
+    "screenshots": [],
+    "links": []
+  },
+  {
+    "id": "datacamp-intermediate-sql",
+    "category": "certs",
+    "status": "in-progress",
+    "title": "Intermediate SQL",
+    "issuer": "DataCamp",
+    "summary": "Filtering, aggregating, and summarizing data; multi-table joins and more advanced querying. Currently in progress.",
+    "tags": ["SQL", "Joins", "Aggregation"],
+    "screenshots": [],
+    "links": []
+  },
+  {
+    "id": "security-plus",
+    "category": "certs",
+    "status": "in-progress",
+    "title": "CompTIA Security+",
+    "issuer": "CompTIA",
+    "summary": "Industry-standard baseline for cybersecurity skills and best practices. Currently in progress.",
+    "tags": ["Security", "CompTIA"],
+    "screenshots": [],
+    "links": []
+  },
+  {
+    "id": "network-plus",
+    "category": "certs",
+    "status": "in-progress",
+    "title": "CompTIA Network+",
+    "issuer": "CompTIA",
+    "summary": "Core networking concepts, infrastructure, operations, and security. Currently in progress.",
+    "tags": ["Networking", "CompTIA"],
+    "screenshots": [],
+    "links": []
+  },
+  {
+    "id": "dp080",
+    "category": "certs",
+    "status": "in-progress",
+    "title": "Query & Modify Data with T-SQL (DP-080)",
+    "issuer": "Microsoft",
+    "date": "DP-080T00-A",
+    "summary": "Microsoft course on writing Transact-SQL queries to retrieve and modify data — SELECT, joins, subqueries, and DML. Currently in progress.",
+    "tags": ["T-SQL", "SQL", "Azure"],
+    "screenshots": [],
+    "links": []
+  },
+  { "id": "ai-ops", "category": "data", "status": "live", "title": "AI Operations Layer", "summary": "An AI operations layer — 17 specialized agents running 45 production automations — that handles the repeatable work of my business and gets measurably better every run through structured learning logs. I then pointed that same stack at building Closing Day, a live SaaS with paying customers. The transferable skill: turning ambiguous, manual processes into documented, self-correcting systems that produce consistent output at scale.", "tags": ["AI agents", "Automation", "Systems design"], "spec": ["I design and direct AI systems that drive efficiency and business insight.", { "h": "The pipeline" }, "Spec → Delegate → Execute → Log & correct → Ship", { "h": "By the numbers" }, { "list": ["17 AI agents orchestrated", "45 production automations", "1 live SaaS shipped from it"] }], "specTitle": "How I build", "detailLabel": "How I build", "screenshots": [], "links": [{ "label": "Read the full AI-ops case study", "url": "https://aiopsforrealestate.com" }] },
+  { "id": "prof-excel", "category": "proficiency", "status": "proficient", "title": "Microsoft Excel", "level": "Advanced · 10 yrs", "summary": "A decade of advanced spreadsheet work — pivot tables, Power Query, lookups, and formula-driven models built for real operational reporting.", "tags": ["Pivot tables", "Power Query", "Formulas"], "screenshots": [], "links": [] },
+  { "id": "prof-data-analysis", "category": "proficiency", "status": "proficient", "title": "Data Analysis", "level": "10 yrs", "summary": "Ten years turning messy operational data into decisions — cleaning, exploring, and drawing conclusions that hold up to scrutiny.", "tags": ["Cleaning", "Exploration", "Reporting"], "screenshots": [], "links": [] },
+  { "id": "prof-crm", "category": "proficiency", "status": "proficient", "title": "Enterprise CRM Administration", "level": "Advanced · 10 yrs", "summary": "A decade configuring, administering, and operating multiple enterprise CRM platforms — data models, pipelines, automations, integrations, and user & permission management for real sales and operations teams.", "tags": ["Configuration", "Administration", "Automations", "Integrations"], "screenshots": [], "links": [] },
+  { "id": "prof-management", "category": "proficiency", "status": "proficient", "title": "Team Leadership & Management", "level": "Advanced · 10 yrs", "summary": "A decade leading teams as a business founder and operator — hiring, onboarding, and training staff, setting goals and managing performance, and designing the processes that keep a team producing consistent results.", "tags": ["Team leadership", "Onboarding", "Hiring", "Process design"], "screenshots": [], "links": [] },
+  { "id": "prof-google-sheets", "category": "proficiency", "status": "proficient", "title": "Google Sheets", "level": "Advanced", "summary": "Advanced Sheets — pivot tables, lookups, QUERY, and cross-sheet reporting powering live operational dashboards.", "tags": ["Pivot tables", "QUERY", "Lookups"], "screenshots": [], "links": [] },
+  { "id": "prof-power-bi", "category": "proficiency", "status": "proficient", "title": "Microsoft Power BI", "level": "1 yr", "summary": "Interactive reports and dashboards — data modeling, DAX measures, and visualization built for stakeholder reporting.", "tags": ["DAX", "Dashboards", "Modeling"], "screenshots": [], "links": [] },
+  { "id": "prof-azure", "category": "proficiency", "status": "proficient", "title": "Microsoft Azure", "level": "DP-900 certified", "summary": "Azure cloud fundamentals — core services, relational and non-relational data storage, analytics workloads, and governance; validated by the Azure Data Fundamentals (DP-900) certification.", "tags": ["Cloud", "Data services", "DP-900"], "screenshots": [], "links": [] },
+  { "id": "prof-sql", "category": "proficiency", "status": "proficient", "title": "SQL", "level": "1 yr", "summary": "Querying, joining, and aggregating relational data for analysis and reporting.", "tags": ["Joins", "Aggregation", "Queries"], "screenshots": [], "links": [] },
+  { "id": "prof-data-viz", "category": "proficiency", "status": "proficient", "title": "Data Visualization", "level": "2 yrs", "summary": "Clear, honest visuals — choosing the right chart and structuring dashboards for non-technical audiences.", "tags": ["Dashboards", "Charts", "Storytelling"], "screenshots": [], "links": [] },
+  { "id": "prof-tsql", "category": "proficiency", "status": "proficient", "title": "T-SQL", "level": "1 yr", "summary": "Microsoft SQL Server dialect — set-based queries, joins, subqueries, and DML.", "tags": ["SQL Server", "Joins", "DML"], "screenshots": [], "links": [] }
+]
