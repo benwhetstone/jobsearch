@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <meta name="build" content="20260901T144124Z-5d7b9c1">
+  <meta name="build" content="20260901T190255Z-e745fd3">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ben's Professional Development Roadmap</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b7fd4'/%3E%3Crect x='7' y='18' width='4' height='7' rx='1' fill='%23fff'/%3E%3Crect x='14' y='12' width='4' height='13' rx='1' fill='%23fff'/%3E%3Crect x='21' y='7' width='4' height='18' rx='1' fill='%23fff'/%3E%3Cpath d='M7 15 L15 10 L21 6' stroke='%23fff' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round' opacity='.55'/%3E%3C/svg%3E">
@@ -210,7 +210,7 @@ a.rm-tag.done .rm-lbl::before{content:"✓ ";}
 .rm-cardtype{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;}
 .rm-ct-core{color:var(--c2);} .rm-ct-tool{color:var(--c1);} .rm-ct-book{color:var(--c3);} .rm-ct-opt{color:var(--neutral);}
 .rm-cardedit{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
-  background:none;border:0;padding:2px 3px;color:var(--dim);cursor:pointer;opacity:0;transition:opacity .12s ease-out;}
+  background:none;border:0;padding:3px 4px;color:var(--dim);cursor:pointer;}
 .rm-card:hover .rm-cardedit,.rm-cardedit:focus-visible{opacity:1;}
 @media (hover:none){ .rm-cardedit{opacity:1;} }
 .rm-cardedit:hover{color:var(--c1);}
@@ -265,8 +265,10 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
 .rm-signin:hover{color:#fff;}
 .rm-addbtn,.rm-cardedit,.rm-stagenav,.rm-donerow{display:none;}
 body.rm-can-edit .rm-addbtn{display:block;}
-body.rm-can-edit .rm-card:hover .rm-cardedit,body.rm-can-edit .rm-cardedit:focus-visible{display:block;opacity:1;}
-@media (hover:none){ body.rm-can-edit .rm-cardedit{display:block;opacity:1;} }
+/* Always visible once signed in. Hiding it until hover meant that on a tablet
+   — no hover — the edit button never appeared, which put delete out of reach
+   entirely. A control you cannot find is a control you do not have. */
+body.rm-can-edit .rm-cardedit{display:block;opacity:1;}
 body.rm-can-edit .tl-stage.is-current .rm-stagenav{display:flex;}
 body.rm-can-edit .rm-donerow{display:block;}
 body:not(.rm-can-edit) .rm-sal{cursor:default;border-bottom:0;}
@@ -700,7 +702,7 @@ body:not(.rm-can-edit) .rm-card{cursor:default;}
       var meta=document.createElement('div'); meta.className='rm-cardmeta';
       var t=document.createElement('span'); t.className='rm-cardtype rm-ct-'+(it.type||'tool');
       t.textContent=TYPE_LABEL[it.type]||'Course';
-      var ed=document.createElement('button'); ed.className='rm-cardedit'; ed.type='button'; ed.textContent='edit';
+      var ed=document.createElement('button'); ed.className='rm-cardedit'; ed.type='button'; ed.textContent='edit / delete';
       ed.setAttribute('aria-label','Edit '+it.label);
       ed.addEventListener('click',function(e){ e.stopPropagation(); e.preventDefault();
         openEditor(card.closest('.rm-col'),stage,null,it); });
