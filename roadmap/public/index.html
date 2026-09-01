@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <meta name="build" content="20260901T131940Z-9356dcb">
+  <meta name="build" content="20260901T133823Z-51cd3cc">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ben's Data Analytics Roadmap</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b7fd4'/%3E%3Crect x='7' y='18' width='4' height='7' rx='1' fill='%23fff'/%3E%3Crect x='14' y='12' width='4' height='13' rx='1' fill='%23fff'/%3E%3Crect x='21' y='7' width='4' height='18' rx='1' fill='%23fff'/%3E%3Cpath d='M7 15 L15 10 L21 6' stroke='%23fff' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round' opacity='.55'/%3E%3C/svg%3E">
@@ -157,6 +157,7 @@ body.no-scan #scanline,html.pre-noscan #scanline{display:none;}
   animation:pulseDot 1.6s ease-in-out infinite;}
 .rm-role{margin:16px 0 2px;font-family:var(--disp);font-size:29px;font-weight:700;line-height:1.1;color:#eaf6fb;}
 .tl-stage[data-stage="4"] .rm-role{color:#ffe3f1;}
+.rm-desc{margin:6px 0 8px;max-width:68ch;font-family:var(--mono);font-size:12.5px;line-height:1.75;color:#a8bac8;}
 .rm-alt{margin:0 0 4px;font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--dim);}
 
 /* ---------- section labels + pills ---------- */
@@ -338,6 +339,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <div class="rm-stage">
       <div class="rm-row"><span><span class="rm-stlabel">Stage 1</span> &nbsp;<span class="rm-time">~0–3 yrs in</span></span><span class="rm-sal" data-sal-stage="1" title="Click to edit this band">$55K – $80K</span></div>
       <div class="rm-role">Data Analyst</div>
+      <p class="rm-desc">Pull and clean the data, build the recurring reports and dashboards the business runs on, and answer the questions that come in. SQL and one BI tool, working inside a model someone else designed.</p>
       <div class="rm-alt">Data Analyst · BI Analyst · Reporting Analyst — hired; building the foundation and climbing to Senior</div>
       <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
         <a class="rm-tag rm-core" target="_blank" rel="noopener" href="https://learn.microsoft.com/en-us/credentials/certifications/data-analyst-associate/">PL-300 · Power BI Data Analyst</a>
@@ -376,6 +378,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <div class="rm-stage">
       <div class="rm-row"><span><span class="rm-stlabel">Stage 2</span> &nbsp;<span class="rm-time">~3–5 yrs in</span></span><span class="rm-sal" data-sal-stage="2" title="Click to edit this band">$110K – $140K</span></div>
       <div class="rm-role">Senior Data Analyst</div>
+      <p class="rm-desc">Own a business area end to end — design the model rather than query it, decide what gets measured, and review the junior analysts' work. Stakeholders come to you before the decision, not after.</p>
       <div class="rm-alt">Senior Data Analyst · Lead Analyst — the biggest income jump; climbing to Manager</div>
       <div class="rm-group"><div class="rm-glabel">Credentials — proctored exam</div><div class="rm-line">
       </div></div>
@@ -394,6 +397,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <div class="rm-stage">
       <div class="rm-row"><span><span class="rm-stlabel">Stage 3</span> &nbsp;<span class="rm-time">~6–8 yrs in</span></span><span class="rm-sal" data-sal-stage="3" title="Click to edit this band">$130K – $160K</span></div>
       <div class="rm-role">Analytics Manager / Lead</div>
+      <p class="rm-desc">Run the analysts, not the queries. Hiring, prioritization and stakeholder negotiation, accountable for what the team ships and the roadmap behind it. Hands-on analysis becomes the exception.</p>
       <div class="rm-alt">Analytics Manager · Analytics Lead — postings want leadership + an advanced degree, not more certs</div>
       <div class="rm-group"><div class="rm-glabel">Advanced degree</div><div class="rm-line">
         <span class="rm-tag rm-earned" style="cursor:default;"><span class="rm-earned-ck">✓</span>MPA · the advanced degree most analysts lack</span>
@@ -421,6 +425,7 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
     <div class="rm-stage goal">
       <div class="rm-row"><span><span class="rm-stlabel">The Goal</span> &nbsp;<span class="rm-time">The ceiling</span></span><span class="rm-sal" data-sal-stage="4" title="Click to edit this band">$180K – $250K+</span></div>
       <div class="rm-role">Director of Analytics → VP Analytics → Chief Data Officer</div>
+      <p class="rm-desc">Own the data function itself: strategy, budget, headcount, platform and governance. You decide what the organization measures, and you answer for data as a business asset at the executive table.</p>
       <div class="rm-alt">Leadership scale + domain depth + MPA are the qualification — not certs</div>
       <div class="rm-group"><div class="rm-glabel">Focus</div><div class="rm-line">
         <span class="rm-tag rm-tool" style="cursor:default;">Enterprise data strategy</span>
@@ -682,7 +687,8 @@ body.rm-dragmode{cursor:grabbing;user-select:none;}
       Array.prototype.forEach.call(card.children,function(ch){
         // the header row and the role title always stay: a folded stage that
         // does not name its own role is just a bar with a number on it
-        if(!ch.classList.contains('rm-row') && !ch.classList.contains('rm-role')) ch.classList.add('rm-foldable');
+        if(!ch.classList.contains('rm-row') && !ch.classList.contains('rm-role')
+            && !ch.classList.contains('rm-desc')) ch.classList.add('rm-foldable');
       });
       var row=st.querySelector('.rm-row');
       var b=document.createElement('button'); b.className='rm-foldbtn'; b.type='button';
